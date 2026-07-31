@@ -10,6 +10,8 @@ import type {
   Announcement,
   CheckoutResult,
   CurrentUser,
+  MembershipCard,
+  MembershipQuote,
   OrderProduct,
   PaymentMethod,
   Product,
@@ -66,6 +68,10 @@ export class ApiError extends Error {
     this.code = code;
     this.status = status;
   }
+}
+
+export function isMembershipRequiredError(error: unknown) {
+  return error instanceof ApiError && error.code === 60_008;
 }
 
 async function apiRequest<T>(path: string, init?: RequestInit) {
@@ -134,6 +140,14 @@ let demoPresetSequence =
     )
   ) + 1;
 let demoOrderSequence = 1;
+type DemoOrderType =
+  | "membership"
+  | "purchase"
+  | "recharge"
+  | "renewal"
+  | "reset";
+
+let demoMembershipExpiredAt = Date.now() + 120 * 24 * 60 * 60 * 1000;
 const demoOrders = new Map<
   string,
   {
@@ -142,21 +156,23 @@ const demoOrders = new Map<
     quantity: number;
     status: number;
     subscriptionId: number;
-    type: "purchase" | "recharge" | "renewal" | "reset";
+    type: DemoOrderType;
   }
 >();
 
-function demoOrderType(type: "purchase" | "recharge" | "renewal" | "reset") {
+function demoOrderType(type: DemoOrderType) {
   if (type === "renewal") return 2;
   if (type === "reset") return 3;
   if (type === "recharge") return 4;
+  if (type === "membership") return 5;
   return 1;
 }
 
-function demoOrderName(type: "purchase" | "recharge" | "renewal" | "reset") {
+function demoOrderName(type: DemoOrderType) {
   if (type === "reset") return "流量重置";
   if (type === "recharge") return "余额充值";
   if (type === "renewal") return "订阅续费";
+  if (type === "membership") return "年度会员";
   return "订阅套餐";
 }
 
@@ -481,6 +497,71 @@ export async function getPurchaseQuote(input: {
   };
 }
 
+export async function getMembershipQuote(input: {
+  payment: number;
+}): Promise<MembershipQuote> {
+  if (isClientDemoMode()) {
+    const plan = demoMembershipCard().plan;
+    const user = demoCurrentUser();
+    const commissionDeduction = Math.min(plan.unitPrice, user.commission);
+    const afterCommission = plan.unitPrice - commissionDeduction;
+    const giftAmount = Math.min(afterCommission, user.giftAmount);
+    const providerAmount = afterCommission - giftAmount;
+    const feeAmount =
+      input.payment === 8 ? Math.round(providerAmount * 0.02) : 0;
+    return {
+      amount: providerAmount + feeAmount,
+      commissionDeduction,
+      feeAmount,
+      giftAmount,
+      price: plan.unitPrice,
+    };
+  }
+  const data = await apiRequest<{
+    amount: number;
+    commission_deduction: number;
+    fee_amount: number;
+    gift_amount: number;
+    price: number;
+  }>("v1/public/order/membership/pre", {
+    body: JSON.stringify(input),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  if (!data) throw new Error("会员报价不可用");
+  return {
+    amount: data.amount,
+    commissionDeduction: data.commission_deduction,
+    feeAmount: data.fee_amount,
+    giftAmount: data.gift_amount,
+    price: data.price,
+  };
+}
+
+export async function createMembershipOrder(input: {
+  payment: number;
+  request_id: string;
+}) {
+  if (isClientDemoMode()) {
+    return createDemoOrder({
+      payment: input.payment,
+      quantity: 1,
+      subscriptionId: 0,
+      type: "membership",
+    });
+  }
+  const data = await apiRequest<{ order_no: string }>(
+    "v1/public/order/membership",
+    {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }
+  );
+  if (!data?.order_no) throw new Error("会员订单创建失败");
+  return data.order_no;
+}
+
 export async function createPurchaseOrder(input: {
   coupon: string;
   payment: number;
@@ -709,6 +790,8 @@ type RawCurrentUser = {
   created_at: number;
   gift_amount: number;
   id: number;
+  is_member: boolean;
+  member_expired_at: number;
   refer_code: string;
 };
 
@@ -731,6 +814,8 @@ function demoCurrentUser(): CurrentUser {
     createdAt: Date.UTC(2026, 5, 10),
     giftAmount: 2000,
     id: 1001,
+    isMember: demoMembershipExpiredAt > Date.now(),
+    memberExpiredAt: demoMembershipExpiredAt,
     referCode: "ALPHA-7K2M",
   };
 }
@@ -752,8 +837,120 @@ export async function getCurrentUserWith(
     createdAt: normalizeTimestamp(data.created_at),
     giftAmount: data.gift_amount,
     id: data.id,
+    isMember: Boolean(data.is_member),
+    memberExpiredAt: data.member_expired_at
+      ? normalizeTimestamp(data.member_expired_at)
+      : 0,
     referCode: data.refer_code,
   };
+}
+
+type RawMembershipCard = {
+  enabled: boolean;
+  expired_at: number;
+  is_member: boolean;
+  plan: {
+    description: string;
+    duration_unit: string;
+    duration_value: number;
+    enabled: boolean;
+    id: number;
+    name: string;
+    policy: {
+      monthly_consumption_limit: number;
+      monthly_consumption_limit_enabled: boolean;
+      monthly_order_limit: number;
+      monthly_order_limit_enabled: boolean;
+      subscription_expiry_grace_days: number;
+      subscription_expiry_limit_enabled: boolean;
+    };
+    unit_price: number;
+  };
+  usage: {
+    monthly_consumption: number;
+    monthly_order_count: number;
+  };
+};
+
+function demoMembershipCard(): MembershipCard {
+  return {
+    enabled: true,
+    expiredAt: demoMembershipExpiredAt,
+    isMember: demoMembershipExpiredAt > Date.now(),
+    plan: {
+      description: "订阅购买资格与账户级权益管理。",
+      durationUnit: "Year",
+      durationValue: 1,
+      enabled: true,
+      id: 1,
+      name: "年度会员",
+      policy: {
+        monthlyConsumptionLimit: 50_000,
+        monthlyConsumptionLimitEnabled: true,
+        monthlyOrderLimit: 20,
+        monthlyOrderLimitEnabled: true,
+        subscriptionExpiryGraceDays: 30,
+        subscriptionExpiryLimitEnabled: true,
+      },
+      unitPrice: 8800,
+    },
+    usage: {
+      monthlyConsumption: 6800,
+      monthlyOrderCount: 2,
+    },
+  };
+}
+
+function mapMembershipCard(data: RawMembershipCard): MembershipCard {
+  return {
+    enabled: Boolean(data.enabled),
+    expiredAt: data.expired_at ? normalizeTimestamp(data.expired_at) : 0,
+    isMember: Boolean(data.is_member),
+    plan: {
+      description: data.plan?.description || "",
+      durationUnit: data.plan?.duration_unit || "Year",
+      durationValue: data.plan?.duration_value || 1,
+      enabled: Boolean(data.plan?.enabled),
+      id: data.plan?.id || 0,
+      name: data.plan?.name || "会员",
+      policy: {
+        monthlyConsumptionLimit:
+          data.plan?.policy?.monthly_consumption_limit || 0,
+        monthlyConsumptionLimitEnabled: Boolean(
+          data.plan?.policy?.monthly_consumption_limit_enabled
+        ),
+        monthlyOrderLimit: data.plan?.policy?.monthly_order_limit || 0,
+        monthlyOrderLimitEnabled: Boolean(
+          data.plan?.policy?.monthly_order_limit_enabled
+        ),
+        subscriptionExpiryGraceDays:
+          data.plan?.policy?.subscription_expiry_grace_days || 0,
+        subscriptionExpiryLimitEnabled: Boolean(
+          data.plan?.policy?.subscription_expiry_limit_enabled
+        ),
+      },
+      unitPrice: data.plan?.unit_price || 0,
+    },
+    usage: {
+      monthlyConsumption: data.usage?.monthly_consumption || 0,
+      monthlyOrderCount: data.usage?.monthly_order_count || 0,
+    },
+  };
+}
+
+export function getMembershipCard(): Promise<MembershipCard> {
+  return getMembershipCardWith(apiRequest);
+}
+
+export async function getMembershipCardWith(
+  request: ApiRequester
+): Promise<MembershipCard> {
+  if (isClientDemoMode()) return demoMembershipCard();
+  const data = await request<RawMembershipCard>(
+    "v1/public/order/membership/card"
+  );
+  if (!data) throw new Error("会员状态不可用");
+  return mapMembershipCard(data);
 }
 
 export async function updatePassword(input: {
@@ -1398,7 +1595,7 @@ function createDemoOrder(input: {
   payment: number;
   quantity: number;
   subscriptionId: number;
-  type: "purchase" | "recharge" | "renewal" | "reset";
+  type: DemoOrderType;
 }) {
   const orderNo = `ALP-DEMO-${String(demoOrderSequence).padStart(4, "0")}`;
   demoOrderSequence += 1;
@@ -1463,6 +1660,13 @@ function completeDemoOrder(orderNo: string) {
   const order = demoOrders.get(orderNo);
   if (!order) throw new Error("订单不存在");
   order.status = 5;
+  if (order.type === "membership") {
+    const base = Math.max(Date.now(), demoMembershipExpiredAt);
+    const expiresAt = new Date(base);
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    demoMembershipExpiredAt = expiresAt.getTime();
+    return;
+  }
   if (order.type === "purchase" || order.type === "recharge") return;
   const subscription = demoSubscriptionState.find(
     (item) => item.id === order.subscriptionId

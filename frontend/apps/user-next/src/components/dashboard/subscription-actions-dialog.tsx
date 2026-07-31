@@ -21,8 +21,6 @@ import {
   Field,
   FieldDescription,
   FieldLabel,
-  FieldLegend,
-  FieldSet,
 } from "@workspace/ui/components/field";
 import {
   InputGroup,
@@ -31,10 +29,6 @@ import {
   InputGroupInput,
 } from "@workspace/ui/components/input-group";
 import { Input } from "@workspace/ui/components/input";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@workspace/ui/components/radio-group";
 import { Separator } from "@workspace/ui/components/separator";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
@@ -44,17 +38,18 @@ import {
 } from "@workspace/ui/components/toggle-group";
 import {
   CircleAlert,
-  CreditCard,
+  Crown,
   Gift,
   Minus,
   Plus,
   RefreshCcw,
   RotateCcw,
-  WalletCards,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OrderCheckoutStatus } from "@/components/orders/order-checkout-status";
+import { PaymentMethodSelector } from "@/components/orders/payment-method-selector";
 import {
   checkoutOrder,
   createOrderRequestId,
@@ -63,6 +58,7 @@ import {
   getPaymentMethods,
   getRenewalQuote,
   getResetTrafficQuote,
+  isMembershipRequiredError,
 } from "@/lib/client-api";
 import {
   formatBytes,
@@ -71,7 +67,6 @@ import {
 } from "@/lib/format";
 import type {
   CheckoutResult,
-  PaymentMethod,
   RenewalQuote,
   ResetTrafficQuote,
   SiteConfig,
@@ -91,54 +86,6 @@ function durationLabel(quantity: number, unit: string) {
     year: "年",
   };
   return `${quantity} ${labels[unit.toLowerCase()] || unit}`;
-}
-
-function PaymentMethodSelector({
-  methods,
-  onChange,
-  value,
-}: Readonly<{
-  methods: PaymentMethod[];
-  onChange: (id: number) => void;
-  value: number;
-}>) {
-  return (
-    <FieldSet>
-      <FieldLegend>支付方式</FieldLegend>
-      <RadioGroup
-        className="grid gap-2 sm:grid-cols-2"
-        onValueChange={(next) => onChange(Number(next))}
-        value={String(value)}
-      >
-        {methods.map((method) => {
-          const platform = method.platform.toLowerCase();
-          const Icon = platform === "balance" ? WalletCards : CreditCard;
-          const id = `subscription-payment-${method.id}`;
-          return (
-            <FieldLabel
-              className="flex cursor-pointer items-center gap-3 rounded-lg border p-3"
-              htmlFor={id}
-              key={method.id}
-            >
-              <RadioGroupItem id={id} value={String(method.id)} />
-              <Icon
-                aria-hidden="true"
-                className="size-4 text-muted-foreground"
-              />
-              <span className="min-w-0">
-                <strong className="block font-medium text-sm">
-                  {method.name}
-                </strong>
-                <small className="block truncate font-normal text-muted-foreground text-xs">
-                  {method.description || method.platform}
-                </small>
-              </span>
-            </FieldLabel>
-          );
-        })}
-      </RadioGroup>
-    </FieldSet>
-  );
 }
 
 function BillingSummary({
@@ -212,6 +159,7 @@ export function SubscriptionActionsDialog({
   subscription: Subscription;
 }>) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(0);
   const [payment, setPayment] = useState(0);
   const [coupon, setCoupon] = useState("");
@@ -317,6 +265,14 @@ export function SubscriptionActionsDialog({
     !submitting &&
     (!paymentRequired || payment !== 0);
 
+  const openMembership = () => {
+    onOpenChange(false);
+    const next = encodeURIComponent(
+      `/dashboard?subscription=${subscription.id}`
+    );
+    router.push(`/membership?next=${next}`);
+  };
+
   const submit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -339,7 +295,12 @@ export function SubscriptionActionsDialog({
       setOrderNo(createdOrderNo);
       setCheckout(checkoutResult);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "订单提交失败");
+      if (mode === "renewal" && isMembershipRequiredError(error)) {
+        openMembership();
+        toast.info("续费前请先开通会员");
+      } else {
+        toast.error(error instanceof Error ? error.message : "订单提交失败");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -357,6 +318,9 @@ export function SubscriptionActionsDialog({
       }),
       queryClient.invalidateQueries({ queryKey: ["alpha-traffic"] }),
       queryClient.invalidateQueries({ queryKey: ["alpha-orders"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["alpha-membership-card"],
+      }),
     ]);
   };
 
@@ -365,6 +329,8 @@ export function SubscriptionActionsDialog({
   const currentProduct = quote?.product;
   const quoteUnavailable =
     quoteError instanceof Error ? quoteError.message : "报价暂不可用";
+  const membershipRequired =
+    mode === "renewal" && isMembershipRequiredError(quoteError);
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -462,9 +428,29 @@ export function SubscriptionActionsDialog({
                   <BillingSummary quote={quote} symbol={symbol} />
                 ) : quoteError ? (
                   <Alert variant="destructive">
-                    <CircleAlert />
-                    <AlertTitle>报价暂不可用</AlertTitle>
-                    <AlertDescription>{quoteUnavailable}</AlertDescription>
+                    {membershipRequired ? <Crown /> : <CircleAlert />}
+                    <AlertTitle>
+                      {membershipRequired
+                        ? "续费前需要有效会员"
+                        : "报价暂不可用"}
+                    </AlertTitle>
+                    <AlertDescription className="flex flex-col items-start gap-2">
+                      <span>
+                        {membershipRequired
+                          ? "开通会员后即可继续为当前订阅续费。"
+                          : quoteUnavailable}
+                      </span>
+                      {membershipRequired ? (
+                        <Button
+                          className="h-auto px-0 py-0"
+                          onClick={openMembership}
+                          type="button"
+                          variant="link"
+                        >
+                          前往会员中心
+                        </Button>
+                      ) : null}
+                    </AlertDescription>
                   </Alert>
                 ) : (
                   <div className="space-y-3">
@@ -633,6 +619,7 @@ export function SubscriptionActionsDialog({
                     </Alert>
                   ) : (
                     <PaymentMethodSelector
+                      idPrefix="subscription-payment"
                       methods={payments.data}
                       onChange={setPayment}
                       value={payment}

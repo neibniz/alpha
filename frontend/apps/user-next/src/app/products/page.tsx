@@ -6,6 +6,7 @@ import { ProductStorefront } from "@/components/products/product-storefront";
 import { authCookieName, isServerDemoMode } from "@/lib/runtime";
 import {
   getServerCurrentUser,
+  getServerMembershipCard,
   getServerProducts,
   getServerSiteConfig,
   getServerSubscriptions,
@@ -43,6 +44,11 @@ export default async function ProductsPage() {
       {
         queryFn: getServerSubscriptions,
         queryKey: ["alpha-subscriptions"],
+        staleTime: 30_000,
+      },
+      {
+        queryFn: getServerMembershipCard,
+        queryKey: ["alpha-membership-card"],
         staleTime: 30_000,
       }
     );

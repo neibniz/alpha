@@ -112,6 +112,24 @@ export async function queryMembershipCard(options?: Record<string, unknown>) {
   );
 }
 
+/** Preview membership card purchase POST /v1/public/order/membership/pre */
+export async function preMembership(
+  body: API.PreMembershipOrderRequest,
+  options?: Record<string, unknown>
+) {
+  return request<API.Response & { data?: API.PreOrderResponse }>(
+    "/v1/public/order/membership/pre",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      data: body,
+      ...(options || {}),
+    }
+  );
+}
+
 /** Purchase membership card POST /v1/public/order/membership */
 export async function purchaseMembership(
   body: API.PurchaseMembershipOrderRequest,

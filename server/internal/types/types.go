@@ -1441,6 +1441,11 @@ type MembershipPolicy struct {
 	SubscriptionExpiryGraceDays    int64 `json:"subscription_expiry_grace_days"`
 }
 
+type MembershipUsage struct {
+	MonthlyConsumption int64 `json:"monthly_consumption"`
+	MonthlyOrderCount  int64 `json:"monthly_order_count"`
+}
+
 type UpdateMembershipPlanRequest struct {
 	Id            int64            `json:"id" validate:"required"`
 	Name          string           `json:"name" validate:"required"`
@@ -1453,9 +1458,11 @@ type UpdateMembershipPlanRequest struct {
 }
 
 type MembershipCardResponse struct {
-	IsMember  bool           `json:"is_member"`
-	ExpiredAt int64          `json:"expired_at"`
-	Plan      MembershipPlan `json:"plan"`
+	Enabled   bool            `json:"enabled"`
+	IsMember  bool            `json:"is_member"`
+	ExpiredAt int64           `json:"expired_at"`
+	Plan      MembershipPlan  `json:"plan"`
+	Usage     MembershipUsage `json:"usage"`
 }
 
 type OrdersStatistics struct {
@@ -1674,6 +1681,10 @@ type PurchaseOrderResponse struct {
 type PurchaseMembershipOrderRequest struct {
 	Payment   int64  `json:"payment,omitempty"`
 	RequestId string `json:"request_id,omitempty" validate:"omitempty,min=16,max=64"`
+}
+
+type PreMembershipOrderRequest struct {
+	Payment int64 `json:"payment,omitempty"`
 }
 
 type PurchaseMembershipOrderResponse struct {

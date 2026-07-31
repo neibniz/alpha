@@ -74,6 +74,22 @@ func queryDefaultMembershipPlan(ctx context.Context, svcCtx *svc.ServiceContext)
 	return &plan, nil
 }
 
+func queryConfiguredMembershipPlan(ctx context.Context, svcCtx *svc.ServiceContext) (*membership.Plan, error) {
+	var plan membership.Plan
+	err := svcCtx.DB.WithContext(ctx).
+		Model(&membership.Plan{}).
+		Select(membership.PlanTypeColumns()).
+		Order("enabled DESC, \"sort\" ASC, id ASC").
+		First(&plan).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query membership configuration error: %v", err)
+	}
+	return &plan, nil
+}
+
 func membershipPlanToType(plan *membership.Plan) types.MembershipPlan {
 	return membershipview.PlanFromModel(plan)
 }

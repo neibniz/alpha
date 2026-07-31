@@ -207,6 +207,45 @@ export type PurchaseQuote = {
   price: number;
 };
 
+export type MembershipPolicy = {
+  monthlyConsumptionLimit: number;
+  monthlyConsumptionLimitEnabled: boolean;
+  monthlyOrderLimit: number;
+  monthlyOrderLimitEnabled: boolean;
+  subscriptionExpiryGraceDays: number;
+  subscriptionExpiryLimitEnabled: boolean;
+};
+
+export type MembershipPlan = {
+  description: string;
+  durationUnit: string;
+  durationValue: number;
+  enabled: boolean;
+  id: number;
+  name: string;
+  policy: MembershipPolicy;
+  unitPrice: number;
+};
+
+export type MembershipCard = {
+  enabled: boolean;
+  expiredAt: number;
+  isMember: boolean;
+  plan: MembershipPlan;
+  usage: {
+    monthlyConsumption: number;
+    monthlyOrderCount: number;
+  };
+};
+
+export type MembershipQuote = {
+  amount: number;
+  commissionDeduction: number;
+  feeAmount: number;
+  giftAmount: number;
+  price: number;
+};
+
 export type UserAuthMethod = {
   identifier: string;
   type: string;
@@ -220,6 +259,8 @@ export type CurrentUser = {
   createdAt: number;
   giftAmount: number;
   id: number;
+  isMember: boolean;
+  memberExpiredAt: number;
   referCode: string;
 };
 

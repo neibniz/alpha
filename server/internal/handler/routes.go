@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"github.com/gin-gonic/gin"
 	adminAds "github.com/neibniz/alpha/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/neibniz/alpha/server/internal/handler/admin/announcement"
 	adminApplication "github.com/neibniz/alpha/server/internal/handler/admin/application"
@@ -25,6 +26,7 @@ import (
 	auth "github.com/neibniz/alpha/server/internal/handler/auth"
 	authOauth "github.com/neibniz/alpha/server/internal/handler/auth/oauth"
 	common "github.com/neibniz/alpha/server/internal/handler/common"
+	forwarder "github.com/neibniz/alpha/server/internal/handler/forwarder"
 	publicAnnouncement "github.com/neibniz/alpha/server/internal/handler/public/announcement"
 	publicDocument "github.com/neibniz/alpha/server/internal/handler/public/document"
 	publicOrder "github.com/neibniz/alpha/server/internal/handler/public/order"
@@ -33,11 +35,9 @@ import (
 	publicSubscribe "github.com/neibniz/alpha/server/internal/handler/public/subscribe"
 	publicTicket "github.com/neibniz/alpha/server/internal/handler/public/ticket"
 	publicUser "github.com/neibniz/alpha/server/internal/handler/public/user"
-	forwarder "github.com/neibniz/alpha/server/internal/handler/forwarder"
 	server "github.com/neibniz/alpha/server/internal/handler/server"
 	"github.com/neibniz/alpha/server/internal/middleware"
 	"github.com/neibniz/alpha/server/internal/svc"
-	"github.com/gin-gonic/gin"
 )
 
 func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
@@ -750,6 +750,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get membership card
 		publicOrderGroupRouter.GET("/membership/card", publicOrder.QueryMembershipCardHandler(serverCtx))
+
+		// Preview membership card purchase
+		publicOrderGroupRouter.POST("/membership/pre", publicOrder.PreMembershipHandler(serverCtx))
 
 		// Purchase membership card
 		publicOrderGroupRouter.POST("/membership", publicOrder.PurchaseMembershipHandler(serverCtx))

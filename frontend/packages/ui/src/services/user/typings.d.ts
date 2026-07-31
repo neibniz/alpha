@@ -504,10 +504,17 @@ declare namespace API {
     subscription_expiry_grace_days: number;
   };
 
+  type MembershipUsage = {
+    monthly_consumption: number;
+    monthly_order_count: number;
+  };
+
   type MembershipCardResponse = {
+    enabled: boolean;
     is_member: boolean;
     expired_at: number;
     plan: MembershipPlan;
+    usage: MembershipUsage;
   };
 
   type PaymentConfig = {
@@ -730,6 +737,10 @@ declare namespace API {
   type PurchaseMembershipOrderRequest = {
     payment?: number;
     request_id?: string;
+  };
+
+  type PreMembershipOrderRequest = {
+    payment?: number;
   };
 
   type PurchaseMembershipOrderResponse = {

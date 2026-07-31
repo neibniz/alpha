@@ -29,6 +29,7 @@ import {
   Bell,
   ChevronDown,
   CircleHelp,
+  Crown,
   FileText,
   Layers3,
   LogOut,
@@ -46,7 +47,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
-import { getCurrentUser, getSubscriptions } from "@/lib/client-api";
+import {
+  getCurrentUser,
+  getMembershipCard,
+  getSubscriptions,
+} from "@/lib/client-api";
 import { formatBytes, percentOf } from "@/lib/format";
 import type { Subscription } from "@/lib/models";
 import { AlphaLogo } from "./alpha-logo";
@@ -54,6 +59,7 @@ import { AlphaLogo } from "./alpha-logo";
 const primaryNavigation = [
   { href: "/dashboard", label: "我的订阅", icon: Layers3 },
   { href: "/products", label: "购买套餐", icon: ShoppingBag },
+  { href: "/membership", label: "会员中心", icon: Crown },
 ];
 
 const secondaryNavigation = [
@@ -66,6 +72,7 @@ const secondaryNavigation = [
 
 const routeLabels: Record<string, string> = {
   "/dashboard": "我的订阅",
+  "/membership": "会员中心",
   "/products": "购买套餐",
   "/settings/account": "账户资料",
   "/settings/orders": "订单",
@@ -149,6 +156,7 @@ function SidebarContent({
   identifier,
   initial,
   logout,
+  membershipEnabled,
   onNavigate,
   pathname,
   selectedSubscriptionId,
@@ -159,6 +167,7 @@ function SidebarContent({
   identifier: string;
   initial: string;
   logout: () => void;
+  membershipEnabled: boolean;
   onNavigate?: () => void;
   pathname: string;
   selectedSubscriptionId: number;
@@ -209,7 +218,12 @@ function SidebarContent({
         className={`grid gap-1 px-4 py-3 ${compact ? "px-2" : ""}`}
       >
         {primaryNavigation.map((item) =>
-          navigationLink(item, authenticated || item.href === "/products")
+          navigationLink(
+            item,
+            item.href === "/products" ||
+              (authenticated &&
+                (item.href !== "/membership" || membershipEnabled))
+          )
         )}
       </nav>
 
@@ -332,6 +346,12 @@ export function AppShell({
     queryKey: ["alpha-subscriptions"],
     staleTime: 30_000,
   });
+  const membership = useQuery({
+    enabled: authenticated,
+    queryFn: getMembershipCard,
+    queryKey: ["alpha-membership-card"],
+    staleTime: 30_000,
+  });
   const identifier =
     user.data?.authMethods.find((method) => method.type === "email")
       ?.identifier ||
@@ -356,6 +376,7 @@ export function AppShell({
     identifier,
     initial,
     logout,
+    membershipEnabled: membership.data?.enabled ?? false,
     pathname,
     selectedSubscriptionId,
     subscriptions: subscriptions.data || [],

@@ -36,8 +36,6 @@ import {
   Field,
   FieldDescription,
   FieldLabel,
-  FieldLegend,
-  FieldSet,
 } from "@workspace/ui/components/field";
 import {
   InputGroup,
@@ -46,10 +44,6 @@ import {
   InputGroupInput,
 } from "@workspace/ui/components/input-group";
 import { Input } from "@workspace/ui/components/input";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@workspace/ui/components/radio-group";
 import { Separator } from "@workspace/ui/components/separator";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
@@ -61,7 +55,7 @@ import {
   Check,
   CircleAlert,
   CircleGauge,
-  CreditCard,
+  Crown,
   Gauge,
   Gift,
   HardDrive,
@@ -71,32 +65,29 @@ import {
   ShoppingBag,
   Smartphone,
   Sparkles,
-  WalletCards,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OrderCheckoutStatus } from "@/components/orders/order-checkout-status";
+import { PaymentMethodSelector } from "@/components/orders/payment-method-selector";
 import {
   checkoutOrder,
   createOrderRequestId,
   createPurchaseOrder,
+  getMembershipCard,
   getPaymentMethods,
   getProducts,
   getPurchaseQuote,
   getSiteConfig,
+  isMembershipRequiredError,
 } from "@/lib/client-api";
 import {
   formatBytes,
   formatCurrency,
   formatSpeedLimitMbps,
 } from "@/lib/format";
-import type {
-  CheckoutResult,
-  PaymentMethod,
-  Product,
-  PurchaseQuote,
-} from "@/lib/models";
+import type { CheckoutResult, Product, PurchaseQuote } from "@/lib/models";
 
 const durationOptions = [
   { label: "1 个月", value: 1 },
@@ -231,56 +222,6 @@ function ProductCard({
   );
 }
 
-function PaymentSelector({
-  methods,
-  onChange,
-  value,
-}: Readonly<{
-  methods: PaymentMethod[];
-  onChange: (value: number) => void;
-  value: number;
-}>) {
-  return (
-    <FieldSet>
-      <FieldLegend>支付方式</FieldLegend>
-      <RadioGroup
-        className="grid gap-2 sm:grid-cols-2"
-        onValueChange={(next) => onChange(Number(next))}
-        value={String(value)}
-      >
-        {methods.map((method) => {
-          const Icon =
-            method.platform.toLowerCase() === "balance"
-              ? WalletCards
-              : CreditCard;
-          const id = `purchase-payment-${method.id}`;
-          return (
-            <FieldLabel
-              className="flex cursor-pointer items-center gap-3 rounded-lg border p-3"
-              htmlFor={id}
-              key={method.id}
-            >
-              <RadioGroupItem id={id} value={String(method.id)} />
-              <Icon
-                aria-hidden="true"
-                className="size-4 text-muted-foreground"
-              />
-              <span className="min-w-0">
-                <strong className="block font-medium text-sm">
-                  {method.name}
-                </strong>
-                <small className="block truncate font-normal text-muted-foreground text-xs">
-                  {method.description || method.platform}
-                </small>
-              </span>
-            </FieldLabel>
-          );
-        })}
-      </RadioGroup>
-    </FieldSet>
-  );
-}
-
 function PurchaseSummary({
   product,
   quantity,
@@ -364,6 +305,7 @@ function CheckoutDialog({
   symbol: string;
 }>) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [payment, setPayment] = useState(0);
   const [coupon, setCoupon] = useState("");
@@ -428,8 +370,13 @@ function CheckoutDialog({
     !quote.isFetching &&
     !submitting &&
     (!paymentRequired || payment !== 0);
+  const membershipRequired = isMembershipRequiredError(quote.error);
 
   const close = () => onOpenChange(false);
+  const openMembership = () => {
+    onOpenChange(false);
+    router.push("/membership?next=%2Fproducts");
+  };
   const submit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -445,7 +392,13 @@ function CheckoutDialog({
       setOrderNo(createdOrderNo);
       setCheckout(checkoutResult);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "订单创建失败");
+      if (isMembershipRequiredError(error)) {
+        queryClient.invalidateQueries({ queryKey: ["alpha-membership-card"] });
+        openMembership();
+        toast.info("购买套餐前请先开通会员");
+      } else {
+        toast.error(error instanceof Error ? error.message : "订单创建失败");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -465,6 +418,9 @@ function CheckoutDialog({
                   queryKey: ["alpha-subscriptions"],
                 }),
                 queryClient.invalidateQueries({ queryKey: ["alpha-orders"] }),
+                queryClient.invalidateQueries({
+                  queryKey: ["alpha-membership-card"],
+                }),
                 queryClient.invalidateQueries({
                   queryKey: ["alpha-current-user"],
                 }),
@@ -566,21 +522,31 @@ function CheckoutDialog({
 
                 {quote.isError ? (
                   <Alert variant="destructive">
-                    <CircleAlert />
-                    <AlertTitle>报价暂不可用</AlertTitle>
+                    {membershipRequired ? <Crown /> : <CircleAlert />}
+                    <AlertTitle>
+                      {membershipRequired
+                        ? "购买前需要有效会员"
+                        : "报价暂不可用"}
+                    </AlertTitle>
                     <AlertDescription>
                       <span>
-                        {quote.error instanceof Error
-                          ? quote.error.message
-                          : "请稍后重试"}
+                        {membershipRequired
+                          ? "开通会员后即可继续购买当前套餐。"
+                          : quote.error instanceof Error
+                            ? quote.error.message
+                            : "请稍后重试"}
                       </span>
                       <Button
                         className="h-auto px-0 py-0"
-                        onClick={() => quote.refetch()}
+                        onClick={
+                          membershipRequired
+                            ? openMembership
+                            : () => quote.refetch()
+                        }
                         type="button"
                         variant="link"
                       >
-                        重新计算
+                        {membershipRequired ? "前往会员中心" : "重新计算"}
                       </Button>
                     </AlertDescription>
                   </Alert>
@@ -601,7 +567,8 @@ function CheckoutDialog({
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <PaymentSelector
+                    <PaymentMethodSelector
+                      idPrefix="purchase-payment"
                       methods={payments.data}
                       onChange={setPayment}
                       value={payment}
@@ -656,6 +623,12 @@ export function ProductStorefront({
     queryFn: getSiteConfig,
     queryKey: ["alpha-site-config"],
     staleTime: 300_000,
+  });
+  const membership = useQuery({
+    enabled: authenticated,
+    queryFn: getMembershipCard,
+    queryKey: ["alpha-membership-card"],
+    staleTime: 30_000,
   });
 
   const displayedProducts = useMemo(() => products.data || [], [products.data]);
@@ -735,6 +708,25 @@ export function ProductStorefront({
         </ToggleGroup>
       </section>
 
+      {authenticated &&
+      membership.data?.enabled &&
+      !membership.data.isMember ? (
+        <Alert className="mb-6" data-reveal>
+          <Crown />
+          <AlertTitle>购买套餐前需要有效会员</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>先开通会员，再从下方选择需要的订阅套餐。</span>
+            <Button
+              className="shrink-0"
+              onClick={() => router.push("/membership?next=%2Fproducts")}
+              size="sm"
+            >
+              前往会员中心
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {displayedProducts.length ? (
         <section className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
           {displayedProducts.map((product) => (
@@ -744,6 +736,14 @@ export function ProductStorefront({
               onPurchase={(item) => {
                 if (!authenticated) {
                   router.push("/login?next=%2Fproducts");
+                  return;
+                }
+                if (membership.isPending) {
+                  toast.info("正在确认会员状态，请稍候");
+                  return;
+                }
+                if (membership.data?.enabled && !membership.data.isMember) {
+                  router.push("/membership?next=%2Fproducts");
                   return;
                 }
                 setSelected(item);

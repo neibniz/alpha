@@ -35,9 +35,15 @@ const StripeCheckoutPanel = dynamic(
   }
 );
 
-export type OrderCheckoutKind = "purchase" | "recharge" | "renewal" | "reset";
+export type OrderCheckoutKind =
+  | "membership"
+  | "purchase"
+  | "recharge"
+  | "renewal"
+  | "reset";
 
 const completedTitles: Record<OrderCheckoutKind, string> = {
+  membership: "会员已生效",
   purchase: "订阅已开通",
   recharge: "充值已到账",
   renewal: "续费已完成",

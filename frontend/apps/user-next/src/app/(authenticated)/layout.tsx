@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { authCookieName, isServerDemoMode } from "@/lib/runtime";
 import {
   getServerCurrentUser,
+  getServerMembershipCard,
   getServerSubscriptions,
   isServerAuthError,
 } from "@/lib/server/api";
@@ -34,6 +35,11 @@ export default async function AuthenticatedLayout({
         {
           queryFn: getServerSubscriptions,
           queryKey: ["alpha-subscriptions"],
+          staleTime: 30_000,
+        },
+        {
+          queryFn: getServerMembershipCard,
+          queryKey: ["alpha-membership-card"],
           staleTime: 30_000,
         },
       ]}

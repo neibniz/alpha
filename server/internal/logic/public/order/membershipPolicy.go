@@ -27,6 +27,25 @@ var membershipPolicySelectColumns = []string{
 	"subscription_expiry_grace_days",
 }
 
+type membershipUsageTotals struct {
+	MonthlyConsumption int64
+	MonthlyOrderCount  int64
+}
+
+func queryMembershipUsageTotals(ctx context.Context, svcCtx *svc.ServiceContext, userID int64, now time.Time) (membershipUsageTotals, error) {
+	var usage membershipUsageTotals
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	err := svcCtx.DB.WithContext(ctx).
+		Model(&modelOrder.Order{}).
+		Where("user_id = ?", userID).
+		Where("type IN ?", membershipPolicyOrderTypes).
+		Where("status IN ?", membershipPolicyOrderStatuses).
+		Where("created_at >= ?", monthStart).
+		Select("COALESCE(SUM(amount), 0) AS monthly_consumption, COUNT(*) AS monthly_order_count").
+		Scan(&usage).Error
+	return usage, err
+}
+
 func enforceMembershipOrderPolicies(ctx context.Context, svcCtx *svc.ServiceContext, u *user.User, nextAmount int64) error {
 	if u == nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
@@ -44,37 +63,22 @@ func enforceMembershipOrderPolicies(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 
 	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	var usage membershipUsageTotals
+	if plan.MonthlyConsumptionLimitEnabled || plan.MonthlyOrderLimitEnabled {
+		usage, err = queryMembershipUsageTotals(ctx, svcCtx, u.Id, now)
+		if err != nil {
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query membership monthly usage error: %v", err)
+		}
+	}
 
 	if plan.MonthlyConsumptionLimitEnabled && plan.MonthlyConsumptionLimit > 0 {
-		var monthlyTotal int64
-		if err = svcCtx.DB.WithContext(ctx).
-			Model(&modelOrder.Order{}).
-			Where("user_id = ?", u.Id).
-			Where("type IN ?", membershipPolicyOrderTypes).
-			Where("status IN ?", membershipPolicyOrderStatuses).
-			Where("created_at >= ?", monthStart).
-			Select("COALESCE(SUM(amount), 0)").
-			Scan(&monthlyTotal).Error; err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query membership monthly consumption error: %v", err)
-		}
-		if monthlyTotal+nextAmount > plan.MonthlyConsumptionLimit {
+		if usage.MonthlyConsumption+nextAmount > plan.MonthlyConsumptionLimit {
 			return errors.Wrapf(xerr.NewErrCodeMsg(xerr.MembershipPolicyLimit, "monthly consumption limit exceeded"), "monthly consumption limit exceeded")
 		}
 	}
 
 	if plan.MonthlyOrderLimitEnabled && plan.MonthlyOrderLimit > 0 {
-		var monthlyOrders int64
-		if err = svcCtx.DB.WithContext(ctx).
-			Model(&modelOrder.Order{}).
-			Where("user_id = ?", u.Id).
-			Where("type IN ?", membershipPolicyOrderTypes).
-			Where("status IN ?", membershipPolicyOrderStatuses).
-			Where("created_at >= ?", monthStart).
-			Count(&monthlyOrders).Error; err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query membership monthly order count error: %v", err)
-		}
-		if monthlyOrders+1 > plan.MonthlyOrderLimit {
+		if usage.MonthlyOrderCount+1 > plan.MonthlyOrderLimit {
 			return errors.Wrapf(xerr.NewErrCodeMsg(xerr.MembershipPolicyLimit, "monthly order limit exceeded"), "monthly order limit exceeded")
 		}
 	}

@@ -7,6 +7,7 @@ import {
   getAnnouncementsWith,
   getCurrentUserWith,
   getDocumentsWith,
+  getMembershipCardWith,
   getOAuthMethodsWith,
   getOrders,
   getPaymentMethodsWith,
@@ -134,6 +135,10 @@ export const getServerCurrentUser = cache(() =>
 
 export const getServerSubscriptions = cache(() =>
   getSubscriptionsWith(authenticatedRequest)
+);
+
+export const getServerMembershipCard = cache(() =>
+  getMembershipCardWith(authenticatedRequest)
 );
 
 export const getServerSubscriptionScopes = cache(() =>

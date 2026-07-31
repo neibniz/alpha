@@ -32,6 +32,10 @@ service alpha {
 	@handler QueryMembershipCard
 	get /membership/card returns (MembershipCardResponse)
 
+	@doc "Preview membership card purchase"
+	@handler PreMembership
+	post /membership/pre (PreMembershipOrderRequest) returns (PreOrderResponse)
+
 	@doc "Purchase membership card"
 	@handler PurchaseMembership
 	post /membership (PurchaseMembershipOrderRequest) returns (PurchaseMembershipOrderResponse)

@@ -13,6 +13,7 @@ export function formatDate(timestamp: number) {
   return new Intl.DateTimeFormat("zh-CN", {
     day: "2-digit",
     month: "2-digit",
+    timeZone: "UTC",
     year: "numeric",
   })
     .format(timestamp)

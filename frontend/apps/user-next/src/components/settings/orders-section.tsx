@@ -70,6 +70,7 @@ function checkoutKind(type: number): OrderCheckoutKind {
   if (type === 2) return "renewal";
   if (type === 3) return "reset";
   if (type === 4) return "recharge";
+  if (type === 5) return "membership";
   return "purchase";
 }
 
@@ -300,6 +301,9 @@ export function OrdersSection() {
                   }),
                   queryClient.invalidateQueries({
                     queryKey: ["alpha-current-user"],
+                  }),
+                  queryClient.invalidateQueries({
+                    queryKey: ["alpha-membership-card"],
                   }),
                 ]);
               }}

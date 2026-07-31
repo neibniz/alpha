@@ -540,6 +540,10 @@ type (
 		SubscriptionExpiryLimitEnabled bool  `json:"subscription_expiry_limit_enabled"`
 		SubscriptionExpiryGraceDays    int64 `json:"subscription_expiry_grace_days"`
 	}
+	MembershipUsage {
+		MonthlyConsumption int64 `json:"monthly_consumption"`
+		MonthlyOrderCount  int64 `json:"monthly_order_count"`
+	}
 	UpdateMembershipPlanRequest {
 		Id            int64  `json:"id" validate:"required"`
 		Name          string `json:"name" validate:"required"`
@@ -551,9 +555,11 @@ type (
 		Policy        MembershipPolicy `json:"policy"`
 	}
 	MembershipCardResponse {
-		IsMember  bool           `json:"is_member"`
-		ExpiredAt int64          `json:"expired_at"`
-		Plan      MembershipPlan `json:"plan"`
+		Enabled   bool            `json:"enabled"`
+		IsMember  bool            `json:"is_member"`
+		ExpiredAt int64           `json:"expired_at"`
+		Plan      MembershipPlan  `json:"plan"`
+		Usage     MembershipUsage `json:"usage"`
 	}
 	Document {
 		Id        int64    `json:"id"`
@@ -841,6 +847,9 @@ type (
 	PurchaseMembershipOrderRequest {
 		Payment   int64  `json:"payment,omitempty"`
 		RequestId string `json:"request_id,omitempty" validate:"omitempty,min=16,max=64"`
+	}
+	PreMembershipOrderRequest {
+		Payment int64 `json:"payment,omitempty"`
 	}
 	PurchaseMembershipOrderResponse {
 		OrderNo string `json:"order_no"`

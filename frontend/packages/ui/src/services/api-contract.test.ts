@@ -818,10 +818,14 @@ function isStringLiteralUnion(typeName: string) {
   if (!typeName) {
     return false;
   }
-  return typeName
+  const members = typeName
     .split("|")
     .map((part) => part.trim())
-    .every((part) => /^"[^"]*"$/.test(part) || /^'[^']*'$/.test(part));
+    .filter(Boolean);
+  return (
+    members.length > 0 &&
+    members.every((part) => /^"[^"]*"$/.test(part) || /^'[^']*'$/.test(part))
+  );
 }
 
 function apiFieldNames(

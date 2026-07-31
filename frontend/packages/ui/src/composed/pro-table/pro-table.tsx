@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type CellContext,
   type ColumnDef,
   type ColumnFiltersState,
   flexRender,
@@ -57,7 +58,6 @@ import { useSize } from "ahooks";
 import { GripVertical, ListRestart, RefreshCcw } from "lucide-react";
 import type React from "react";
 import {
-  Fragment,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -111,6 +111,10 @@ export interface ProTableActions {
   updateRow: (row: Record<string, unknown> & { id?: string | number }) => void;
 }
 
+interface ProTableActionMeta<TData> {
+  render?: (row: TData) => React.ReactNode[];
+}
+
 export function ProTable<
   TData extends Record<string, unknown> & { id?: string | number },
   TValue extends Record<string, unknown>,
@@ -160,6 +164,21 @@ export function ProTable<
   );
   const filterValues = filterSnapshot.values;
   const filterSignature = filterSnapshot.signature;
+  const hasBatchActions = Boolean(actions?.batchRender);
+  const hasRowActions = Boolean(actions?.render);
+  const renderActionsCell = useCallback(
+    ({ column, row }: CellContext<TData, TValue>) => {
+      const meta = column.columnDef.meta as
+        | ProTableActionMeta<TData>
+        | undefined;
+      return (
+        <div className="flex items-center justify-end gap-2">
+          {meta?.render?.(row.original)}
+        </div>
+      );
+    },
+    []
+  );
   const tableColumns = useMemo(
     () =>
       [
@@ -176,7 +195,7 @@ export function ProTable<
               },
             ]
           : []),
-        ...(actions?.batchRender
+        ...(hasBatchActions
           ? [
               createSelectColumn<TData, TValue>({
                 selectAll: t("table.selectAll", "Select all"),
@@ -191,26 +210,33 @@ export function ProTable<
               ...column,
             }) as ColumnDef<TData, TValue>
         ),
-        ...(actions?.render
+        ...(hasRowActions
           ? ([
               {
                 id: "actions",
                 header: texts?.actions,
-                cell: ({ row }) => (
-                  <div className="flex items-center justify-end gap-2">
-                    {actions.render?.(row.original).map((item, index) => (
-                      <Fragment key={index}>{item}</Fragment>
-                    ))}
-                  </div>
-                ),
+                cell: renderActionsCell,
                 enableSorting: false,
                 enableHiding: false,
-                size: actions.columnSize,
+                meta: {
+                  render: actions?.render,
+                },
+                size: actions?.columnSize,
               },
             ] as ColumnDef<TData, TValue>[])
           : []),
       ] as ColumnDef<TData, TValue>[],
-    [actions, columns, onSort, t, texts?.actions]
+    [
+      actions?.columnSize,
+      actions?.render,
+      columns,
+      hasBatchActions,
+      hasRowActions,
+      onSort,
+      renderActionsCell,
+      t,
+      texts?.actions,
+    ]
   );
 
   const table = useReactTable({
@@ -236,6 +262,7 @@ export function ProTable<
     manualFiltering: true,
     rowCount,
     manualSorting: true,
+    getRowId: getProTableRowId,
   });
 
   const fetchData = useCallback(async () => {
@@ -473,17 +500,9 @@ export function ProTable<
                   table.getRowModel().rows.map((row) => (
                     <SortableRow
                       data-state={row.getIsSelected() && "selected"}
-                      id={
-                        row.original.id
-                          ? String(row.original.id)
-                          : String(row.index)
-                      }
+                      id={row.id}
                       isSortable
-                      key={
-                        row.original.id
-                          ? String(row.original.id)
-                          : String(row.index)
-                      }
+                      key={row.id}
                     >
                       {row
                         .getVisibleCells()
@@ -545,6 +564,15 @@ export function ProTable<
       {rowCount > 0 && <Pagination table={table} />}
     </div>
   );
+}
+
+function getProTableRowId<TData extends { id?: string | number }>(
+  row: TData,
+  index: number
+) {
+  return row.id === undefined || row.id === null
+    ? String(index)
+    : String(row.id);
 }
 
 function columnsHaveExplicitSizes<TData, TValue>(

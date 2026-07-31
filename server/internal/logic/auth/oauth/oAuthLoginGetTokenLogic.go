@@ -492,6 +492,9 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 		)
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidAccess), "invalid access")
 	}
+	if authType == OAuthGitHub {
+		l.syncGitHubEmail(userInfo.Id, email, requestID)
+	}
 
 	l.Infow("existing user found successfully",
 		logger.Field("request_id", requestID),
@@ -500,6 +503,84 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 	)
 
 	return userInfo, nil
+}
+
+// syncGitHubEmail backfills a verified GitHub email for legacy OAuth users.
+// It never replaces an existing email or links an address owned by another user.
+func (l *OAuthLoginGetTokenLogic) syncGitHubEmail(userID int64, email, requestID string) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if userID <= 0 || email == "" {
+		return
+	}
+
+	current, err := l.svcCtx.UserModel.FindUserAuthMethodByPlatform(l.ctx, userID, authEmail)
+	switch {
+	case err == nil:
+		if strings.EqualFold(current.AuthIdentifier, email) && !current.Verified {
+			if updateErr := l.svcCtx.UserModel.UpdateUserAuthMethods(l.ctx, userID, authEmail, user.UserAuthMethodFieldsUpdate{
+				Verified: user.UpdateValue(true),
+			}); updateErr != nil {
+				l.Errorw("failed to verify existing email from github",
+					logger.Field("request_id", requestID),
+					logger.Field("user_id", userID),
+					logger.Field("email", logIdentifier(email)),
+					logger.Field("error", updateErr.Error()),
+				)
+			}
+		}
+		return
+	case !errors.Is(err, gorm.ErrRecordNotFound):
+		l.Errorw("failed to query existing email before github sync",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userID),
+			logger.Field("email", logIdentifier(email)),
+			logger.Field("error", err.Error()),
+		)
+		return
+	}
+
+	owner, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, authEmail, email)
+	switch {
+	case err == nil:
+		if owner.UserId != userID {
+			l.Infow("github email belongs to another user",
+				logger.Field("request_id", requestID),
+				logger.Field("user_id", userID),
+				logger.Field("email", logIdentifier(email)),
+			)
+		}
+		return
+	case !errors.Is(err, gorm.ErrRecordNotFound):
+		l.Errorw("failed to check github email ownership",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userID),
+			logger.Field("email", logIdentifier(email)),
+			logger.Field("error", err.Error()),
+		)
+		return
+	}
+
+	method := &user.AuthMethods{
+		UserId:         userID,
+		AuthType:       authEmail,
+		AuthIdentifier: email,
+		Verified:       true,
+	}
+	if err := l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, method); err != nil {
+		l.Errorw("failed to backfill github email",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userID),
+			logger.Field("email", logIdentifier(email)),
+			logger.Field("error", err.Error()),
+		)
+		return
+	}
+
+	l.Infow("github email added to existing user",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userID),
+		logger.Field("email", logIdentifier(email)),
+	)
 }
 
 func (l *OAuthLoginGetTokenLogic) activeTrial(uid int64, requestID string, tx ...*gorm.DB) error {

@@ -29,6 +29,28 @@ func (m *defaultUserModel) FindUserAuthMethodSummaries(ctx context.Context, user
 	return data, err
 }
 
+// RevealUserAuthMethods is the explicit, uncached path for authorized PII access.
+// Callers must enforce administrator authorization and write an audit record.
+func (m *defaultUserModel) RevealUserAuthMethods(ctx context.Context, userId int64) ([]*AuthMethods, error) {
+	data := make([]*AuthMethods, 0)
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&AuthMethods{}).
+			Select(userAuthMethodLookupColumns).
+			Where("user_id = ?", userId).
+			Order("id ASC").
+			Find(v).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, method := range data {
+		if err := m.openAuthMethod(method); err != nil {
+			return nil, err
+		}
+	}
+	return data, nil
+}
+
 func (m *defaultUserModel) FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*AuthMethods, error) {
 	var data AuthMethods
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {

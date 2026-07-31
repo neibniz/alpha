@@ -130,6 +130,17 @@ type (
 	GetUserAuthMethodResponse {
 		AuthMethods []UserAuthMethod `json:"auth_methods"`
 	}
+	RevealUserPrivateIdentityRequest {
+		UserId int64  `json:"user_id" validate:"required,gt=0"`
+		Reason string `json:"reason" validate:"required,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+	}
+	RevealUserPrivateIdentityResponse {
+		UserId      int64            `json:"user_id"`
+		Email       string           `json:"email"`
+		AuthMethods []UserAuthMethod `json:"auth_methods"`
+		RevealedAt  int64            `json:"revealed_at"`
+		ExpiresAt   int64            `json:"expires_at"`
+	}
 	GetUserSubscribeListRequest {
 		Page   int   `form:"page"`
 		Size   int   `form:"size"`
@@ -326,6 +337,10 @@ service alpha {
 	@doc "Get user auth method"
 	@handler GetUserAuthMethod
 	get /auth_method (GetUserAuthMethodRequest) returns (GetUserAuthMethodResponse)
+
+	@doc "Reveal complete private user identities with an audit record"
+	@handler RevealUserPrivateIdentity
+	post /private_identity/reveal (RevealUserPrivateIdentityRequest) returns (RevealUserPrivateIdentityResponse)
 
 	@doc "Get user subcribe"
 	@handler GetUserSubscribe

@@ -57,9 +57,7 @@ import {
   BadgeDollarSign,
   Check,
   Circle,
-  Copy,
   Eye,
-  EyeOff,
   Gift,
   LoaderCircle,
   LogIn,
@@ -99,6 +97,7 @@ import { MembershipInfoForm } from "./user-profile/membership-info-form";
 import { NotifySettingsForm } from "./user-profile/notify-settings-form";
 import UserSubscription from "./user-subscription";
 import { TrafficResetDialog } from "./traffic-reset-dialog";
+import { PrivateIdentityDialog } from "./private-identity-dialog";
 
 type UserListRow = API.UserListItem;
 type UserListStatus = NonNullable<API.GetUserListParams["status"]>;
@@ -176,22 +175,12 @@ function UserStatusCell({
   );
 }
 
-function UserIdentityCell({
-  revealed,
-  toggleReveal,
-  user,
-}: {
-  revealed: boolean;
-  toggleReveal: () => void;
-  user: UserListRow;
-}) {
+function UserIdentityCell({ user }: { user: UserListRow }) {
   const { t } = useTranslation("user");
   const method = user.primary_auth_method;
   const identifier = method?.auth_identifier || `#${user.id}`;
   const authType = method?.auth_type || "user";
-  const displayIdentifier = revealed
-    ? identifier
-    : maskUserIdentifier(identifier, authType);
+  const displayIdentifier = maskUserIdentifier(identifier, authType);
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -228,51 +217,19 @@ function UserIdentityCell({
         </div>
       </div>
       <div className="flex shrink-0 items-center">
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <PrivateIdentityDialog
+          trigger={
             <Button
-              aria-label={
-                revealed
-                  ? t("hidePrivateData", "Hide private data")
-                  : t("revealPrivateData", "Reveal private data")
-              }
-              onClick={toggleReveal}
+              aria-label={t("revealPrivateData", "Reveal private data")}
               size="icon-sm"
               type="button"
               variant="ghost"
             >
-              {revealed ? <EyeOff /> : <Eye />}
+              <Eye />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {revealed
-              ? t("hidePrivateData", "Hide private data")
-              : t("revealPrivateData", "Reveal private data")}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label={t("copyIdentity", "Copy full identifier")}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(identifier);
-                  toast.success(t("copySuccess", "Copied successfully"));
-                } catch {
-                  toast.error(t("copyFailed", "Copy failed"));
-                }
-              }}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Copy />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t("copyIdentity", "Copy full identifier")}
-          </TooltipContent>
-        </Tooltip>
+          }
+          userId={user.id}
+        />
       </div>
     </div>
   );
@@ -351,9 +308,6 @@ export default function User() {
   const { t } = useTranslation("user");
   const [createLoading, setCreateLoading] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<number>();
-  const [revealedUserIds, setRevealedUserIds] = useState<Set<number>>(
-    () => new Set()
-  );
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const ref = useRef<ProTableActions>(null);
   const sp = useSearch({ strict: false }) as Record<string, string | undefined>;
@@ -365,15 +319,6 @@ export default function User() {
     status,
     subscribe_id: sp.subscribe_id || undefined,
     user_subscribe_id: sp.user_subscribe_id || undefined,
-  };
-
-  const toggleIdentity = (userId: number) => {
-    setRevealedUserIds((current) => {
-      const next = new Set(current);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
-    });
   };
 
   const updateStatus = async (userId: number, enabled: boolean) => {
@@ -580,13 +525,7 @@ export default function User() {
               accessorKey: "primary_auth_method",
               header: t("identity", "Identity"),
               size: 260,
-              cell: ({ row }) => (
-                <UserIdentityCell
-                  revealed={revealedUserIds.has(row.original.id)}
-                  toggleReveal={() => toggleIdentity(row.original.id)}
-                  user={row.original}
-                />
-              ),
+              cell: ({ row }) => <UserIdentityCell user={row.original} />,
             },
             {
               accessorKey: "is_member",

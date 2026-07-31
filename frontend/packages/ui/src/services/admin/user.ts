@@ -49,6 +49,23 @@ export async function getUserAuthMethod(
   );
 }
 
+/** Reveal complete private user identities with an audit record POST /v1/admin/user/private_identity/reveal */
+export async function revealUserPrivateIdentity(
+  body: API.RevealUserPrivateIdentityRequest,
+  options?: Record<string, unknown>
+) {
+  return request<
+    API.Response & { data?: API.RevealUserPrivateIdentityResponse }
+  >("/v1/admin/user/private_identity/reveal", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** Update user auth method PUT /v1/admin/user/auth_method */
 export async function updateUserAuthMethod(
   body: API.UpdateUserAuthMethodRequest,

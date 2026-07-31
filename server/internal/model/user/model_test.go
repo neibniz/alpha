@@ -559,7 +559,7 @@ func TestUserPrimaryAuthMethodListColumnsStayLightweight(t *testing.T) {
 		"auth_type",
 		"auth_identifier",
 		"verified",
-		"ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id ASC) AS rn",
+		"ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY CASE WHEN auth_type = 'email' THEN 0 ELSE 1 END, id ASC) AS rn",
 	}
 	for _, column := range required {
 		if _, ok := columns[column]; !ok {
@@ -2672,9 +2672,10 @@ func TestQueryPageListSearchDedupesAndPreservesIDOrder(t *testing.T) {
 	}
 	if err := db.Create([]*AuthMethods{
 		{Id: 1, UserId: 1, AuthType: "mobile", AuthIdentifier: "needle-one-mobile", Verified: true},
-		{Id: 2, UserId: 1, AuthType: "email", AuthIdentifier: "needle-one@example.com", Verified: true},
+		{Id: 2, UserId: 1, AuthType: "github", AuthIdentifier: "needle-one-github", Verified: true},
 		{Id: 3, UserId: 2, AuthType: "email", AuthIdentifier: "other@example.com", Verified: true},
 		{Id: 4, UserId: 3, AuthType: "email", AuthIdentifier: "needle-three@example.com", Verified: true},
+		{Id: 5, UserId: 1, AuthType: "email", AuthIdentifier: "needle-one@example.com", Verified: true},
 	}).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -2704,7 +2705,7 @@ func TestQueryPageListSearchDedupesAndPreservesIDOrder(t *testing.T) {
 		t.Fatalf("user 1 auth methods = %d, want primary auth only", len(list[1].AuthMethods))
 	}
 	if list[1].AuthMethods[0].AuthType != "email" || list[1].AuthMethods[0].AuthIdentifier != "needle-one@example.com" {
-		t.Fatalf("user 1 primary auth method = %#v, want first supported auth by id", list[1].AuthMethods[0])
+		t.Fatalf("user 1 primary auth method = %#v, want email before OAuth identity", list[1].AuthMethods[0])
 	}
 }
 

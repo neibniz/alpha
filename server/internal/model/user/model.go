@@ -116,6 +116,7 @@ type customUserLogicModel interface {
 	QueryActiveSubscriptions(ctx context.Context, subscribeId ...int64) (map[int64]int64, error)
 	FindUserAuthMethods(ctx context.Context, userId int64) ([]*AuthMethods, error)
 	FindUserAuthMethodSummaries(ctx context.Context, userId int64) ([]*AuthMethods, error)
+	RevealUserAuthMethods(ctx context.Context, userId int64) ([]*AuthMethods, error)
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	UpdateUserAuthMethods(ctx context.Context, userId int64, authType string, update UserAuthMethodFieldsUpdate, tx ...*gorm.DB) error
 	DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error
@@ -444,7 +445,7 @@ var userPrimaryAuthMethodListColumns = []string{
 	"auth_type",
 	"auth_identifier",
 	"verified",
-	"ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id ASC) AS rn",
+	"ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY CASE WHEN auth_type = 'email' THEN 0 ELSE 1 END, id ASC) AS rn",
 }
 
 var userAuthMethodCacheColumns = []string{

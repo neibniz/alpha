@@ -567,6 +567,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get user auth method
 		adminUserGroupRouter.GET("/auth_method", adminUser.GetUserAuthMethodHandler(serverCtx))
 
+		// Reveal complete private user identities with an audit record
+		adminUserGroupRouter.POST("/private_identity/reveal", adminUser.RevealUserPrivateIdentityHandler(serverCtx))
+
 		// Update user basic info
 		adminUserGroupRouter.PUT("/basic", adminUser.UpdateUserBasicInfoHandler(serverCtx))
 

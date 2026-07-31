@@ -35,6 +35,7 @@ const (
 	TypeCommission        Type = 33 // Commission log
 	TypeGift              Type = 34 // Gift log
 	TypeLogout            Type = 35 // Logout log
+	TypePrivateDataReveal Type = 36 // Administrator private identity reveal
 	TypeUserTrafficRank   Type = 40 // Top 10 User traffic rank log
 	TypeServerTrafficRank Type = 41 // Top 10 Server traffic rank log
 	TypeTrafficStat       Type = 42 // Daily traffic statistics log
@@ -310,6 +311,25 @@ type SubscribeAdjustment struct {
 	Before         SubscribeAdjustmentState `json:"before"`
 	After          SubscribeAdjustmentState `json:"after"`
 	Timestamp      int64                    `json:"timestamp"`
+}
+
+// PrivateDataReveal records access to decrypted identity data without storing the data itself.
+type PrivateDataReveal struct {
+	OperatorUserId int64    `json:"operator_user_id"`
+	TargetUserId   int64    `json:"target_user_id"`
+	Reason         string   `json:"reason"`
+	AuthTypes      []string `json:"auth_types,omitempty"`
+	Timestamp      int64    `json:"timestamp"`
+}
+
+func (r *PrivateDataReveal) Marshal() ([]byte, error) {
+	type Alias PrivateDataReveal
+	return marshalLogJSON((*Alias)(r))
+}
+
+func (r *PrivateDataReveal) Unmarshal(data []byte) error {
+	type Alias PrivateDataReveal
+	return json.Unmarshal(data, (*Alias)(r))
 }
 
 func (a *SubscribeAdjustment) Marshal() ([]byte, error) {

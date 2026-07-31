@@ -1025,6 +1025,19 @@ type GetUserAuthMethodResponse struct {
 	AuthMethods []UserAuthMethod `json:"auth_methods"`
 }
 
+type RevealUserPrivateIdentityRequest struct {
+	UserId int64  `json:"user_id" validate:"required,gt=0"`
+	Reason string `json:"reason" validate:"required,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+}
+
+type RevealUserPrivateIdentityResponse struct {
+	UserId      int64            `json:"user_id"`
+	Email       string           `json:"email"`
+	AuthMethods []UserAuthMethod `json:"auth_methods"`
+	RevealedAt  int64            `json:"revealed_at"`
+	ExpiresAt   int64            `json:"expires_at"`
+}
+
 type GetUserListRequest struct {
 	Page            int    `form:"page"`
 	Size            int    `form:"size"`

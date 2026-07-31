@@ -1220,6 +1220,24 @@ declare namespace API {
     auth_methods: UserAuthMethod[];
   };
 
+  type RevealUserPrivateIdentityRequest = {
+    user_id: number;
+    reason:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
+  };
+
+  type RevealUserPrivateIdentityResponse = {
+    user_id: number;
+    email: string;
+    auth_methods: UserAuthMethod[];
+    revealed_at: number;
+    expires_at: number;
+  };
+
   type GetUserDetailParams = {
     id: number;
   };

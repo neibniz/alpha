@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -147,8 +148,57 @@ func TestGitHubOAuthCallbackAuthenticatesExistingUser(t *testing.T) {
 	if got.Id != account.Id {
 		t.Fatalf("authenticated user id = %d, want %d", got.Id, account.Id)
 	}
+	emailMethod, err := userModel.FindUserAuthMethodByOpenID(context.Background(), "email", "octocat@example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if emailMethod.UserId != account.Id || !emailMethod.Verified {
+		t.Fatalf("github email method = %+v, want verified method for user %d", emailMethod, account.Id)
+	}
 	if rds.Exists(context.Background(), oauthcallback.GitHubLoginStateScope+":"+state).Val() != 0 {
 		t.Fatal("oauth state was not consumed")
+	}
+}
+
+func TestGitHubEmailSyncDoesNotStealAnotherUsersEmail(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "email-conflict.db")), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&modeluser.User{}, &modeluser.AuthMethods{}); err != nil {
+		t.Fatal(err)
+	}
+	mini := miniredis.RunT(t)
+	rds := redis.NewClient(&redis.Options{Addr: mini.Addr()})
+	t.Cleanup(func() { _ = rds.Close() })
+	userModel := modeluser.NewModel(db, rds, privacy.DisabledCodec())
+	enabled := true
+	githubAccount := &modeluser.User{Enable: &enabled}
+	emailOwner := &modeluser.User{Enable: &enabled}
+	if err := userModel.Insert(context.Background(), githubAccount); err != nil {
+		t.Fatal(err)
+	}
+	if err := userModel.Insert(context.Background(), emailOwner); err != nil {
+		t.Fatal(err)
+	}
+	if err := userModel.InsertUserAuthMethods(context.Background(), &modeluser.AuthMethods{
+		UserId: emailOwner.Id, AuthType: "email", AuthIdentifier: "owner@example.test", Verified: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	logic := NewOAuthLoginGetTokenLogic(context.Background(), &svc.ServiceContext{UserModel: userModel})
+	logic.syncGitHubEmail(githubAccount.Id, "OWNER@EXAMPLE.TEST", "request-id")
+
+	if _, err := userModel.FindUserAuthMethodByPlatform(context.Background(), githubAccount.Id, "email"); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("github user email lookup error = %v, want record not found", err)
+	}
+	owner, err := userModel.FindUserAuthMethodByOpenID(context.Background(), "email", "owner@example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner.UserId != emailOwner.Id {
+		t.Fatalf("email owner = %d, want %d", owner.UserId, emailOwner.Id)
 	}
 }
 

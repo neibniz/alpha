@@ -71,6 +71,10 @@ func TestIdentityPrivacyEncryptsStorageAndUsesMaskedProjection(t *testing.T) {
 	if err != nil || len(summaries) != 1 || summaries[0].AuthIdentifier != "u**r@example.com" {
 		t.Fatalf("summaries = %#v, %v", summaries, err)
 	}
+	revealed, err := model.RevealUserAuthMethods(ctx, data.Id)
+	if err != nil || len(revealed) != 1 || revealed[0].AuthIdentifier != "user@example.com" {
+		t.Fatalf("revealed methods = %#v, %v", revealed, err)
+	}
 	if _, err := model.FindOneForLoginByEmail(ctx, "user@example.com"); err != nil {
 		t.Fatal(err)
 	}

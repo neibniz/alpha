@@ -12,7 +12,7 @@
   ],
   "headers": [
     {
-      "source": "/config.js",
+      "source": "/runtime-config.js",
       "headers": [
         {
           "key": "Cache-Control",

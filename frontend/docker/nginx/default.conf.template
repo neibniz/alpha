@@ -31,8 +31,8 @@ server {
         return 200 "ok\n";
     }
 
-    location = /config.js {
-        try_files /config.js =404;
+    location = /runtime-config.js {
+        try_files /runtime-config.js =404;
     }
 
     location = /index.html {

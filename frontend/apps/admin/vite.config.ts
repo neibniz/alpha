@@ -46,7 +46,7 @@ function runtimeConfigPlugin(config: {
       )};\n`;
 
       mkdirSync(distDir, { recursive: true });
-      writeFileSync(`${distDir}/config.js`, runtimeConfig);
+      writeFileSync(`${distDir}/runtime-config.js`, runtimeConfig);
     },
   };
 }

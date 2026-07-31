@@ -365,7 +365,7 @@ frontend_next_upstream_url: http://127.0.0.1:27001
 frontend_next_api_prefix: ""
 ```
 
-The user container is recreated with the new runtime environment. The admin app continues to use its generated `config.js`.
+The user container is recreated with the new runtime environment. The admin app continues to use its generated `runtime-config.js`.
 
 If a frontend and Server are intentionally placed on different hosts, set the frontend upstream
 to the Server's private or HTTPS address. Keep the frontend listener behind its same-host Caddy

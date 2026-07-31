@@ -10,7 +10,7 @@ services:
       ALPHA_ADMIN_PORT: "{{ frontend_port }}"
       ALPHA_ADMIN_UPSTREAM: {{ frontend_container_upstream_url | to_json }}
     volumes:
-      - {{ frontend_runtime_root }}/config.js:/usr/share/nginx/html/config.js:ro
+      - {{ frontend_runtime_root }}/runtime-config.js:/usr/share/nginx/html/runtime-config.js:ro
     tmpfs:
       - /etc/nginx/conf.d:size=1m,mode=0755
       - /var/cache/nginx:size=32m,mode=0755

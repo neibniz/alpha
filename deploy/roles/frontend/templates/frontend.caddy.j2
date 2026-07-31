@@ -15,7 +15,7 @@
 		reverse_proxy 127.0.0.1:{{ frontend_port }}
 {% else %}
 		root * /srv/frontend/{{ frontend_app_name }}/current
-		header /config.js Cache-Control "no-store"
+		header /runtime-config.js Cache-Control "no-store"
 		header @branding Cache-Control "no-cache"
 		header @static Cache-Control "public, max-age=31536000, immutable"
 		try_files {path} /index.html

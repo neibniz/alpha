@@ -158,7 +158,7 @@ services:
     ports:
       - "3001:80"
     volumes:
-      - ./config/frontend/admin-config.js:/usr/share/nginx/html/config.js:ro
+      - ./config/frontend/admin-config.js:/usr/share/nginx/html/runtime-config.js:ro
     tmpfs:
       - /var/cache/nginx:size=32m,mode=0755
       - /var/run:size=1m,mode=0755

@@ -53,7 +53,7 @@ ALPHA_TRUST_PROXY_HEADERS
 Admin defaults to same-origin `/api` calls. Set `ALPHA_ADMIN_UPSTREAM` to the
 server origin reachable from its container. To use a public API origin instead,
 pass `VITE_API_BASE_URL` and `VITE_API_PREFIX` as build arguments, or replace
-`/usr/share/nginx/html/config.js` with a read-only runtime mount.
+`/usr/share/nginx/html/runtime-config.js` with a read-only runtime mount.
 
 GitHub Actions publishes multi-architecture images to:
 
@@ -178,7 +178,7 @@ domain. Do not use a wildcard callback URL.
 
 ## Build-Time and Runtime Values
 
-Admin `VITE_*` values are public and are written to `dist/config.js` at build
+Admin `VITE_*` values are public and are written to `dist/runtime-config.js` at build
 time. Container and Caddy deployments can still replace that file at runtime.
 
 User variables without the `NEXT_PUBLIC_` prefix remain server-side. Never place

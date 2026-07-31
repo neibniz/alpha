@@ -215,8 +215,8 @@
 
 - name: Render runtime frontend config
   ansible.builtin.template:
-    src: config.js.j2
-    dest: "{{ frontend_runtime_root }}/config.js"
+    src: runtime-config.js.j2
+    dest: "{{ frontend_runtime_root }}/runtime-config.js"
     mode: "0644"
   register: frontend_runtime_config
 

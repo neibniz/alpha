@@ -2805,6 +2805,7 @@ type TrafficSeriesPoint struct {
 	Timestamp int64 `json:"timestamp"`
 	Download  int64 `json:"download"`
 	Upload    int64 `json:"upload"`
+	Observed  bool  `json:"observed"`
 }
 
 type TrafficSeriesResponse struct {

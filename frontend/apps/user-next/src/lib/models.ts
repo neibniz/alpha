@@ -45,6 +45,7 @@ export type Subscription = {
 
 export type TrafficPoint = {
   downloadMbps: number;
+  observed: boolean;
   timestamp: number;
   uploadMbps: number;
 };

@@ -1269,6 +1269,7 @@ declare namespace API {
     timestamp: number;
     download: number;
     upload: number;
+    observed: boolean;
   };
 
   type TrafficSeriesResponse = {

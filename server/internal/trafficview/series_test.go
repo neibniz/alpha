@@ -71,6 +71,9 @@ func TestBuildSeriesResponseFillsMissingBuckets(t *testing.T) {
 	if response.List[1].Timestamp != start.Add(time.Minute).UnixMilli() || response.List[1].Download != 0 || response.List[1].Upload != 0 {
 		t.Fatalf("missing bucket was not zero-filled: %#v", response.List[1])
 	}
+	if !response.List[0].Observed || response.List[1].Observed || !response.List[2].Observed {
+		t.Fatalf("observed bucket markers are incorrect: %#v", response.List)
+	}
 	if response.Download != 25 || response.Upload != 7 || response.IntervalSeconds != 60 {
 		t.Fatalf("response summary = %#v", response)
 	}

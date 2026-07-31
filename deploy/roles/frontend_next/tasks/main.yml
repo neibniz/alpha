@@ -14,7 +14,13 @@
         or frontend_next_container_image | length > 0
       - frontend_release_version | default('latest') is match('^[A-Za-z0-9._/-]+$')
       - frontend_next_upstream_url is match('^https?://[^\\s]+$')
-      - frontend_next_subscribe_proxy_path is match('^/[A-Za-z0-9._~%/-]*$')
+      - >-
+        frontend_next_api_prefix | length == 0
+        or frontend_next_api_prefix is match('^/[A-Za-z0-9._~/-]+$')
+      - >-
+        frontend_next_subscribe_proxy_path
+        is match('^/[A-Za-z0-9._~-]+(?:/[A-Za-z0-9._~-]+)*$')
+      - frontend_next_subscribe_proxy_path != '/api/subscription-proxy'
       - frontend_next_subscribe_proxy_upstream is match('^(?:[A-Za-z0-9.-]+|\\[[0-9A-Fa-f:]+\\]):[0-9]{1,5}$')
       - >-
         frontend_next_package_checksum | default('') | length == 0
@@ -38,6 +44,59 @@
         if frontend_next_deployment_mode == 'image'
         else frontend_next_image
       }}
+    frontend_next_effective_api_prefix: >-
+      {{
+        ''
+        if frontend_next_api_prefix | trim | length == 0
+        else '/' ~ (
+          frontend_next_api_prefix
+          | trim
+          | regex_replace('^/+', '')
+          | regex_replace('/+$', '')
+        )
+      }}
+
+- name: Read Server public subscription configuration
+  ansible.builtin.uri:
+    url: >-
+      {{ frontend_next_upstream_url | regex_replace('/+$', '') }}{{
+      frontend_next_effective_api_prefix }}/v1/common/site/config
+    method: GET
+    headers:
+      Accept: application/json
+    status_code: 200
+    return_content: true
+  register: frontend_next_server_config
+  retries: 10
+  delay: 2
+  until: frontend_next_server_config.status | default(0) == 200
+  changed_when: false
+  when:
+    - frontend_next_subscribe_proxy_enabled | bool
+    - frontend_next_verify_subscribe_contract | bool
+
+- name: Resolve Server subscription path
+  ansible.builtin.set_fact:
+    frontend_next_server_subscribe_path: >-
+      {{ (frontend_next_server_config.json | default({})).get('data', {}).get('subscribe', {}).get('subscribe_path', '') }}
+  when:
+    - frontend_next_subscribe_proxy_enabled | bool
+    - frontend_next_verify_subscribe_contract | bool
+
+- name: Verify Server and frontend subscription paths match
+  ansible.builtin.assert:
+    that:
+      - >-
+        (frontend_next_server_config.json | default({})).get('code', 0)
+        | int == 200
+      - frontend_next_server_subscribe_path == frontend_next_subscribe_proxy_path
+    fail_msg: >-
+      Server exposes subscription path {{ frontend_next_server_subscribe_path
+      | default('<missing>') }}, but the user frontend proxy is configured for
+      {{ frontend_next_subscribe_proxy_path }}. Update both values before deploying.
+  when:
+    - frontend_next_subscribe_proxy_enabled | bool
+    - frontend_next_verify_subscribe_contract | bool
 
 - name: Ensure Next frontend directories exist
   ansible.builtin.file:

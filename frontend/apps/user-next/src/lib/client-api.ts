@@ -366,7 +366,12 @@ export async function getSubscriptionScopesWith(
 
 type RawTraffic = {
   interval_seconds: number;
-  list: Array<{ download: number; timestamp: number; upload: number }>;
+  list: Array<{
+    download: number;
+    observed?: boolean;
+    timestamp: number;
+    upload: number;
+  }>;
 };
 
 export async function getTrafficSeries(
@@ -383,6 +388,7 @@ export async function getTrafficSeries(
     intervalSeconds,
     points: (data?.list || []).map((point) => ({
       downloadMbps: (point.download * 8) / intervalSeconds / 1_000_000,
+      observed: point.observed ?? (point.download > 0 || point.upload > 0),
       timestamp: normalizeTimestamp(point.timestamp),
       uploadMbps: (point.upload * 8) / intervalSeconds / 1_000_000,
     })),

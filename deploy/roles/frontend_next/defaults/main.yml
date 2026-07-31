@@ -15,3 +15,4 @@ frontend_next_keep_releases: 3
 frontend_next_subscribe_proxy_enabled: true
 frontend_next_subscribe_proxy_path: /v1/subscribe/config
 frontend_next_subscribe_proxy_upstream: "127.0.0.1:{{ server_container_port }}"
+frontend_next_verify_subscribe_contract: true

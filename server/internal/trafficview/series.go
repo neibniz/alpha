@@ -83,6 +83,7 @@ func BuildSeriesResponse(window SeriesWindow, series analytics.TrafficSeries) *t
 		}
 		points[index].Download = point.Download
 		points[index].Upload = point.Upload
+		points[index].Observed = true
 	}
 	return &types.TrafficSeriesResponse{
 		StartTime:       window.Start.UnixMilli(),

@@ -11,10 +11,17 @@ describe("subscription proxy routing", () => {
     );
   });
 
-  test("builds one exact rewrite without allowing a proxy loop", () => {
-    expect(buildSubscriptionProxyRewrites("/api/subscribe/")).toEqual([
+  test("uses filesystem routes for the standard subscription paths", () => {
+    expect(buildSubscriptionProxyRewrites("/api/subscribe/")).toEqual([]);
+    expect(buildSubscriptionProxyRewrites("/v1/subscribe/config")).toEqual(
+      []
+    );
+  });
+
+  test("builds one exact rewrite for a custom path without allowing a loop", () => {
+    expect(buildSubscriptionProxyRewrites("/s/custom/")).toEqual([
       {
-        source: "/api/subscribe",
+        source: "/s/custom",
         destination: "/api/subscription-proxy",
       },
     ]);

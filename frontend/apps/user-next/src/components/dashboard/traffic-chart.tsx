@@ -29,12 +29,16 @@ function formatTick(timestamp: number, period: TrafficPeriod) {
 
 function TooltipContent({
   active,
+  averagingSeconds,
   label,
   payload,
-}: Readonly<Record<string, unknown>>) {
-  const values = payload as
-    | Array<{ dataKey?: string; value?: number }>
-    | undefined;
+}: Readonly<{
+  active?: boolean;
+  averagingSeconds?: number;
+  label?: number | string;
+  payload?: Array<{ dataKey?: string; value?: number }>;
+}>) {
+  const values = payload;
   if (!(active && values?.length)) return null;
   const upload =
     values.find((item) => item.dataKey === "uploadMbps")?.value || 0;
@@ -42,9 +46,16 @@ function TooltipContent({
     values.find((item) => item.dataKey === "downloadMbps")?.value || 0;
   return (
     <div className="grid min-w-44 gap-2 rounded-lg border bg-background p-3 text-xs shadow-lg">
-      <time className="font-medium">
-        {new Date(Number(label)).toLocaleTimeString("zh-CN")}
-      </time>
+      <span className="flex items-center justify-between gap-4">
+        <time className="font-medium">
+          {new Date(Number(label)).toLocaleTimeString("zh-CN")}
+        </time>
+        {averagingSeconds ? (
+          <span className="text-muted-foreground">
+            {averagingSeconds} 秒均值
+          </span>
+        ) : null}
+      </span>
       <span className="flex items-center gap-2">
         <i className="size-2 rounded-full bg-zinc-500" />
         上传 {upload.toFixed(2)} Mbps
@@ -58,12 +69,28 @@ function TooltipContent({
 }
 
 export default function TrafficChart({
+  averagingSeconds,
   period,
   points,
-}: Readonly<{ period: TrafficPeriod; points: TrafficPoint[] }>) {
+}: Readonly<{
+  averagingSeconds?: number;
+  period: TrafficPeriod;
+  points: TrafficPoint[];
+}>) {
+  if (points.length === 0) {
+    return (
+      <div
+        className="flex h-80 items-center justify-center text-muted-foreground text-sm"
+        role="status"
+      >
+        暂无流量记录
+      </div>
+    );
+  }
+
   return (
     <ChartContainer
-      aria-label="实时流量趋势图"
+      aria-label="流量速率趋势图"
       className="h-80 w-full aspect-auto"
       config={chartConfig}
       role="img"
@@ -91,7 +118,7 @@ export default function TrafficChart({
           width={70}
         />
         <ChartTooltip
-          content={<TooltipContent />}
+          content={<TooltipContent averagingSeconds={averagingSeconds} />}
           cursor={{ stroke: "#cfd8dc", strokeDasharray: "3 3" }}
         />
         <Area
@@ -101,8 +128,10 @@ export default function TrafficChart({
           fillOpacity={0.08}
           isAnimationActive={period !== "5m" && period !== "15m"}
           stroke="var(--color-downloadMbps)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-          type="monotone"
+          type="monotoneX"
         />
         <Area
           dataKey="uploadMbps"
@@ -111,8 +140,10 @@ export default function TrafficChart({
           fillOpacity={0.06}
           isAnimationActive={period !== "5m" && period !== "15m"}
           stroke="var(--color-uploadMbps)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-          type="monotone"
+          type="monotoneX"
         />
       </AreaChart>
     </ChartContainer>

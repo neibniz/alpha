@@ -431,8 +431,8 @@ const periodSettings: Record<
   TrafficPeriod,
   { count: number; intervalSeconds: number }
 > = {
-  "5m": { count: 61, intervalSeconds: 5 },
-  "15m": { count: 91, intervalSeconds: 10 },
+  "5m": { count: 60, intervalSeconds: 5 },
+  "15m": { count: 180, intervalSeconds: 5 },
   "1h": { count: 61, intervalSeconds: 60 },
   "24h": { count: 97, intervalSeconds: 900 },
   "7d": { count: 85, intervalSeconds: 7200 },
@@ -444,16 +444,20 @@ export function makeDemoTraffic(
   period: TrafficPeriod
 ): TrafficSeries {
   const settings = periodSettings[period];
-  const now = Math.floor(Date.now() / 1000) * 1000;
+  const bucketMilliseconds = settings.intervalSeconds * 1000;
+  const currentBucket = Math.floor(Date.now() / bucketMilliseconds);
+  const now = currentBucket * bucketMilliseconds;
   const seed = subscriptionId % 17;
   const points = Array.from({ length: settings.count }, (_, index) => {
-    const phase = index + seed;
+    const phase =
+      (currentBucket % 10_000) - (settings.count - index - 1) + seed;
     const download =
       31 + Math.sin(phase / 5.1) * 7.8 + Math.sin(phase / 2.8) * 3.1;
     const upload =
       7.5 + Math.sin(phase / 4.3) * 2.1 + Math.cos(phase / 2.2) * 1.2;
     return {
       downloadMbps: Math.max(1, Number(download.toFixed(2))),
+      observed: true,
       timestamp:
         now - (settings.count - index - 1) * settings.intervalSeconds * 1000,
       uploadMbps: Math.max(0.2, Number(upload.toFixed(2))),

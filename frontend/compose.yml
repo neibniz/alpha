@@ -14,6 +14,7 @@ services:
       dockerfile: docker/user.Dockerfile
       args:
         NEXT_PUBLIC_ALPHA_DEMO: ${NEXT_PUBLIC_ALPHA_DEMO:-false}
+        ALPHA_SUBSCRIPTION_PROXY_PATH: ${ALPHA_SUBSCRIPTION_PROXY_PATH:-/api/subscribe}
     restart: unless-stopped
     init: true
     user: bun

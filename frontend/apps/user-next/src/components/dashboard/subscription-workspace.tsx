@@ -78,7 +78,7 @@ import {
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   buildSubscriptionUrls,
@@ -96,6 +96,12 @@ import type {
   TrafficPeriod,
 } from "@/lib/models";
 import { findDefaultPreset, presetKeyForSelection } from "@/lib/preset-utils";
+import {
+  getCurrentTrafficRate,
+  latestObservedTimestamp,
+  smoothTrafficPoints,
+  trafficAverageSeconds,
+} from "@/lib/traffic-series";
 import { PresetDialog } from "./preset-dialog";
 import {
   type SubscriptionActionMode,
@@ -283,6 +289,14 @@ function ActiveSubscription({
     refetchIntervalInBackground: false,
     staleTime: live ? 4000 : 30_000,
   });
+  const currentTraffic = useQuery({
+    enabled: !live,
+    queryFn: () => getTrafficSeries(subscription.id, "5m"),
+    queryKey: ["alpha-traffic", subscription.id, "5m"],
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+    staleTime: 4000,
+  });
 
   useGSAP(
     () => {
@@ -309,7 +323,35 @@ function ActiveSubscription({
 
   const used = subscription.uploadBytes + subscription.downloadBytes;
   const usagePercent = percentOf(used, subscription.trafficBytes);
-  const lastPoint = traffic.data?.points.at(-1);
+  const currentSeries = live ? traffic.data : currentTraffic.data;
+  const currentRate = useMemo(
+    () => getCurrentTrafficRate(currentSeries),
+    [currentSeries]
+  );
+  const chartPoints = useMemo(
+    () =>
+      smoothTrafficPoints(
+        traffic.data?.points || [],
+        period,
+        traffic.data?.intervalSeconds || 5
+      ),
+    [period, traffic.data]
+  );
+  const chartObservedAt = useMemo(
+    () => latestObservedTimestamp(traffic.data?.points || []),
+    [traffic.data]
+  );
+  const chartAverageSeconds = live
+    ? trafficAverageSeconds(traffic.data?.intervalSeconds || 5)
+    : undefined;
+  const currentTrafficError = live ? traffic.isError : currentTraffic.isError;
+  const currentRateHint = currentTrafficError
+    ? "实时数据不可用"
+    : currentRate.status === "unavailable"
+      ? "正在获取采样"
+      : currentRate.status === "active"
+        ? `最近 ${currentRate.averagingSeconds} 秒均值`
+        : `近 ${currentRate.averagingSeconds} 秒无流量`;
   const links = buildSubscriptionUrls(
     subscription,
     config,
@@ -419,30 +461,36 @@ function ActiveSubscription({
         </Card>
         <Card className="gap-4 rounded-lg py-5 shadow-none">
           <CardHeader className="grid grid-cols-[1fr_auto] items-center px-4 sm:px-5">
-            <CardDescription>当前下载</CardDescription>
+            <CardDescription>实时下载</CardDescription>
             <ArrowDown aria-hidden="true" className="text-blue-600" />
           </CardHeader>
-          <CardContent className="px-4 sm:px-5">
+          <CardContent className="grid gap-1 px-4 sm:px-5">
             <strong className="font-semibold text-xl tabular-nums sm:text-2xl">
-              {lastPoint?.downloadMbps.toFixed(1) || "0.0"}
+              {currentRate.status === "unavailable"
+                ? "--"
+                : currentRate.downloadMbps.toFixed(1)}
               <small className="ml-1 font-normal text-muted-foreground text-sm">
                 Mbps
               </small>
             </strong>
+            <small className="text-muted-foreground">{currentRateHint}</small>
           </CardContent>
         </Card>
         <Card className="gap-4 rounded-lg py-5 shadow-none">
           <CardHeader className="grid grid-cols-[1fr_auto] items-center px-4 sm:px-5">
-            <CardDescription>当前上传</CardDescription>
+            <CardDescription>实时上传</CardDescription>
             <ArrowUp aria-hidden="true" className="text-zinc-500" />
           </CardHeader>
-          <CardContent className="px-4 sm:px-5">
+          <CardContent className="grid gap-1 px-4 sm:px-5">
             <strong className="font-semibold text-xl tabular-nums sm:text-2xl">
-              {lastPoint?.uploadMbps.toFixed(1) || "0.0"}
+              {currentRate.status === "unavailable"
+                ? "--"
+                : currentRate.uploadMbps.toFixed(1)}
               <small className="ml-1 font-normal text-muted-foreground text-sm">
                 Mbps
               </small>
             </strong>
+            <small className="text-muted-foreground">{currentRateHint}</small>
           </CardContent>
         </Card>
       </section>
@@ -464,6 +512,9 @@ function ActiveSubscription({
             </CardTitle>
             <CardDescription>
               {PERIOD_LABELS[period]}的上下行速率
+              {chartAverageSeconds
+                ? ` · ${chartAverageSeconds} 秒移动平均`
+                : ""}
             </CardDescription>
             <CardAction className="col-span-1 col-start-1 row-span-1 row-start-3 mt-3 justify-self-stretch xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:mt-0 xl:justify-self-end">
               <div className="flex flex-wrap items-center gap-2">
@@ -541,8 +592,9 @@ function ActiveSubscription({
                 </Alert>
               ) : (
                 <TrafficChart
+                  averagingSeconds={chartAverageSeconds}
                   period={period}
-                  points={traffic.data?.points || []}
+                  points={chartPoints}
                 />
               )}
             </div>
@@ -555,10 +607,13 @@ function ActiveSubscription({
                 <i className="size-2 rounded-full bg-zinc-500" />
                 上传
               </span>
+              {chartAverageSeconds ? (
+                <span>{chartAverageSeconds} 秒均值</span>
+              ) : null}
               <time className="ml-auto">
-                数据截至{" "}
-                {lastPoint
-                  ? new Date(lastPoint.timestamp).toLocaleString("zh-CN")
+                {live ? "最后采样" : "数据截至"}{" "}
+                {chartObservedAt
+                  ? new Date(chartObservedAt).toLocaleString("zh-CN")
                   : "--"}
               </time>
             </div>

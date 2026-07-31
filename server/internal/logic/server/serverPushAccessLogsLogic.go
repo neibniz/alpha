@@ -3,9 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/analytics"
 	"github.com/neibniz/alpha/server/internal/model/user"
 	"github.com/neibniz/alpha/server/internal/ordersnapshot"
@@ -14,12 +17,11 @@ import (
 	"github.com/neibniz/alpha/server/internal/types"
 	"github.com/neibniz/alpha/server/pkg/logger"
 	"github.com/neibniz/alpha/server/pkg/xerr"
-	"github.com/google/uuid"
 )
 
 const (
 	maxAccessBatchSize  = 2000
-	maxAccessClockSkew  = 24 * time.Hour
+	maxAccessClockSkew  = 5 * time.Minute
 	maxAccessReasonSize = 512
 )
 
@@ -99,7 +101,7 @@ func normalizeAccessEvents(serverID int64, items []types.XrayAccessEvent, users 
 	rejected := 0
 	for _, item := range items {
 		event, err := normalizeAccessEvent(serverID, item, users, now)
-		if err != nil || (event.Status == "accepted" && event.UserSubscribeID == 0) {
+		if err != nil {
 			rejected++
 			continue
 		}
@@ -226,7 +228,7 @@ func (l *ServerPushAccessLogsLogic) evaluateIPLimits(events []analytics.AccessEv
 
 func normalizeAccessEvent(serverID int64, item types.XrayAccessEvent, users map[int64]int64, now time.Time) (analytics.AccessEvent, error) {
 	eventID, err := uuid.Parse(item.EventId)
-	if err != nil {
+	if err != nil || eventID == uuid.Nil {
 		return analytics.AccessEvent{}, fmt.Errorf("invalid access event id")
 	}
 	eventTime := time.UnixMilli(item.Timestamp)
@@ -241,6 +243,23 @@ func normalizeAccessEvent(serverID int64, item types.XrayAccessEvent, users map[
 	if network != "" && network != "tcp" && network != "udp" {
 		return analytics.AccessEvent{}, fmt.Errorf("invalid access event network")
 	}
+	sourceIP, err := normalizeAccessIP(item.SourceIP)
+	if err != nil || sourceIP == "" {
+		return analytics.AccessEvent{}, fmt.Errorf("invalid access event source IP")
+	}
+	destinationIP, err := normalizeAccessIP(item.DestinationIP)
+	if err != nil {
+		return analytics.AccessEvent{}, fmt.Errorf("invalid access event destination IP")
+	}
+	destinationHost := strings.TrimSpace(item.DestinationHost)
+	if parsed := net.ParseIP(strings.Trim(destinationHost, "[]")); parsed != nil {
+		parsedIP := parsed.String()
+		if destinationIP != "" && destinationIP != parsedIP {
+			return analytics.AccessEvent{}, fmt.Errorf("conflicting access event destination IP")
+		}
+		destinationIP = parsedIP
+		destinationHost = ""
+	}
 	userID := users[item.UserSubscribeId]
 	userSubscribeID := item.UserSubscribeId
 	if userID == 0 {
@@ -252,10 +271,10 @@ func normalizeAccessEvent(serverID int64, item types.XrayAccessEvent, users map[
 		ServerID:        serverID,
 		UserID:          userID,
 		UserSubscribeID: userSubscribeID,
-		SourceIP:        truncateAccessValue(item.SourceIP, 64),
+		SourceIP:        sourceIP,
 		SourcePort:      item.SourcePort,
-		DestinationHost: truncateAccessValue(item.DestinationHost, 512),
-		DestinationIP:   truncateAccessValue(item.DestinationIP, 64),
+		DestinationHost: truncateAccessValue(destinationHost, 512),
+		DestinationIP:   destinationIP,
 		DestinationPort: item.DestinationPort,
 		Network:         network,
 		Status:          status,
@@ -265,10 +284,25 @@ func normalizeAccessEvent(serverID int64, item types.XrayAccessEvent, users map[
 	}, nil
 }
 
-func truncateAccessValue(value string, limit int) string {
+func normalizeAccessIP(value string) (string, error) {
 	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	ip := net.ParseIP(strings.Trim(value, "[]"))
+	if ip == nil {
+		return "", fmt.Errorf("invalid IP address")
+	}
+	return ip.String(), nil
+}
+
+func truncateAccessValue(value string, limit int) string {
+	value = strings.ToValidUTF8(strings.TrimSpace(value), "")
 	if len(value) <= limit {
 		return value
+	}
+	for limit > 0 && !utf8.RuneStart(value[limit]) {
+		limit--
 	}
 	return value[:limit]
 }

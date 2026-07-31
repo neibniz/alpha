@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/analytics"
 	"github.com/neibniz/alpha/server/internal/types"
-	"github.com/google/uuid"
 )
 
 func TestProxyAccessFilterDefaultsAndCursor(t *testing.T) {
@@ -34,6 +34,26 @@ func TestProxyAccessFilterRejectsOversizedRange(t *testing.T) {
 	}, now)
 	if err == nil {
 		t.Fatal("proxyAccessFilter() error = nil")
+	}
+}
+
+func TestProxyAccessFilterNormalizesNetworkIdentifiers(t *testing.T) {
+	now := time.Now()
+	filter, err := proxyAccessFilter(&types.FilterProxyAccessLogRequest{
+		SourceIP:    "[2001:0db8::1]",
+		Destination: "2001:0db8::2",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filter.SourceIP != "2001:db8::1" || filter.Destination != "2001:db8::2" {
+		t.Fatalf("filter = %+v", filter)
+	}
+	if _, err := proxyAccessFilter(&types.FilterProxyAccessLogRequest{SourceIP: "invalid"}, now); err == nil {
+		t.Fatal("invalid source IP should be rejected")
+	}
+	if _, err := proxyAccessFilter(&types.FilterProxyAccessLogRequest{ServerId: -1}, now); err == nil {
+		t.Fatal("negative filter ID should be rejected")
 	}
 }
 

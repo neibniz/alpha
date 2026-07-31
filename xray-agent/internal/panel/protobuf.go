@@ -163,8 +163,8 @@ func (c *Client) postAccessEventsProtobuf(ctx context.Context, events []AccessEv
 			Limit:           decision.GetLimit(),
 		})
 	}
-	if result.Accepted+result.Rejected != len(events) {
-		return AccessPostResult{}, true, fmt.Errorf("panel acknowledged %d of %d access events", result.Accepted+result.Rejected, len(events))
+	if err := validateAccessAcknowledgement(result, len(events)); err != nil {
+		return AccessPostResult{}, true, err
 	}
 	c.accessEventsProtobuf.markSupported()
 	return result, true, nil

@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 	"time"
+	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/analytics"
 	"github.com/neibniz/alpha/server/internal/ordersnapshot"
 	"github.com/neibniz/alpha/server/internal/types"
-	"github.com/google/uuid"
 )
 
 func TestServerPushAccessLogsRejectsNilRequest(t *testing.T) {
@@ -32,7 +33,7 @@ func TestEffectiveDeviceLimitUsesOrderSnapshot(t *testing.T) {
 	}
 }
 
-func TestNormalizeAccessEventsRejectsUnknownAcceptedSubscription(t *testing.T) {
+func TestNormalizeAccessEventsPreservesUnknownAcceptedSubscription(t *testing.T) {
 	now := time.Now()
 	items := []types.XrayAccessEvent{{
 		EventId:         uuid.NewString(),
@@ -42,8 +43,47 @@ func TestNormalizeAccessEventsRejectsUnknownAcceptedSubscription(t *testing.T) {
 		Status:          "accepted",
 	}}
 	events, rejected := normalizeAccessEvents(1, items, map[int64]int64{}, now)
-	if len(events) != 0 || rejected != 1 {
+	if len(events) != 1 || rejected != 0 {
 		t.Fatalf("events = %v, rejected = %d", events, rejected)
+	}
+	if events[0].UserID != 0 || events[0].UserSubscribeID != 0 {
+		t.Fatalf("unknown subscription should be stored without user association: %+v", events[0])
+	}
+}
+
+func TestNormalizeAccessEventRejectsInvalidSourceAndFutureTimestamp(t *testing.T) {
+	now := time.Now()
+	base := types.XrayAccessEvent{
+		EventId: uuid.NewString(), Timestamp: now.UnixMilli(), SourceIP: "not-an-ip", Status: "rejected",
+	}
+	if _, err := normalizeAccessEvent(7, base, nil, now); err == nil {
+		t.Fatal("invalid source IP should be rejected")
+	}
+	base.SourceIP = "203.0.113.9"
+	base.Timestamp = now.Add(maxAccessClockSkew + time.Second).UnixMilli()
+	if _, err := normalizeAccessEvent(7, base, nil, now); err == nil {
+		t.Fatal("future timestamp outside clock skew should be rejected")
+	}
+}
+
+func TestNormalizeAccessEventCanonicalizesIPAndUTF8Truncation(t *testing.T) {
+	now := time.Now()
+	event, err := normalizeAccessEvent(7, types.XrayAccessEvent{
+		EventId:         uuid.NewString(),
+		Timestamp:       now.UnixMilli(),
+		SourceIP:        "[2001:0db8::1]",
+		DestinationHost: "198.51.100.8",
+		Reason:          "原因原因原因",
+		Status:          "rejected",
+	}, nil, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.SourceIP != "2001:db8::1" || event.DestinationHost != "" || event.DestinationIP != "198.51.100.8" {
+		t.Fatalf("normalized event = %+v", event)
+	}
+	if got := truncateAccessValue("原因原因", 5); got != "原" || !utf8.ValidString(got) {
+		t.Fatalf("UTF-8 truncation = %q", got)
 	}
 }
 

@@ -36,7 +36,9 @@ func TestFlushAppliesPolicyAndAcknowledgesIndependently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := collector.spool.appendAndAdvance([]panel.AccessEvent{{EventID: "event", Status: "accepted"}}, 1, 2, 3, 0); err != nil {
+	if _, err := collector.spool.appendRecords([]collectedRecord{{
+		Event: panel.AccessEvent{EventID: "event", Status: "accepted"}, EndOffset: 3,
+	}}, 1, 2, 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := collector.flush(context.Background()); err != nil {
@@ -47,5 +49,26 @@ func TestFlushAppliesPolicyAndAcknowledgesIndependently(t *testing.T) {
 	}
 	if len(sink.decisions) != 1 || sink.decisions[0] != decision {
 		t.Fatalf("decisions = %+v", sink.decisions)
+	}
+}
+
+func TestFlushIncompleteAcknowledgementKeepsEventQueued(t *testing.T) {
+	dir := t.TempDir()
+	collector, err := NewCollector(7, "", testAccessConfig(dir+"/spool", dir+"/state"), testEventPoster{
+		result: panel.AccessPostResult{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := collector.spool.appendRecords([]collectedRecord{{
+		Event: panel.AccessEvent{EventID: "event", Status: "accepted"}, EndOffset: 3,
+	}}, 1, 2, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := collector.flush(context.Background()); err == nil {
+		t.Fatal("incomplete acknowledgement should fail")
+	}
+	if collector.spool.state.Pending != 1 || collector.spool.state.AckOffset != 0 {
+		t.Fatalf("state = %+v", collector.spool.state)
 	}
 }

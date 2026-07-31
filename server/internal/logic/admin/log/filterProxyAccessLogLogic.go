@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/analytics"
 	"github.com/neibniz/alpha/server/internal/privacy"
 	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/neibniz/alpha/server/internal/types"
 	"github.com/neibniz/alpha/server/pkg/logger"
 	"github.com/neibniz/alpha/server/pkg/xerr"
-	"github.com/google/uuid"
 )
 
 const maxProxyAccessRange = 31 * 24 * time.Hour
@@ -78,6 +78,9 @@ func proxyAccessFilter(req *types.FilterProxyAccessLogRequest, now time.Time) (a
 	if end.Sub(start) > maxProxyAccessRange {
 		return analytics.AccessFilter{}, fmt.Errorf("time range cannot exceed 31 days")
 	}
+	if req.ServerId < 0 || req.UserId < 0 || req.UserSubscribeId < 0 {
+		return analytics.AccessFilter{}, fmt.Errorf("filter IDs cannot be negative")
+	}
 	status := strings.ToLower(strings.TrimSpace(req.Status))
 	if status != "" && status != "accepted" && status != "rejected" {
 		return analytics.AccessFilter{}, fmt.Errorf("status must be accepted or rejected")
@@ -89,14 +92,26 @@ func proxyAccessFilter(req *types.FilterProxyAccessLogRequest, now time.Time) (a
 	if limit > 200 {
 		limit = 200
 	}
+	sourceIP := strings.TrimSpace(req.SourceIP)
+	if sourceIP != "" {
+		parsed := net.ParseIP(strings.Trim(sourceIP, "[]"))
+		if parsed == nil {
+			return analytics.AccessFilter{}, fmt.Errorf("source_ip must be a valid IP address")
+		}
+		sourceIP = parsed.String()
+	}
+	destination := strings.TrimSpace(req.Destination)
+	if parsed := net.ParseIP(strings.Trim(destination, "[]")); parsed != nil {
+		destination = parsed.String()
+	}
 	filter := analytics.AccessFilter{
 		Start:           start,
 		End:             end,
 		ServerID:        req.ServerId,
 		UserID:          req.UserId,
 		UserSubscribeID: req.UserSubscribeId,
-		SourceIP:        strings.TrimSpace(req.SourceIP),
-		Destination:     strings.TrimSpace(req.Destination),
+		SourceIP:        sourceIP,
+		Destination:     destination,
 		Status:          status,
 		Limit:           limit,
 	}

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/neibniz/alpha/xray-agent/internal/config"
 	"github.com/gorilla/websocket"
+	"github.com/neibniz/alpha/xray-agent/internal/config"
 )
 
 type Client struct {
@@ -435,16 +435,27 @@ func (c *Client) postAccessEventsJSON(ctx context.Context, events []AccessEvent)
 	if result.Code != 200 {
 		return AccessPostResult{}, fmt.Errorf("panel returned code %d: %s", result.Code, result.Msg)
 	}
+	if len(bytes.TrimSpace(result.Data)) == 0 || bytes.Equal(bytes.TrimSpace(result.Data), []byte("null")) {
+		return AccessPostResult{}, fmt.Errorf("panel returned no access event acknowledgement")
+	}
 	var report AccessPostResult
-	if len(result.Data) > 0 && string(result.Data) != "null" {
-		if err := json.Unmarshal(result.Data, &report); err != nil {
-			return AccessPostResult{}, err
-		}
-		if report.Accepted+report.Rejected != len(events) {
-			return AccessPostResult{}, fmt.Errorf("panel acknowledged %d of %d access events", report.Accepted+report.Rejected, len(events))
-		}
+	if err := json.Unmarshal(result.Data, &report); err != nil {
+		return AccessPostResult{}, err
+	}
+	if err := validateAccessAcknowledgement(report, len(events)); err != nil {
+		return AccessPostResult{}, err
 	}
 	return report, nil
+}
+
+func validateAccessAcknowledgement(result AccessPostResult, expected int) error {
+	if result.Accepted < 0 || result.Rejected < 0 {
+		return fmt.Errorf("panel returned a negative access event acknowledgement")
+	}
+	if result.Accepted+result.Rejected != expected {
+		return fmt.Errorf("panel acknowledged %d of %d access events", result.Accepted+result.Rejected, expected)
+	}
+	return nil
 }
 
 func (c *Client) DialStatusWS(ctx context.Context) (*websocket.Conn, *http.Response, error) {

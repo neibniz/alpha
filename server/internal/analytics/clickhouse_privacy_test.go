@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/neibniz/alpha/server/internal/privacy"
 	"github.com/google/uuid"
+	"github.com/neibniz/alpha/server/internal/privacy"
 )
 
 func TestProtectAccessEventEncryptsPrivateFields(t *testing.T) {
@@ -94,6 +94,18 @@ func TestAccessFiltersUseBlindIndexesWhenPrivacyEnabled(t *testing.T) {
 	}
 	if len(args) != 3 || args[1] != args[2] {
 		t.Fatalf("destination blind index arguments = %#v", args)
+	}
+}
+
+func TestAccessDestinationFilterCoversHostAndIPWithoutPrivacy(t *testing.T) {
+	store := &clickHouseStore{privacy: privacy.DisabledCodec()}
+	where, args := store.appendAccessFilters(nil, nil, AccessFilter{Destination: "198.51.100.8"})
+	condition := strings.Join(where, " AND ")
+	if !strings.Contains(condition, "destination_host") || !strings.Contains(condition, "destination_ip") {
+		t.Fatalf("destination filter condition = %q", condition)
+	}
+	if len(args) != 2 || args[0] != "198.51.100.8" || args[1] != "198.51.100.8" {
+		t.Fatalf("destination filter arguments = %#v", args)
 	}
 }
 

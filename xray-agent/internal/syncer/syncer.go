@@ -86,10 +86,9 @@ func (r *Runner) Run(ctx context.Context) error {
 			accessCollector, err = accesslog.NewCollector(r.cfg.Server.ServerID, r.cfg.Log.XrayAccessPath, r.cfg.Report.Access, r.panel)
 		}
 		if err != nil {
-			log.Printf("initialize xray access collector failed: %v", err)
-		} else {
-			go accessCollector.Run(ctx)
+			return fmt.Errorf("initialize xray access collector: %w", err)
 		}
+		go accessCollector.Run(ctx)
 	}
 
 	ticker := time.NewTicker(r.cfg.Agent.PullInterval)

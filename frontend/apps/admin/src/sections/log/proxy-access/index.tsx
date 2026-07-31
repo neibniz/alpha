@@ -53,7 +53,7 @@ const pageSize = 50;
 
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  return new Date(date.getTime() - offset).toISOString().slice(0, 19);
 }
 
 function initialFilters(): ProxyAccessFilters {
@@ -210,6 +210,7 @@ export default function ProxyAccessLogPage() {
                 }))
               }
               type="datetime-local"
+              step={1}
               value={draft.start}
             />
           </div>
@@ -228,6 +229,7 @@ export default function ProxyAccessLogPage() {
                 setDraft((current) => ({ ...current, end: event.target.value }))
               }
               type="datetime-local"
+              step={1}
               value={draft.end}
             />
           </div>

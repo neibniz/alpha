@@ -201,6 +201,39 @@ func TestAccessAndOnlineUsersFallbackToJSON(t *testing.T) {
 	}
 }
 
+func TestAccessJSONRequiresExplicitCompleteAcknowledgement(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing data", body: `{"code":200,"msg":"ok"}`},
+		{name: "null data", body: `{"code":200,"msg":"ok","data":null}`},
+		{name: "partial count", body: `{"code":200,"msg":"ok","data":{"accepted":0,"rejected":0}}`},
+		{name: "negative count", body: `{"code":200,"msg":"ok","data":{"accepted":-1,"rejected":2}}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				if request.URL.Path == "/v2/server/access-events" {
+					writer.WriteHeader(http.StatusNotFound)
+					return
+				}
+				writer.Header().Set("Content-Type", "application/json")
+				_, _ = writer.Write([]byte(test.body))
+			}))
+			defer server.Close()
+
+			client := NewClient(config.PanelConfig{BaseURL: server.URL, ServerID: 7, Token: "node-token"})
+			_, err := client.PostAccessEvents(context.Background(), []AccessEvent{{
+				EventID: "00000000-0000-5000-8000-000000000001", Timestamp: time.Now().UnixMilli(), Status: "accepted",
+			}})
+			if err == nil {
+				t.Fatal("missing or invalid acknowledgement should keep the event queued")
+			}
+		})
+	}
+}
+
 func TestProtobufServerErrorDoesNotFallback(t *testing.T) {
 	jsonRequests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {

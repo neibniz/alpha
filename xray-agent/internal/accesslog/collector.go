@@ -19,7 +19,11 @@ import (
 	"github.com/neibniz/alpha/xray-agent/internal/panel"
 )
 
-const maxLinesPerPoll = 5000
+const (
+	maxLinesPerPoll       = 5000
+	maxAccessLogLineBytes = 64 << 10
+	minAccessSpoolBytes   = 1 << 20
+)
 
 type EventPoster interface {
 	PostAccessEvents(context.Context, []panel.AccessEvent) (panel.AccessPostResult, error)
@@ -39,6 +43,9 @@ type Collector struct {
 }
 
 func NewCollector(serverID int64, logPath string, cfg config.AccessReportConfig, poster EventPoster, policy ...PolicyDecisionSink) (*Collector, error) {
+	if cfg.MaxSpoolBytes < minAccessSpoolBytes {
+		return nil, fmt.Errorf("access spool size must be at least %d bytes", minAccessSpoolBytes)
+	}
 	queue, err := openSpool(cfg.SpoolPath, cfg.StatePath, cfg.MaxSpoolBytes)
 	if err != nil {
 		return nil, err
@@ -138,47 +145,80 @@ func (c *Collector) collectFile(path string, offset int64, finalizeEOF bool) (bo
 		return false, err
 	}
 	reader := bufio.NewReader(file)
-	events := make([]panel.AccessEvent, 0, 64)
+	records := make([]collectedRecord, 0, 64)
 	nextOffset := offset
-	parseFailures := int64(0)
+	discardingLine := c.spool.state.FileDevice == device &&
+		c.spool.state.FileInode == inode &&
+		c.spool.state.FileOffset == offset &&
+		c.spool.state.DiscardingLine
 	drained := false
 	for lineNumber := 0; lineNumber < maxLinesPerPoll; lineNumber++ {
 		lineOffset := nextOffset
-		line, readErr := reader.ReadBytes('\n')
-		if errors.Is(readErr, io.EOF) {
-			if len(line) == 0 {
-				drained = true
-				break
-			}
-			if !finalizeEOF {
-				break
-			}
+		line, consumed, complete, readErr := readBoundedLine(reader, maxAccessLogLineBytes)
+		if errors.Is(readErr, io.EOF) && consumed == 0 {
 			drained = true
+			break
 		}
-		if readErr != nil && !errors.Is(readErr, io.EOF) {
+		oversized := errors.Is(readErr, errLineTooLong)
+		if readErr != nil && !errors.Is(readErr, io.EOF) && !oversized {
 			return false, readErr
 		}
-		nextOffset += int64(len(line))
-		event, err := Parse(strings.TrimRight(string(line), "\r\n"))
-		if err != nil {
-			parseFailures++
-			if drained {
+		if discardingLine {
+			nextOffset += consumed
+			if complete || (errors.Is(readErr, io.EOF) && finalizeEOF) {
+				discardingLine = false
+			}
+			records = append(records, collectedRecord{
+				EndOffset:      nextOffset,
+				DiscardingLine: discardingLine,
+			})
+			if !complete {
+				drained = errors.Is(readErr, io.EOF) && finalizeEOF
 				break
 			}
 			continue
 		}
-		event.EventID = eventID(c.serverID, device, inode, lineOffset, line)
-		events = append(events, event)
+		if oversized {
+			nextOffset += consumed
+			discardingLine = !complete && !(errors.Is(readErr, io.EOF) && finalizeEOF)
+			records = append(records, collectedRecord{
+				EndOffset:      nextOffset,
+				ParseFailure:   true,
+				DiscardingLine: discardingLine,
+			})
+			if !complete {
+				drained = errors.Is(readErr, io.EOF) && finalizeEOF
+				break
+			}
+			continue
+		}
+		if !complete {
+			if !finalizeEOF {
+				drained = false
+				break
+			}
+			drained = true
+		}
+		nextOffset += consumed
+		record := collectedRecord{EndOffset: nextOffset}
+		event, err := Parse(strings.TrimRight(string(line), "\r\n"))
+		if err != nil {
+			record.ParseFailure = true
+		} else {
+			event.EventID = eventID(c.serverID, device, inode, lineOffset, line)
+			record.Event = event
+		}
+		records = append(records, record)
 		if drained {
 			break
 		}
 	}
-	err = c.spool.appendAndAdvance(events, device, inode, nextOffset, parseFailures)
+	committed, err := c.spool.appendRecords(records, device, inode, offset)
 	if errors.Is(err, errSpoolFull) {
-		log.Printf("xray access spool reached %d bytes; newest events were dropped", c.cfg.MaxSpoolBytes)
-		return drained, nil
+		log.Printf("xray access spool reached %d bytes; source cursor paused for retry", c.cfg.MaxSpoolBytes)
+		return false, nil
 	}
-	return drained, err
+	return drained && committed == len(records), err
 }
 
 func findFileByIdentity(activePath string, device, inode uint64) (string, bool, error) {
@@ -220,6 +260,9 @@ func (c *Collector) flush(ctx context.Context) error {
 	result, err := c.poster.PostAccessEvents(ctx, events)
 	if err != nil {
 		return err
+	}
+	if result.Accepted < 0 || result.Rejected < 0 || result.Accepted+result.Rejected != len(events) {
+		return fmt.Errorf("panel acknowledged %d accepted and %d rejected of %d access events", result.Accepted, result.Rejected, len(events))
 	}
 	if c.policy != nil && len(result.IPLimitDecisions) > 0 {
 		if err := c.policy.ApplyIPLimitDecisions(ctx, result.IPLimitDecisions); err != nil {

@@ -10,9 +10,9 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/config"
 	"github.com/neibniz/alpha/server/internal/privacy"
-	"github.com/google/uuid"
 )
 
 const (
@@ -805,7 +805,7 @@ func (s *clickHouseStore) appendAccessFilters(where []string, args []any, filter
 			index := s.privacy.BlindIndex("xray_destination", strings.ToLower(filter.Destination))
 			where, args = append(where, "(destination_host_bidx = ? OR destination_ip_bidx = ?)"), append(args, index, index)
 		} else {
-			where, args = append(where, "positionCaseInsensitive(destination_host, ?) > 0"), append(args, filter.Destination)
+			where, args = append(where, "(lowerUTF8(destination_host) = lowerUTF8(?) OR destination_ip = ?)"), append(args, filter.Destination, filter.Destination)
 		}
 	}
 	if filter.Status != "" {

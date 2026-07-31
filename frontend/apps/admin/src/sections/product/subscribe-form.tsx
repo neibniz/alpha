@@ -347,30 +347,30 @@ export default function SubscribeForm<T extends object>({
     .object({
       name: z.string(),
       description: z.string().optional(),
-      unit_price: z.number(),
+      unit_price: z.number().int().nonnegative(),
       unit_time: z.string(),
-      replacement: z.number().optional(),
+      replacement: z.number().int().nonnegative().optional(),
       discount: z
         .array(
           z.object({
-            quantity: z.number(),
-            discount: z.number(),
+            quantity: z.number().int().positive(),
+            discount: z.number().min(0).max(100),
           })
         )
         .optional(),
-      inventory: z.number().optional(),
-      speed_limit: z.number().optional(),
-      device_limit: z.number().optional(),
-      traffic: z.number().optional(),
-      quota: z.number().optional(),
+      inventory: z.number().int().min(-1).optional(),
+      speed_limit: z.number().int().nonnegative().optional(),
+      device_limit: z.number().int().nonnegative().optional(),
+      traffic: z.number().int().nonnegative().optional(),
+      quota: z.number().int().nonnegative().optional(),
       language: z.string().optional(),
       node_tags: z.array(z.string()).optional(),
-      nodes: z.array(z.number()).optional(),
-      deduction_ratio: z.number().optional(),
+      nodes: z.array(z.number().int().positive()).optional(),
+      deduction_ratio: z.number().int().min(0).max(100).optional(),
       allow_deduction: z.boolean().optional(),
       allow_renewal: z.boolean().optional(),
       allow_reset_traffic: z.boolean().optional(),
-      reset_cycle: z.number().optional(),
+      reset_cycle: z.number().int().min(0).max(3).optional(),
       renewal_reset: z.boolean().optional(),
       show_original_price: z.boolean().optional(),
       show: z.boolean().optional(),
@@ -382,8 +382,8 @@ export default function SubscribeForm<T extends object>({
       badge: z.string().max(64).optional(),
       min_quantity: z.number().int().min(1).max(1000).optional(),
       max_quantity: z.number().int().min(0).max(1000).optional(),
-      sale_starts_at: z.number().min(0).optional(),
-      sale_ends_at: z.number().min(0).optional(),
+      sale_starts_at: z.number().int().min(0).optional(),
+      sale_ends_at: z.number().int().min(0).optional(),
     })
     .superRefine((values, context) => {
       const minimum = values.min_quantity ?? 1;
@@ -1003,7 +1003,7 @@ export default function SubscribeForm<T extends object>({
                                   type: "number",
                                   min: 1,
                                   max: 100,
-                                  step: 1,
+                                  step: 0.01,
                                   placeholder: t("form.discountPercent"),
                                   suffix: "%",
                                 },
@@ -1091,6 +1091,7 @@ export default function SubscribeForm<T extends object>({
                                 form.setValue(field.name, value);
                               }}
                               placeholder={t("form.auto", "Auto")}
+                              step={1}
                               suffix="%"
                             />
                           </FormControl>

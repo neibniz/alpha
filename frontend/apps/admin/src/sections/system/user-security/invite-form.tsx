@@ -34,7 +34,7 @@ import { z } from "zod";
 
 const inviteSchema = z.object({
   forced_invite: z.boolean().optional(),
-  referral_percentage: z.number().optional(),
+  referral_percentage: z.number().int().min(0).max(100).optional(),
   only_first_purchase: z.boolean().optional(),
 });
 
@@ -169,6 +169,7 @@ export default function InviteConfig() {
                           "invite.inputPlaceholder",
                           "Please enter"
                         )}
+                        step={1}
                         suffix="%"
                         type="number"
                         value={field.value}

@@ -50,7 +50,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const emailSettingsSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   method: z.string(),
   enabled: z.boolean(),
   config: z
@@ -66,7 +66,7 @@ const emailSettingsSchema = z.object({
       platform_config: z
         .object({
           host: z.string().optional(),
-          port: z.number().optional(),
+          port: z.number().int().min(1).max(65_535).optional(),
           ssl: z.boolean(),
           user: z.string().optional(),
           pass: z.string().optional(),
@@ -356,10 +356,13 @@ export default function EmailSettingsForm() {
                         </FormLabel>
                         <FormControl>
                           <EnhancedInput
+                            max={65_535}
+                            min={1}
                             onValueChange={(value) =>
                               field.onChange(Number(value))
                             }
                             placeholder="587"
+                            step={1}
                             type="number"
                             value={field.value?.toString()}
                           />

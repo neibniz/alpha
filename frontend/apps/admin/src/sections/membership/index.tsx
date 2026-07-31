@@ -356,6 +356,7 @@ export default function Membership() {
                         Number(event.target.value) || 1
                       )
                     }
+                    step={1}
                     type="number"
                     value={form.duration_value}
                   />
@@ -497,6 +498,7 @@ export default function Membership() {
                           Number(event.target.value) || 0
                         )
                       }
+                      step={1}
                       type="number"
                       value={form.policy?.monthly_order_limit || 0}
                     />
@@ -559,6 +561,7 @@ export default function Membership() {
                             Number(event.target.value) || 0
                           )
                         }
+                        step={1}
                         type="number"
                         value={form.policy?.subscription_expiry_grace_days || 0}
                       />

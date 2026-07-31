@@ -1760,6 +1760,7 @@ export default function ServerXrayTemplateBindForm({
                       updateBinding(template, { sort: Number(value) || 0 })
                     }
                     placeholder="排序"
+                    step={1}
                     type="number"
                     value={binding?.sort ?? 0}
                   />

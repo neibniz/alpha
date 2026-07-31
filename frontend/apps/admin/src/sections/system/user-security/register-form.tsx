@@ -37,12 +37,12 @@ import { useSubscribe } from "@/stores/subscribe";
 const registerSchema = z.object({
   stop_register: z.boolean().optional(),
   enable_trial: z.boolean().optional(),
-  trial_subscribe: z.number().optional(),
-  trial_time: z.number().optional(),
+  trial_subscribe: z.number().int().positive().optional(),
+  trial_time: z.number().int().nonnegative().optional(),
   trial_time_unit: z.string().optional(),
   enable_ip_register_limit: z.boolean().optional(),
-  ip_register_limit: z.number().optional(),
-  ip_register_limit_duration: z.number().optional(),
+  ip_register_limit: z.number().int().min(1).optional(),
+  ip_register_limit_duration: z.number().int().min(1).optional(),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -217,6 +217,7 @@ export default function RegisterConfig() {
                               "register.inputPlaceholder",
                               "Please enter"
                             )}
+                            step={1}
                             type="number"
                             value={field.value}
                           />
@@ -253,6 +254,7 @@ export default function RegisterConfig() {
                               "register.inputPlaceholder",
                               "Please enter"
                             )}
+                            step={1}
                             suffix={t("register.minute", "Minute(s)")}
                             type="number"
                             value={field.value}
@@ -391,6 +393,7 @@ export default function RegisterConfig() {
                                 )}
                               />
                             }
+                            step={1}
                             type="number"
                             value={field.value}
                           />

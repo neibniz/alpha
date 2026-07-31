@@ -32,9 +32,9 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const verifyCodeSchema = z.object({
-  verify_code_expire_time: z.number().optional(),
-  verify_code_interval: z.number().optional(),
-  verify_code_limit: z.number().optional(),
+  verify_code_expire_time: z.number().int().min(60).optional(),
+  verify_code_interval: z.number().int().min(30).optional(),
+  verify_code_limit: z.number().int().min(1).optional(),
 });
 
 type VerifyCodeFormData = z.infer<typeof verifyCodeSchema>;
@@ -137,6 +137,7 @@ export default function VerifyCodeConfig() {
                           "verifyCode.inputPlaceholder",
                           "Please enter"
                         )}
+                        step={1}
                         suffix={t("verifyCode.seconds", "seconds")}
                         type="number"
                         value={field.value}
@@ -169,6 +170,7 @@ export default function VerifyCodeConfig() {
                           "verifyCode.inputPlaceholder",
                           "Please enter"
                         )}
+                        step={1}
                         suffix={t("verifyCode.seconds", "seconds")}
                         type="number"
                         value={field.value}
@@ -201,6 +203,7 @@ export default function VerifyCodeConfig() {
                           "verifyCode.inputPlaceholder",
                           "Please enter"
                         )}
+                        step={1}
                         suffix={t("verifyCode.times", "time(s)")}
                         type="number"
                         value={field.value}

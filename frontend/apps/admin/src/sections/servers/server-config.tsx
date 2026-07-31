@@ -37,9 +37,9 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const nodeConfigSchema = z.object({
-  node_pull_interval: z.number().optional(),
-  node_push_interval: z.number().optional(),
-  traffic_report_threshold: z.number().optional(),
+  node_pull_interval: z.number().int().nonnegative().optional(),
+  node_push_interval: z.number().int().nonnegative().optional(),
+  traffic_report_threshold: z.number().int().nonnegative().optional(),
 });
 type NodeConfigFormData = z.infer<typeof nodeConfigSchema>;
 
@@ -184,6 +184,7 @@ export default function ServerConfig({
                           "server_config.fields.interval_placeholder",
                           "Please enter"
                         )}
+                        step={1}
                         suffix="S"
                         type="number"
                         value={field.value as number | undefined}
@@ -219,7 +220,7 @@ export default function ServerConfig({
                           "server_config.fields.interval_placeholder",
                           "Please enter"
                         )}
-                        step={0.1}
+                        step={1}
                         suffix="S"
                         type="number"
                         value={field.value as number | undefined}
@@ -254,6 +255,7 @@ export default function ServerConfig({
                           field.onChange(unitConversion("mbToBits", value));
                         }}
                         placeholder="1"
+                        step={0.01}
                         suffix="MB"
                         type="number"
                         value={unitConversion(

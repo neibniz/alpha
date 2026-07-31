@@ -1,7 +1,24 @@
 import { cn } from "@workspace/ui/lib/utils";
+import {
+  isDisallowedIntegerKey,
+  isIntegerNumberInput,
+  normalizeIntegerInputValue,
+} from "@workspace/ui/utils/numeric-input";
 import type * as React from "react";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  inputMode,
+  min,
+  onChange,
+  onKeyDown,
+  step,
+  type,
+  ...props
+}: React.ComponentProps<"input">) {
+  const integerInput = isIntegerNumberInput(type, step);
+  const allowNegative = min === undefined || Number(min) < 0;
+
   return (
     <input
       className={cn(
@@ -11,6 +28,31 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         className
       )}
       data-slot="input"
+      inputMode={integerInput ? "numeric" : inputMode}
+      min={min}
+      onChange={(event) => {
+        if (integerInput) {
+          const normalized = normalizeIntegerInputValue(
+            event.currentTarget.value,
+            allowNegative
+          );
+          if (normalized !== event.currentTarget.value) {
+            event.currentTarget.value = normalized;
+          }
+        }
+        onChange?.(event);
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (
+          integerInput &&
+          !event.defaultPrevented &&
+          isDisallowedIntegerKey(event.key, allowNegative)
+        ) {
+          event.preventDefault();
+        }
+      }}
+      step={step}
       type={type}
       {...props}
     />

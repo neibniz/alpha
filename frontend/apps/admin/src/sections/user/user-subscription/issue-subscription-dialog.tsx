@@ -210,6 +210,7 @@ export function IssueSubscriptionDialog({
                   const next = Number(event.target.value);
                   setQuantity(Number.isFinite(next) ? next : minimum);
                 }}
+                step={1}
                 type="number"
                 value={quantity}
               />

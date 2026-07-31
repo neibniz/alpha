@@ -76,12 +76,12 @@ export default function UserForm<T extends object>({
       ),
     referer_user: z.string().optional(),
     refer_code: z.string().optional(),
-    referral_percentage: z.number().optional(),
+    referral_percentage: z.number().int().min(0).max(100).optional(),
     only_first_purchase: z.boolean().optional(),
     is_admin: z.boolean().optional(),
-    balance: z.number().optional(),
-    gift_amount: z.number().optional(),
-    commission: z.number().optional(),
+    balance: z.number().int().nonnegative().optional(),
+    gift_amount: z.number().int().nonnegative().optional(),
+    commission: z.number().int().nonnegative().optional(),
   });
   const form = useForm<UserFormValues>({
     resolver: zodResolver(formSchema),
@@ -263,6 +263,7 @@ export default function UserForm<T extends object>({
                           "referralPercentagePlaceholder",
                           "Enter percentage"
                         )}
+                        step={1}
                         type="number"
                         {...field}
                         onValueChange={(value) => {

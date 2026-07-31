@@ -28,12 +28,12 @@ import { useGlobalStore } from "@/stores/global";
 
 const basicInfoSchema = z.object({
   avatar: z.string().optional(),
-  balance: z.number().optional(),
-  commission: z.number().optional(),
-  gift_amount: z.number().optional(),
+  balance: z.number().int().nonnegative().optional(),
+  commission: z.number().int().nonnegative().optional(),
+  gift_amount: z.number().int().nonnegative().optional(),
   refer_code: z.string().optional(),
-  referer_id: z.number().optional(),
-  referral_percentage: z.number().optional(),
+  referer_id: z.number().int().nonnegative().optional(),
+  referral_percentage: z.number().int().min(0).max(100).optional(),
   only_first_purchase: z.boolean().optional(),
   is_admin: z.boolean().optional(),
   password: z.string().optional(),
@@ -257,9 +257,11 @@ export function BasicInfoForm({
                     </FormLabel>
                     <FormControl>
                       <EnhancedInput
+                        min={0}
                         onValueChange={(value) => {
                           form.setValue(field.name, value as number);
                         }}
+                        step={1}
                         type="number"
                         value={field.value}
                       />
@@ -285,6 +287,7 @@ export function BasicInfoForm({
                       onValueChange={(value) => {
                         form.setValue(field.name, value as number);
                       }}
+                      step={1}
                       suffix="%"
                       type="number"
                       value={field.value}

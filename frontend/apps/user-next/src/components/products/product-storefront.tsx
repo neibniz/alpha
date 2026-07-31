@@ -480,6 +480,7 @@ function CheckoutDialog({
                           )
                         )
                       }
+                      step={1}
                       type="number"
                       value={quantity}
                     />

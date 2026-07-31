@@ -496,21 +496,21 @@ const VLESS_CLIENT_COLUMNS: JsonArrayColumn[] = [
   { key: "id", label: "UUID", placeholder: "{{ .Vars.uuid }}" },
   { key: "email", label: "Email", placeholder: "{{ .Vars.email }}" },
   { key: "flow", label: "Flow", placeholder: "xtls-rprx-vision" },
-  { key: "level", label: "Level", type: "number" },
+  { key: "level", label: "Level", type: "integer" },
 ];
 
 const VMESS_CLIENT_COLUMNS: JsonArrayColumn[] = [
   { key: "id", label: "UUID", placeholder: "{{ .Vars.uuid }}" },
   { key: "email", label: "Email", placeholder: "{{ .Vars.email }}" },
-  { key: "alterId", label: "Alter ID", type: "number" },
-  { key: "level", label: "Level", type: "number" },
+  { key: "alterId", label: "Alter ID", type: "integer" },
+  { key: "level", label: "Level", type: "integer" },
 ];
 
 const TROJAN_CLIENT_COLUMNS: JsonArrayColumn[] = [
   { key: "password", label: "密码", placeholder: "{{ .Vars.password }}" },
   { key: "email", label: "Email", placeholder: "{{ .Vars.email }}" },
   { key: "flow", label: "Flow" },
-  { key: "level", label: "Level", type: "number" },
+  { key: "level", label: "Level", type: "integer" },
 ];
 
 const FALLBACK_COLUMNS: JsonArrayColumn[] = [
@@ -524,7 +524,7 @@ const SHADOWSOCKS_CLIENT_COLUMNS: JsonArrayColumn[] = [
   { key: "password", label: "密码" },
   { key: "method", label: "Method", placeholder: "aes-256-gcm" },
   { key: "email", label: "Email" },
-  { key: "level", label: "Level", type: "number" },
+  { key: "level", label: "Level", type: "integer" },
 ];
 
 const ACCOUNT_COLUMNS: JsonArrayColumn[] = [
@@ -542,13 +542,13 @@ const WG_PEER_COLUMNS: JsonArrayColumn[] = [
     placeholder: "0.0.0.0/0\n::/0",
     multiline: true,
   },
-  { key: "keepAlive", label: "Keep Alive", type: "number" },
+  { key: "keepAlive", label: "Keep Alive", type: "integer" },
 ];
 
 const HYSTERIA_USER_COLUMNS: JsonArrayColumn[] = [
   { key: "auth", label: "Auth", placeholder: "{{ .Vars.password }}" },
   { key: "email", label: "Email", placeholder: "{{ .Vars.email }}" },
-  { key: "level", label: "Level", type: "number" },
+  { key: "level", label: "Level", type: "integer" },
 ];
 
 const DNS_OUT_RULE_COLUMNS: JsonArrayColumn[] = [
@@ -569,7 +569,7 @@ const DNS_OUT_RULE_COLUMNS: JsonArrayColumn[] = [
     placeholder: "geoip:cn\n1.1.1.1",
     multiline: true,
   },
-  { key: "qtype", label: "QType", type: "number" },
+  { key: "qtype", label: "QType", type: "integer" },
 ];
 
 const FREEDOM_NOISE_COLUMNS: JsonArrayColumn[] = [
@@ -3265,6 +3265,7 @@ export default function XrayTemplateForm({
                                         min={1}
                                         onValueChange={field.onChange}
                                         placeholder="443"
+                                        step={1}
                                         type="number"
                                         value={field.value}
                                       />

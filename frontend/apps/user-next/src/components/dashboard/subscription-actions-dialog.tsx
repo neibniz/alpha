@@ -544,6 +544,7 @@ export function SubscriptionActionsDialog({
                               )
                             )
                           }
+                          step={1}
                           type="number"
                           value={quantity || 1}
                         />

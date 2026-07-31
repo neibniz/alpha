@@ -844,8 +844,11 @@ export default function Forwarders() {
                 <div className="space-y-1.5">
                   <Label>监听端口</Label>
                   <Input
-                    inputMode="numeric"
+                    max={65_535}
+                    min={1}
                     onChange={(event) => setListenPort(event.target.value)}
+                    step={1}
+                    type="number"
                     value={listenPort}
                   />
                 </div>

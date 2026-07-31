@@ -304,7 +304,7 @@ type CreateDocumentRequest struct {
 type CreateNodeRequest struct {
 	Name         string   `json:"name"`
 	Tags         []string `json:"tags,omitempty"`
-	Port         uint16   `json:"port"`
+	Port         uint16   `json:"port" validate:"required"`
 	Address      string   `json:"address"`
 	ServerId     int64    `json:"server_id"`
 	InboundAlias string   `json:"inbound_alias"`
@@ -2956,7 +2956,7 @@ type UpdateNodeRequest struct {
 	Id           int64    `json:"id"`
 	Name         string   `json:"name"`
 	Tags         []string `json:"tags,omitempty"`
-	Port         uint16   `json:"port"`
+	Port         uint16   `json:"port" validate:"required"`
 	Address      string   `json:"address"`
 	ServerId     int64    `json:"server_id"`
 	InboundAlias string   `json:"inbound_alias"`

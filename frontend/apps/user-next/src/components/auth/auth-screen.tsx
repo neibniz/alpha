@@ -283,7 +283,10 @@ export function AuthScreen() {
                           id="auth-code"
                           inputMode="numeric"
                           maxLength={8}
-                          onChange={(event) => setCode(event.target.value)}
+                          onChange={(event) =>
+                            setCode(event.target.value.replace(/\D/g, ""))
+                          }
+                          pattern="[0-9]*"
                           placeholder="邮箱验证码"
                           value={code}
                         />

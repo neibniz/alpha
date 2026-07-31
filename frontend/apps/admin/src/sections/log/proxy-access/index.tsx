@@ -238,7 +238,7 @@ export default function ProxyAccessLogPage() {
             <Input
               aria-invalid={draftError === "invalidServerId"}
               id="proxy-access-server"
-              inputMode="numeric"
+              min={1}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -246,6 +246,8 @@ export default function ProxyAccessLogPage() {
                 }))
               }
               placeholder={t("proxyAccess.optional", "Optional")}
+              step={1}
+              type="number"
               value={draft.serverId}
             />
           </div>
@@ -256,7 +258,7 @@ export default function ProxyAccessLogPage() {
             <Input
               aria-invalid={draftError === "invalidUserId"}
               id="proxy-access-user"
-              inputMode="numeric"
+              min={1}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -264,6 +266,8 @@ export default function ProxyAccessLogPage() {
                 }))
               }
               placeholder={t("proxyAccess.optional", "Optional")}
+              step={1}
+              type="number"
               value={draft.userId}
             />
           </div>
@@ -274,7 +278,7 @@ export default function ProxyAccessLogPage() {
             <Input
               aria-invalid={draftError === "invalidSubscribeId"}
               id="proxy-access-subscribe"
-              inputMode="numeric"
+              min={1}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -282,6 +286,8 @@ export default function ProxyAccessLogPage() {
                 }))
               }
               placeholder={t("proxyAccess.optional", "Optional")}
+              step={1}
+              type="number"
               value={draft.subscribeId}
             />
           </div>

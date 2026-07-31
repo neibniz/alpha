@@ -399,6 +399,7 @@ export default function CouponForm({
                                   max={type === 1 ? 100 : undefined}
                                   min={1}
                                   onValueChange={field.onChange}
+                                  step={type === 1 ? 1 : 0.01}
                                   suffix={type === 1 ? "%" : undefined}
                                   type="number"
                                   value={field.value}

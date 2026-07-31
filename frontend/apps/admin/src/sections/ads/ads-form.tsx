@@ -33,8 +33,8 @@ const formSchema = z.object({
   content: z.string(),
   description: z.string(),
   target_url: z.string().url(),
-  start_time: z.number(),
-  end_time: z.number(),
+  start_time: z.number().int().nonnegative(),
+  end_time: z.number().int().nonnegative(),
 });
 
 type AdsFormValues = z.infer<typeof formSchema>;

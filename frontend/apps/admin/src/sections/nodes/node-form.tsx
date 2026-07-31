@@ -456,6 +456,7 @@ export default function NodeForm(props: {
                               removeAutoFilledField("port");
                             }}
                             placeholder="1-65535"
+                            step={1}
                             type="number"
                           />
                         </FormControl>

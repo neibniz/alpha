@@ -34,7 +34,7 @@ import { z } from "zod";
 
 const logCleanupSchema = z.object({
   auto_clear: z.boolean(),
-  clear_days: z.number().min(1),
+  clear_days: z.number().int().min(1),
 });
 
 type LogCleanupFormData = z.infer<typeof logCleanupSchema>;
@@ -154,11 +154,13 @@ export default function LogCleanupForm() {
                     <FormControl>
                       <EnhancedInput
                         disabled={!form.watch("auto_clear")}
+                        min={1}
                         onValueChange={(value) => field.onChange(Number(value))}
                         placeholder={t(
                           "logCleanup.clearDaysPlaceholder",
                           "Enter retention days"
                         )}
+                        step={1}
                         type="number"
                         value={field.value?.toString()}
                       />

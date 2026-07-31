@@ -24,7 +24,7 @@ type JsonObject = Record<string, unknown>;
 export type JsonArrayColumn = {
   key: string;
   label: string;
-  type?: "text" | "number" | "boolean" | "csv" | "select";
+  type?: "text" | "number" | "integer" | "boolean" | "csv" | "select";
   options?: string[];
   placeholder?: string;
   multiline?: boolean;
@@ -493,8 +493,12 @@ export function JsonArrayObjectEditor({
                       />
                     ) : (
                       <EnhancedInput
+                        min={column.type === "integer" ? 0 : undefined}
                         onValueChange={(text) => {
-                          if (column.type === "number") {
+                          if (
+                            column.type === "number" ||
+                            column.type === "integer"
+                          ) {
                             const numberValue = Number(text);
                             updateItem(
                               index,
@@ -514,7 +518,12 @@ export function JsonArrayObjectEditor({
                           );
                         }}
                         placeholder={column.placeholder}
-                        type={column.type === "number" ? "number" : "text"}
+                        step={column.type === "integer" ? 1 : undefined}
+                        type={
+                          column.type === "number" || column.type === "integer"
+                            ? "number"
+                            : "text"
+                        }
                         value={
                           column.type === "csv"
                             ? arrayToCsv(rawValue)

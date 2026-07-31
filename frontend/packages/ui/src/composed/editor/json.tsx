@@ -26,7 +26,14 @@ export function JSONEditor(props: JSONEditorProps) {
 
   const handleMount: MonacoEditorProps["onMount"] = (editor, monaco) => {
     props.onMount?.(editor, monaco);
-    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+    const jsonDefaults = monaco.languages.json?.jsonDefaults;
+    if (!jsonDefaults) {
+      console.warn(
+        "Monaco JSON diagnostics are unavailable; continuing without schema validation."
+      );
+      return;
+    }
+    jsonDefaults.setDiagnosticsOptions({
       validate: true,
       schemas: [
         {

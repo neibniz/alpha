@@ -9,6 +9,7 @@ const (
 	CtxKeyClientIP         CtxKey = "clientIP"
 	CtxKeyClientIPSource   CtxKey = "clientIPSource"
 	CtxKeyClientIPVerified CtxKey = "clientIPVerified"
+	CtxKeyUserAgent        CtxKey = "userAgent"
 	CtxKeyPlatform         CtxKey = "platform"
 	CtxKeyPayment          CtxKey = "payment"
 	CtxKeyServerID         CtxKey = "serverId"

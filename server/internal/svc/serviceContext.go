@@ -180,6 +180,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AuthLimiter: authLimiter,
 		AdsModel:    ads.NewModel(db, rds),
 		LogModel: log.NewModel(db, log.Hooks{
+			Privacy: privacyCodec,
 			LookupIPLocation: func(_ context.Context, ip string) log.IPLocation {
 				if geoIP == nil {
 					return log.IPLocation{}

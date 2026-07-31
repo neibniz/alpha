@@ -48,6 +48,12 @@ import {
   proxyAccessFilterParams,
   type ProxyAccessFilters,
 } from "./filter-data";
+import {
+  MASKED_LOG_VISIBILITY,
+  SensitiveLogToggle,
+  sensitiveLogQuery,
+  type SensitiveLogVisibility,
+} from "../sensitive-log-toggle";
 
 const pageSize = 50;
 
@@ -82,6 +88,9 @@ export default function ProxyAccessLogPage() {
   const [cursorHistory, setCursorHistory] = useState<string[]>([""]);
   const [pageIndex, setPageIndex] = useState(0);
   const [nextCursor, setNextCursor] = useState("");
+  const [visibility, setVisibility] = useState<SensitiveLogVisibility>(
+    MASKED_LOG_VISIBILITY
+  );
   const requestID = useRef(0);
   const draftError = useMemo(() => proxyAccessFilterError(draft), [draft]);
 
@@ -103,9 +112,10 @@ export default function ProxyAccessLogPage() {
     setLoading(true);
     setLoadFailed(false);
     try {
-      const { data } = await filterProxyAccessLog(
-        proxyAccessFilterParams(filters, pageSize, cursorHistory[pageIndex])
-      );
+      const { data } = await filterProxyAccessLog({
+        ...proxyAccessFilterParams(filters, pageSize, cursorHistory[pageIndex]),
+        ...sensitiveLogQuery(visibility),
+      });
       if (currentRequest !== requestID.current) return;
       setRows(data?.data?.list || []);
       setNextCursor(data?.data?.next_cursor || "");
@@ -117,7 +127,7 @@ export default function ProxyAccessLogPage() {
     } finally {
       if (currentRequest === requestID.current) setLoading(false);
     }
-  }, [cursorHistory, filters, pageIndex]);
+  }, [cursorHistory, filters, pageIndex, visibility]);
 
   useEffect(() => {
     load();
@@ -148,11 +158,24 @@ export default function ProxyAccessLogPage() {
     setPageIndex((current) => current + 1);
   };
 
+  const updateVisibility = (next: SensitiveLogVisibility) => {
+    requestID.current += 1;
+    setRows([]);
+    setNextCursor("");
+    setCursorHistory([""]);
+    setPageIndex(0);
+    setVisibility(next);
+  };
+
   return (
     <AdminPage>
       <AdminPageHeader
         actions={
           <div className="flex items-center gap-2">
+            <SensitiveLogToggle
+              onChange={updateVisibility}
+              value={visibility}
+            />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

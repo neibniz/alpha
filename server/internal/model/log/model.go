@@ -20,14 +20,15 @@ func NewModel(db *gorm.DB, hooks ...Hooks) Model {
 }
 
 type FilterParams struct {
-	Page     int
-	Size     int
-	MaxSize  int
-	Type     uint8
-	Types    []int
-	Data     string
-	Search   string
-	ObjectID int64
+	Page            int
+	Size            int
+	MaxSize         int
+	Type            uint8
+	Types           []int
+	Data            string
+	Search          string
+	ObjectID        int64
+	RevealSensitive bool
 }
 
 type SubscribeAccessFilterParams struct {
@@ -36,6 +37,7 @@ type SubscribeAccessFilterParams struct {
 	Date            string
 	UserId          int64
 	UserSubscribeId int64
+	RevealSensitive bool
 }
 
 type customSystemLogLogicModel interface {
@@ -77,15 +79,39 @@ func (m *customSystemLogModel) FilterBalanceLogs(ctx context.Context, filter *Fi
 }
 
 func (m *customSystemLogModel) FilterLoginLogs(ctx context.Context, filter *FilterParams) ([]LoginLogRow, int64, error) {
-	return filterProjectedSystemLogs[LoginLogRow](m, ctx, filterWithType(filter, TypeLogin), loginLogSelectColumns)
+	filter = filterWithType(filter, TypeLogin)
+	rows, total, err := filterProjectedSystemLogs[LoginLogRow](m, ctx, filter, sensitiveLogColumns(loginLogSelectColumns, filter.RevealSensitive))
+	if err == nil && filter.RevealSensitive {
+		err = m.revealLoginRows(rows)
+	}
+	return rows, total, err
 }
 
 func (m *customSystemLogModel) FilterRegisterLogs(ctx context.Context, filter *FilterParams) ([]RegisterLogRow, int64, error) {
-	return filterProjectedSystemLogs[RegisterLogRow](m, ctx, filterWithType(filter, TypeRegister), registerLogSelectColumns)
+	filter = filterWithType(filter, TypeRegister)
+	rows, total, err := filterProjectedSystemLogs[RegisterLogRow](m, ctx, filter, sensitiveLogColumns(registerLogSelectColumns, filter.RevealSensitive))
+	if err == nil && filter.RevealSensitive {
+		err = m.revealRegisterRows(rows)
+	}
+	return rows, total, err
 }
 
 func (m *customSystemLogModel) FilterMessageLogs(ctx context.Context, filter *FilterParams) ([]MessageLogRow, int64, error) {
-	return filterProjectedSystemLogs[MessageLogRow](m, ctx, filter, messageLogSelectColumns)
+	filter = normalizeSystemLogFilter(filter)
+	rows, total, err := filterProjectedSystemLogs[MessageLogRow](m, ctx, filter, sensitiveLogColumns(messageLogSelectColumns, filter.RevealSensitive))
+	if err == nil && filter.RevealSensitive {
+		err = m.revealMessageRows(rows)
+	}
+	return rows, total, err
+}
+
+func sensitiveLogColumns(columns []string, reveal bool) []string {
+	if !reveal {
+		return columns
+	}
+	selected := make([]string, 0, len(columns)+2)
+	selected = append(selected, columns...)
+	return append(selected, "privacy_ref", "private_data")
 }
 
 func (m *customSystemLogModel) FilterResetSubscribeLogs(ctx context.Context, filter *FilterParams) ([]ResetSubscribeLogRow, int64, error) {
@@ -182,12 +208,16 @@ func (m *customSystemLogModel) FilterSubscribeAccessLog(ctx context.Context, fil
 		return logs, total, nil
 	}
 	listQuery := applySubscribeAccessLogFilter(m.WithContext(ctx).Model(&SubscribeAccessLog{}), queryFilter)
+	columns := sensitiveLogColumns(subscribeAccessLogListColumns, queryFilter.params.RevealSensitive)
 	err = listQuery.
-		Select(subscribeAccessLogListColumns).
+		Select(columns).
 		Order("created_at DESC, id DESC").
 		Limit(queryFilter.params.Size).
 		Offset(offset).
 		Find(&logs).Error
+	if err == nil && queryFilter.params.RevealSensitive {
+		err = m.revealSubscribeAccessLogs(logs)
+	}
 	return logs, total, err
 }
 
@@ -249,14 +279,17 @@ type CommissionLogRow struct {
 }
 
 type MessageLogRow struct {
-	Id        int64
-	Type      uint8
-	Platform  string
-	To        string
-	Subject   string
-	Content   string
-	Status    uint8
-	CreatedAt time.Time
+	Id          int64
+	Type        uint8
+	Platform    string
+	To          string
+	Subject     string
+	Content     string
+	Status      uint8
+	CreatedAt   time.Time
+	PrivacyRef  string
+	PrivateData string
+	Revealed    bool
 }
 
 type ResetSubscribeLogRow struct {
@@ -290,6 +323,9 @@ type LoginLogRow struct {
 	UserAgent    string
 	Success      bool
 	CreatedAt    time.Time
+	PrivacyRef   string
+	PrivateData  string
+	Revealed     bool
 }
 
 type RegisterLogRow struct {
@@ -302,6 +338,9 @@ type RegisterLogRow struct {
 	Location     string
 	UserAgent    string
 	Timestamp    int64
+	PrivacyRef   string
+	PrivateData  string
+	Revealed     bool
 }
 
 var systemLogListColumns = []string{

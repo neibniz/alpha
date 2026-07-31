@@ -595,8 +595,14 @@ type FilterCommissionLogResponse struct {
 }
 
 type FilterEmailLogResponse struct {
-	Total int64        `json:"total"`
-	List  []MessageLog `json:"list"`
+	Total int64             `json:"total"`
+	List  []AdminMessageLog `json:"list"`
+}
+
+type FilterEmailLogRequest struct {
+	FilterLogParams
+	RevealSensitive bool   `form:"reveal_sensitive,optional"`
+	RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 }
 
 type FilterGiftLogRequest struct {
@@ -618,7 +624,9 @@ type FilterLogParams struct {
 
 type FilterLoginLogRequest struct {
 	FilterLogParams
-	UserId int64 `form:"user_id,optional"`
+	UserId          int64  `form:"user_id,optional"`
+	RevealSensitive bool   `form:"reveal_sensitive,optional"`
+	RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 }
 
 type FilterLoginLogResponse struct {
@@ -637,6 +645,8 @@ type FilterProxyAccessLogRequest struct {
 	Status          string `form:"status,optional"`
 	Size            int    `form:"size,optional"`
 	Cursor          string `form:"cursor,optional"`
+	RevealSensitive bool   `form:"reveal_sensitive,optional"`
+	RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 }
 
 type FilterProxyAccessLogResponse struct {
@@ -658,7 +668,9 @@ type FilterNodeListResponse struct {
 
 type FilterRegisterLogRequest struct {
 	FilterLogParams
-	UserId int64 `form:"user_id,optional"`
+	UserId          int64  `form:"user_id,optional"`
+	RevealSensitive bool   `form:"reveal_sensitive,optional"`
+	RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 }
 
 type FilterRegisterLogResponse struct {
@@ -713,8 +725,10 @@ type FilterServerTrafficLogResponse struct {
 
 type FilterSubscribeLogRequest struct {
 	FilterLogParams
-	UserId          int64 `form:"user_id,optional"`
-	UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+	UserId          int64  `form:"user_id,optional"`
+	UserSubscribeId int64  `form:"user_subscribe_id,optional"`
+	RevealSensitive bool   `form:"reveal_sensitive,optional"`
+	RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 }
 
 type FilterSubscribeLogResponse struct {
@@ -886,8 +900,8 @@ type GetMessageLogListRequest struct {
 }
 
 type GetMessageLogListResponse struct {
-	Total int64        `json:"total"`
-	List  []MessageLog `json:"list"`
+	Total int64             `json:"total"`
+	List  []AdminMessageLog `json:"list"`
 }
 
 type GetNodeMultiplierResponse struct {
@@ -1213,6 +1227,7 @@ type LoginLog struct {
 	UserAgent    string `json:"user_agent"`
 	Success      bool   `json:"success"`
 	Timestamp    int64  `json:"timestamp"`
+	Revealed     bool   `json:"revealed"`
 }
 
 type LoginResponse struct {
@@ -1240,6 +1255,18 @@ type MessageLog struct {
 	Content   json.RawMessage `json:"content"`
 	Status    uint8           `json:"status"`
 	CreatedAt int64           `json:"created_at"`
+}
+
+type AdminMessageLog struct {
+	Id        int64           `json:"id"`
+	Type      uint8           `json:"type"`
+	Platform  string          `json:"platform"`
+	To        string          `json:"to"`
+	Subject   string          `json:"subject"`
+	Content   json.RawMessage `json:"content"`
+	Status    uint8           `json:"status"`
+	CreatedAt int64           `json:"created_at"`
+	Revealed  bool            `json:"revealed"`
 }
 
 type MigrateServerNodeResponse struct {
@@ -2156,6 +2183,7 @@ type RegisterLog struct {
 	Location     string `json:"location,omitempty"`
 	UserAgent    string `json:"user_agent"`
 	Timestamp    int64  `json:"timestamp"`
+	Revealed     bool   `json:"revealed"`
 }
 
 type RenewalOrderRequest struct {
@@ -2721,6 +2749,7 @@ type SubscribeLog struct {
 	Location        string `json:"location,omitempty"`
 	UserSubscribeId int64  `json:"user_subscribe_id"`
 	Timestamp       int64  `json:"timestamp"`
+	Revealed        bool   `json:"revealed"`
 }
 
 type SubscribeSortRequest struct {
@@ -2831,6 +2860,7 @@ type ProxyAccessLog struct {
 	Status          string `json:"status"`
 	OutboundTag     string `json:"outbound_tag,omitempty"`
 	Reason          string `json:"reason,omitempty"`
+	Revealed        bool   `json:"revealed"`
 }
 
 type XrayAccessEvent struct {

@@ -38,6 +38,7 @@ type AccessEvent struct {
 	OutboundTag     string
 	Reason          string
 	ParserVersion   uint16
+	Revealed        bool
 }
 
 type AccessFilter struct {
@@ -52,6 +53,7 @@ type AccessFilter struct {
 	Limit           int
 	CursorTime      time.Time
 	CursorID        uuid.UUID
+	RevealSensitive bool
 }
 
 type AccessPage struct {

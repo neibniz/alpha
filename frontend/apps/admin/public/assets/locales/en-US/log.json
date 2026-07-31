@@ -1,5 +1,6 @@
 {
   "workspace": "Analytics",
+  "cancel": "Cancel",
   "column": {
     "amount": "Amount",
     "balance": "Balance",
@@ -58,6 +59,21 @@
     "reset": "Reset"
   },
   "search": "Search",
+  "sensitive": {
+    "description": "Complete fields remain visible for 60 seconds. This access records the administrator, source IP, reason, and result count.",
+    "fullInformation": "Complete information",
+    "reason": "Access reason",
+    "reveal": "Show complete information",
+    "selectReason": "Select an access reason",
+    "title": "View complete log information",
+    "reasons": {
+      "account_verification": "Account verification",
+      "billing_dispute": "Billing dispute",
+      "compliance": "Compliance review",
+      "customer_support": "Customer support",
+      "security_incident": "Security incident"
+    }
+  },
   "sent": "Sent",
   "status": {
     "accepted": "Accepted",

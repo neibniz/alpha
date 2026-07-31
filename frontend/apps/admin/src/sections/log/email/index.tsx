@@ -2,17 +2,29 @@
 
 import { useSearch } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
-import { ProTable } from "@workspace/ui/composed/pro-table/pro-table";
+import {
+  ProTable,
+  type ProTableActions,
+} from "@workspace/ui/composed/pro-table/pro-table";
 import { filterEmailLog } from "@workspace/ui/services/admin/log";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@/utils/common";
+import {
+  SensitiveLogToggle,
+  sensitiveLogQuery,
+  useSensitiveLogVisibility,
+} from "../sensitive-log-toggle";
 
 type EmailLogFilter = Pick<API.FilterEmailLogParams, "date" | "search">;
 
 export default function EmailLogPage() {
   const { t } = useTranslation("log");
   const sp = useSearch({ strict: false }) as Record<string, string | undefined>;
+  const tableAction = useRef<ProTableActions>(null);
+  const { updateVisibility, visibility, visibilityRef } =
+    useSensitiveLogVisibility(tableAction);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -21,7 +33,8 @@ export default function EmailLogPage() {
     date: sp.date || today,
   };
   return (
-    <ProTable<API.MessageLog, EmailLogFilter>
+    <ProTable<API.AdminMessageLog, EmailLogFilter>
+      action={tableAction}
       columns={[
         {
           accessorKey: "platform",
@@ -73,7 +86,12 @@ export default function EmailLogPage() {
           cell: ({ row }) => formatDate(row.original.created_at),
         },
       ]}
-      header={{ title: t("title.email", "Email Log") }}
+      header={{
+        title: t("title.email", "Email Log"),
+        toolbar: (
+          <SensitiveLogToggle onChange={updateVisibility} value={visibility} />
+        ),
+      }}
       initialFilters={initialFilters}
       params={[{ key: "search" }, { key: "date", type: "date" }]}
       request={async (pagination, filter) => {
@@ -82,6 +100,7 @@ export default function EmailLogPage() {
           size: pagination.size,
           search: filter?.search,
           date: filter?.date,
+          ...sensitiveLogQuery(visibilityRef.current),
         });
         return normalizePageResult(data?.data);
       }}

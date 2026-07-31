@@ -651,15 +651,24 @@ func (s *clickHouseStore) QueryAccessEvents(ctx context.Context, filter AccessFi
 	where := []string{"event_time >= fromUnixTimestamp64Milli(?)", "event_time < fromUnixTimestamp64Milli(?)"}
 	args := []any{filter.Start.UnixMilli(), filter.End.UnixMilli()}
 	where, args = s.appendAccessFilters(where, args, filter)
+	sourceIPExpression := "if(privacy_version = 1, source_ip_display, source_ip)"
+	destinationHostExpression := "if(privacy_version = 1, destination_host_display, destination_host)"
+	destinationIPExpression := "if(privacy_version = 1, destination_ip_display, destination_ip)"
+	reasonExpression := "if(privacy_version = 1, reason_display, reason)"
+	if filter.RevealSensitive {
+		sourceIPExpression = "source_ip"
+		destinationHostExpression = "destination_host"
+		destinationIPExpression = "destination_ip"
+		reasonExpression = "reason"
+	}
 	query := fmt.Sprintf(`SELECT event_id, event_time, server_id, user_id, user_subscribe_id,
-		if(privacy_version = 1, source_ip_display, source_ip), source_port,
-		if(privacy_version = 1, destination_host_display, destination_host),
-		if(privacy_version = 1, destination_ip_display, destination_ip), destination_port,
-		network, status, outbound_tag, if(privacy_version = 1, reason_display, reason), parser_version
+		%s, source_port, %s, %s, destination_port,
+		network, status, outbound_tag, %s, parser_version, privacy_version
 		FROM %s.xray_access_events FINAL
 		WHERE %s
 		ORDER BY event_time DESC, event_id DESC
-		LIMIT ?`, s.database, strings.Join(where, " AND "))
+		LIMIT ?`, sourceIPExpression, destinationHostExpression, destinationIPExpression,
+		reasonExpression, s.database, strings.Join(where, " AND "))
 	args = append(args, limit+1)
 	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
@@ -670,16 +679,29 @@ func (s *clickHouseStore) QueryAccessEvents(ctx context.Context, filter AccessFi
 	for rows.Next() {
 		var event AccessEvent
 		var serverID, userID, userSubscribeID uint64
+		var privacyVersion uint8
 		if err := rows.Scan(
 			&event.EventID, &event.EventTime, &serverID, &userID, &userSubscribeID,
 			&event.SourceIP, &event.SourcePort, &event.DestinationHost, &event.DestinationIP,
 			&event.DestinationPort, &event.Network, &event.Status, &event.OutboundTag,
-			&event.Reason, &event.ParserVersion,
+			&event.Reason, &event.ParserVersion, &privacyVersion,
 		); err != nil {
 			return AccessPage{}, err
 		}
 		if err := assignAccessEventIDs(&event, serverID, userID, userSubscribeID); err != nil {
 			return AccessPage{}, err
+		}
+		if filter.RevealSensitive {
+			switch privacyVersion {
+			case 0:
+			case accessPrivacyVersion:
+				if err := s.openAccessEvent(&event); err != nil {
+					return AccessPage{}, err
+				}
+			default:
+				return AccessPage{}, fmt.Errorf("unsupported Xray access privacy version %d", privacyVersion)
+			}
+			event.Revealed = true
 		}
 		list = append(list, event)
 	}
@@ -691,6 +713,29 @@ func (s *clickHouseStore) QueryAccessEvents(ctx context.Context, filter AccessFi
 		list = list[:limit]
 	}
 	return AccessPage{List: list, HasMore: hasMore}, nil
+}
+
+func (s *clickHouseStore) openAccessEvent(event *AccessEvent) error {
+	if event == nil {
+		return nil
+	}
+	fields := []struct {
+		name  string
+		value *string
+	}{
+		{name: "source_ip", value: &event.SourceIP},
+		{name: "destination_host", value: &event.DestinationHost},
+		{name: "destination_ip", value: &event.DestinationIP},
+		{name: "reason", value: &event.Reason},
+	}
+	for _, field := range fields {
+		opened, err := s.privacy.Open(accessPrivacyScope(event.EventID, field.name), *field.value)
+		if err != nil {
+			return fmt.Errorf("decrypt Xray access %s: %w", field.name, err)
+		}
+		*field.value = opened
+	}
+	return nil
 }
 
 func (s *clickHouseStore) protectAccessEvent(event AccessEvent) (protectedAccessEvent, error) {

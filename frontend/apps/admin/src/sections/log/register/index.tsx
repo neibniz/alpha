@@ -8,19 +8,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { ProTable } from "@workspace/ui/composed/pro-table/pro-table";
+import {
+  ProTable,
+  type ProTableActions,
+} from "@workspace/ui/composed/pro-table/pro-table";
 import { filterRegisterLog } from "@workspace/ui/services/admin/log";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { IpLink, IpLocation } from "@/components/ip-link";
 import { UserDetail } from "@/sections/user/user-detail";
 import { formatDate } from "@/utils/common";
+import {
+  SensitiveLogToggle,
+  sensitiveLogQuery,
+  useSensitiveLogVisibility,
+} from "../sensitive-log-toggle";
 
 type RegisterLogFilter = Pick<API.FilterRegisterLogParams, "date" | "user_id">;
 
 export default function RegisterLogPage() {
   const { t } = useTranslation("log");
   const sp = useSearch({ strict: false }) as Record<string, string | undefined>;
+  const tableAction = useRef<ProTableActions>(null);
+  const { updateVisibility, visibility, visibilityRef } =
+    useSensitiveLogVisibility(tableAction);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -30,6 +42,7 @@ export default function RegisterLogPage() {
   };
   return (
     <ProTable<API.RegisterLog, RegisterLogFilter>
+      action={tableAction}
       columns={[
         {
           accessorKey: "user",
@@ -85,7 +98,12 @@ export default function RegisterLogPage() {
           cell: ({ row }) => formatDate(row.original.timestamp),
         },
       ]}
-      header={{ title: t("title.register", "Register Log") }}
+      header={{
+        title: t("title.register", "Register Log"),
+        toolbar: (
+          <SensitiveLogToggle onChange={updateVisibility} value={visibility} />
+        ),
+      }}
       initialFilters={initialFilters}
       params={[
         { key: "date", type: "date" },
@@ -97,6 +115,7 @@ export default function RegisterLogPage() {
           size: pagination.size,
           date: filter?.date,
           user_id: filter?.user_id,
+          ...sensitiveLogQuery(visibilityRef.current),
         });
         return normalizePageResult(data?.data);
       }}

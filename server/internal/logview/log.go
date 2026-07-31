@@ -103,16 +103,23 @@ func LoginRows(rows []modelLog.LoginLogRow, resolve LocationResolver) []types.Lo
 	locations := newLocationResolverCacheWithHint(resolve, len(rows))
 	for _, row := range rows {
 		location := locations.Resolve(row.LoginIP, row.CountryShort, row.Region, row.Location)
+		loginIP := row.LoginIP
+		userAgent := row.UserAgent
+		if !row.Revealed {
+			loginIP = privacy.MaskIP(loginIP)
+			userAgent = privacy.MaskUserAgent(userAgent)
+		}
 		list = append(list, types.LoginLog{
 			UserId:       row.UserId,
 			Method:       row.Method,
-			LoginIP:      privacy.MaskIP(row.LoginIP),
+			LoginIP:      loginIP,
 			CountryShort: location.CountryShort,
 			Region:       location.Region,
 			Location:     location.Location,
-			UserAgent:    privacy.MaskUserAgent(row.UserAgent),
+			UserAgent:    userAgent,
 			Success:      row.Success,
 			Timestamp:    timex.UnixMilliOrZero(row.CreatedAt),
+			Revealed:     row.Revealed,
 		})
 	}
 	return list
@@ -143,16 +150,25 @@ func RegisterRows(rows []modelLog.RegisterLogRow, resolve LocationResolver) []ty
 	locations := newLocationResolverCacheWithHint(resolve, len(rows))
 	for _, row := range rows {
 		location := locations.Resolve(row.RegisterIP, row.CountryShort, row.Region, row.Location)
+		identifier := row.Identifier
+		registerIP := row.RegisterIP
+		userAgent := row.UserAgent
+		if !row.Revealed {
+			identifier = privacy.MaskIdentifier(identifier)
+			registerIP = privacy.MaskIP(registerIP)
+			userAgent = privacy.MaskUserAgent(userAgent)
+		}
 		list = append(list, types.RegisterLog{
 			UserId:       row.UserId,
 			AuthMethod:   row.AuthMethod,
-			Identifier:   privacy.MaskIdentifier(row.Identifier),
-			RegisterIP:   privacy.MaskIP(row.RegisterIP),
+			Identifier:   identifier,
+			RegisterIP:   registerIP,
 			CountryShort: location.CountryShort,
 			Region:       location.Region,
 			Location:     location.Location,
-			UserAgent:    privacy.MaskUserAgent(row.UserAgent),
+			UserAgent:    userAgent,
 			Timestamp:    row.Timestamp,
+			Revealed:     row.Revealed,
 		})
 	}
 	return list
@@ -166,16 +182,23 @@ func SubscribeRows(rows []*modelLog.SubscribeAccessLog, resolve LocationResolver
 			continue
 		}
 		location := locations.Resolve(row.ClientIP, row.CountryShort, row.Region, row.Location)
+		clientIP := row.ClientIP
+		userAgent := row.UserAgent
+		if !row.Revealed {
+			clientIP = privacy.MaskIP(clientIP)
+			userAgent = privacy.MaskUserAgent(userAgent)
+		}
 		list.Add(types.SubscribeLog{
 			UserId:          row.UserId,
 			Token:           privacy.MaskTokenPrefix(row.TokenPrefix),
-			UserAgent:       privacy.MaskUserAgent(row.UserAgent),
-			ClientIP:        privacy.MaskIP(row.ClientIP),
+			UserAgent:       userAgent,
+			ClientIP:        clientIP,
 			CountryShort:    location.CountryShort,
 			Region:          location.Region,
 			Location:        location.Location,
 			UserSubscribeId: row.UserSubscribeId,
 			Timestamp:       timex.UnixMilliOrZero(row.CreatedAt),
+			Revealed:        row.Revealed,
 		})
 	}
 	return list.Rows()
@@ -205,22 +228,42 @@ func UserSubscribeRows(rows []*modelLog.SubscribeAccessLog, resolve LocationReso
 	return list.Rows()
 }
 
-func MessageRows(rows []modelLog.MessageLogRow, logr logger.Logger, scope string) []types.MessageLog {
-	list := make([]types.MessageLog, 0, len(rows))
+func MessageRows(rows []modelLog.MessageLogRow, logr logger.Logger, scope string) []types.AdminMessageLog {
+	list := make([]types.AdminMessageLog, 0, len(rows))
 	contents := newMessageContentCache(len(rows))
 	for _, row := range rows {
-		list = append(list, types.MessageLog{
+		to := row.To
+		content := json.RawMessage(nil)
+		if row.Revealed {
+			content = rawMessageContent(row.Content, logr, scope, row.Id)
+		} else {
+			to = privacy.MaskIdentifier(to)
+			content = contents.Content(row.Content, logr, scope, row.Id)
+		}
+		list = append(list, types.AdminMessageLog{
 			Id:        row.Id,
 			Type:      row.Type,
 			Platform:  row.Platform,
-			To:        privacy.MaskIdentifier(row.To),
+			To:        to,
 			Subject:   row.Subject,
-			Content:   contents.Content(row.Content, logr, scope, row.Id),
+			Content:   content,
 			Status:    row.Status,
 			CreatedAt: timex.UnixMilliOrZero(row.CreatedAt),
+			Revealed:  row.Revealed,
 		})
 	}
 	return list
+}
+
+func rawMessageContent(content string, logr logger.Logger, scope string, id int64) json.RawMessage {
+	raw, ok := jsonview.RawValue(content)
+	if ok {
+		return raw
+	}
+	if logr != nil && strings.TrimSpace(content) != "" {
+		logr.Errorf("%s invalid revealed message content json, id=%d", scope, id)
+	}
+	return jsonview.RawValueOrNull("")
 }
 
 func MessageContent(content string, logr logger.Logger, scope string, id int64) json.RawMessage {

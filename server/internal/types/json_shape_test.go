@@ -59,6 +59,7 @@ func TestDynamicJSONFieldsUseRawMessage(t *testing.T) {
 		{name: "system log content", model: SystemLogEntry{}, field: "Content", fieldType: rawMessageType},
 		{name: "system log fields", model: SystemLogEntry{}, field: "Fields", fieldType: rawMessageType},
 		{name: "message log content", model: MessageLog{}, field: "Content", fieldType: rawMessageType},
+		{name: "admin message log content", model: AdminMessageLog{}, field: "Content", fieldType: rawMessageType},
 	}
 
 	for _, tt := range tests {

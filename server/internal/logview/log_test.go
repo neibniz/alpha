@@ -48,6 +48,45 @@ func TestMessageRowsMasksSensitiveContent(t *testing.T) {
 	}
 }
 
+func TestAdminRowsReturnCompleteFieldsOnlyWhenRevealed(t *testing.T) {
+	login := LoginRows([]modelLog.LoginLogRow{{
+		LoginIP:   "203.0.113.42",
+		UserAgent: "AlphaClient/1.0 private-details",
+		Revealed:  true,
+	}}, nil)
+	if login[0].LoginIP != "203.0.113.42" || login[0].UserAgent != "AlphaClient/1.0 private-details" || !login[0].Revealed {
+		t.Fatalf("revealed login row was masked: %#v", login[0])
+	}
+
+	register := RegisterRows([]modelLog.RegisterLogRow{{
+		Identifier: "user@example.com",
+		RegisterIP: "198.51.100.8",
+		UserAgent:  "AlphaRegister/1.0 private-details",
+		Revealed:   true,
+	}}, nil)
+	if register[0].Identifier != "user@example.com" || register[0].RegisterIP != "198.51.100.8" || !register[0].Revealed {
+		t.Fatalf("revealed register row was masked: %#v", register[0])
+	}
+
+	message := MessageRows([]modelLog.MessageLogRow{{
+		To:       "user@example.com",
+		Content:  `{"code":123456}`,
+		Revealed: true,
+	}}, nil, "[test]")
+	if message[0].To != "user@example.com" || string(message[0].Content) != `{"code":123456}` || !message[0].Revealed {
+		t.Fatalf("revealed message row was masked: %#v", message[0])
+	}
+
+	subscribe := SubscribeRows([]*modelLog.SubscribeAccessLog{{
+		ClientIP:  "192.0.2.5",
+		UserAgent: "Clash/2.0 private-details",
+		Revealed:  true,
+	}}, nil)
+	if subscribe[0].ClientIP != "192.0.2.5" || subscribe[0].UserAgent != "Clash/2.0 private-details" || !subscribe[0].Revealed {
+		t.Fatalf("revealed subscribe row was masked: %#v", subscribe[0])
+	}
+}
+
 func TestMessageRowsPreservesRowsWithInvalidContent(t *testing.T) {
 	got := MessageRows([]modelLog.MessageLogRow{
 		{Id: 11, Content: `{invalid`, CreatedAt: time.Unix(1, 0)},

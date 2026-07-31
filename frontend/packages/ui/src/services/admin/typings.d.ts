@@ -1,4 +1,16 @@
 declare namespace API {
+  type AdminMessageLog = {
+    id: number;
+    type: number;
+    platform: string;
+    to: string;
+    subject: string;
+    content: JsonValue;
+    status: number;
+    created_at: number;
+    revealed: boolean;
+  };
+
   type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
 
   type JsonObject = { [key: string]: JsonValue };
@@ -631,11 +643,32 @@ declare namespace API {
     size: number;
     date?: string;
     search?: string;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
+  };
+
+  type FilterEmailLogRequest = {
+    page?: number;
+    size?: number;
+    date?: string;
+    search?: string;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterEmailLogResponse = {
     total: number;
-    list: MessageLog[];
+    list: AdminMessageLog[];
   };
 
   type FilterGiftLogParams = {
@@ -665,6 +698,13 @@ declare namespace API {
     date?: string;
     search?: string;
     user_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterLoginLogRequest = {
@@ -673,6 +713,13 @@ declare namespace API {
     date?: string;
     search?: string;
     user_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterLoginLogResponse = {
@@ -698,6 +745,13 @@ declare namespace API {
     status?: string;
     size?: number;
     cursor?: string;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterProxyAccessLogResponse = {
@@ -729,6 +783,13 @@ declare namespace API {
     date?: string;
     search?: string;
     user_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterRegisterLogRequest = {
@@ -737,6 +798,13 @@ declare namespace API {
     date?: string;
     search?: string;
     user_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterRegisterLogResponse = {
@@ -839,6 +907,13 @@ declare namespace API {
     search?: string;
     user_id?: number;
     user_subscribe_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterSubscribeLogRequest = {
@@ -848,6 +923,13 @@ declare namespace API {
     search?: string;
     user_id?: number;
     user_subscribe_id?: number;
+    reveal_sensitive?: boolean;
+    reveal_reason?:
+      | "customer_support"
+      | "account_verification"
+      | "security_incident"
+      | "billing_dispute"
+      | "compliance";
   };
 
   type FilterSubscribeLogResponse = {
@@ -1061,7 +1143,7 @@ declare namespace API {
 
   type GetMessageLogListResponse = {
     total: number;
-    list: MessageLog[];
+    list: AdminMessageLog[];
   };
 
   type GetNodeMultiplierResponse = {
@@ -1468,6 +1550,7 @@ declare namespace API {
     user_agent: string;
     success: boolean;
     timestamp: number;
+    revealed: boolean;
   };
 
   type LogResponse = {
@@ -1997,6 +2080,7 @@ declare namespace API {
     location?: string;
     user_agent: string;
     timestamp: number;
+    revealed: boolean;
   };
 
   type RenewalOrderRequest = {
@@ -2588,6 +2672,7 @@ declare namespace API {
     location?: string;
     user_subscribe_id: number;
     timestamp: number;
+    revealed: boolean;
   };
 
   type SubscribeSortRequest = {
@@ -2698,6 +2783,7 @@ declare namespace API {
     status: string;
     outbound_tag?: string;
     reason?: string;
+    revealed: boolean;
   };
 
   type TransportConfig = {

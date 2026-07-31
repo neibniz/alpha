@@ -11,6 +11,7 @@ import (
 // Filter subscribe log
 func FilterSubscribeLogHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		privateLogResponse(c)
 		var req types.FilterSubscribeLogRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)

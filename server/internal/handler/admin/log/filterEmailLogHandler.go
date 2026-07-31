@@ -11,7 +11,8 @@ import (
 // Filter email log
 func FilterEmailLogHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var req types.FilterLogParams
+		privateLogResponse(c)
+		var req types.FilterEmailLogRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {

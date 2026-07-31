@@ -23,22 +23,23 @@ Log Types:
 */
 
 const (
-	TypeEmailMessage      Type = 10 // Message log
-	TypeSubscribe         Type = 20 // Subscription log
-	TypeSubscribeTraffic  Type = 21 // Subscription traffic log
-	TypeServerTraffic     Type = 22 // Server traffic log
-	TypeResetSubscribe    Type = 23 // Reset subscription log
-	TypeAdjustSubscribe   Type = 24 // Administrator subscription adjustment log
-	TypeLogin             Type = 30 // Login log
-	TypeRegister          Type = 31 // Registration log
-	TypeBalance           Type = 32 // Balance log
-	TypeCommission        Type = 33 // Commission log
-	TypeGift              Type = 34 // Gift log
-	TypeLogout            Type = 35 // Logout log
-	TypePrivateDataReveal Type = 36 // Administrator private identity reveal
-	TypeUserTrafficRank   Type = 40 // Top 10 User traffic rank log
-	TypeServerTrafficRank Type = 41 // Top 10 Server traffic rank log
-	TypeTrafficStat       Type = 42 // Daily traffic statistics log
+	TypeEmailMessage       Type = 10 // Message log
+	TypeSubscribe          Type = 20 // Subscription log
+	TypeSubscribeTraffic   Type = 21 // Subscription traffic log
+	TypeServerTraffic      Type = 22 // Server traffic log
+	TypeResetSubscribe     Type = 23 // Reset subscription log
+	TypeAdjustSubscribe    Type = 24 // Administrator subscription adjustment log
+	TypeLogin              Type = 30 // Login log
+	TypeRegister           Type = 31 // Registration log
+	TypeBalance            Type = 32 // Balance log
+	TypeCommission         Type = 33 // Commission log
+	TypeGift               Type = 34 // Gift log
+	TypeLogout             Type = 35 // Logout log
+	TypePrivateDataReveal  Type = 36 // Administrator private identity reveal
+	TypeSensitiveLogReveal Type = 37 // Administrator sensitive log reveal
+	TypeUserTrafficRank    Type = 40 // Top 10 User traffic rank log
+	TypeServerTrafficRank  Type = 41 // Top 10 Server traffic rank log
+	TypeTrafficStat        Type = 42 // Daily traffic statistics log
 )
 const (
 	ResetSubscribeTypeAuto       uint16 = 231 // Auto reset
@@ -84,6 +85,8 @@ type SystemLog struct {
 	Success      bool      `gorm:"not null;default:false;comment:Whether action succeeded"`
 	EventAt      int64     `gorm:"not null;default:0;comment:Client event timestamp in milliseconds"`
 	Content      string    `gorm:"type:text;not null;comment:Log Content"`
+	PrivacyRef   string    `gorm:"type:varchar(36);not null;default:'';comment:Privacy encryption reference" json:"-"`
+	PrivateData  string    `gorm:"type:text;not null;default:'';comment:Encrypted original sensitive fields" json:"-"`
 	CreatedAt    time.Time `gorm:"<-:create;comment:Create Time"`
 }
 
@@ -99,6 +102,9 @@ type SubscribeAccessLog struct {
 	Region          string    `gorm:"type:varchar(128);not null;default:'';comment:Client IP Region"`
 	Location        string    `gorm:"type:varchar(160);not null;default:'';comment:Client IP Location"`
 	Success         bool      `gorm:"not null;default:true;comment:Whether Subscribe Request Succeeded"`
+	PrivacyRef      string    `gorm:"type:varchar(36);not null;default:'';comment:Privacy encryption reference" json:"-"`
+	PrivateData     string    `gorm:"type:text;not null;default:'';comment:Encrypted original sensitive fields" json:"-"`
+	Revealed        bool      `gorm:"-"`
 	CreatedAt       time.Time `gorm:"<-:create;index:idx_subscribe_access_created;index:idx_subscribe_access_user_created,priority:2;index:idx_subscribe_access_user_sub_created,priority:2;comment:Create Time"`
 }
 
@@ -329,6 +335,25 @@ func (r *PrivateDataReveal) Marshal() ([]byte, error) {
 
 func (r *PrivateDataReveal) Unmarshal(data []byte) error {
 	type Alias PrivateDataReveal
+	return json.Unmarshal(data, (*Alias)(r))
+}
+
+// SensitiveLogReveal records audited access to encrypted log fields.
+type SensitiveLogReveal struct {
+	OperatorUserId int64  `json:"operator_user_id"`
+	Scope          string `json:"scope"`
+	Reason         string `json:"reason"`
+	RecordCount    int    `json:"record_count"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
+func (r *SensitiveLogReveal) Marshal() ([]byte, error) {
+	type Alias SensitiveLogReveal
+	return marshalLogJSON((*Alias)(r))
+}
+
+func (r *SensitiveLogReveal) Unmarshal(data []byte) error {
+	type Alias SensitiveLogReveal
 	return json.Unmarshal(data, (*Alias)(r))
 }
 

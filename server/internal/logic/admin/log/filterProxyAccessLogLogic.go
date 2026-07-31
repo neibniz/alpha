@@ -16,6 +16,7 @@ import (
 	"github.com/neibniz/alpha/server/internal/types"
 	"github.com/neibniz/alpha/server/pkg/logger"
 	"github.com/neibniz/alpha/server/pkg/xerr"
+	"github.com/pkg/errors"
 )
 
 const maxProxyAccessRange = 31 * 24 * time.Hour
@@ -39,6 +40,10 @@ func (l *FilterProxyAccessLogLogic) FilterProxyAccessLog(req *types.FilterProxyA
 	if !l.svcCtx.Analytics.Available() {
 		return nil, xerr.NewErrMsg("analytics storage is unavailable")
 	}
+	reveal, err := prepareSensitiveLogReveal(l.ctx, l.svcCtx, req.RevealSensitive, req.RevealReason, "proxy_access")
+	if err != nil {
+		return nil, err
+	}
 	filter, err := proxyAccessFilter(req, time.Now())
 	if err != nil {
 		return nil, xerr.NewErrCodeMsg(xerr.InvalidParams, err.Error())
@@ -51,6 +56,9 @@ func (l *FilterProxyAccessLogLogic) FilterProxyAccessLog(req *types.FilterProxyA
 	list := make([]types.ProxyAccessLog, 0, len(page.List))
 	for _, event := range page.List {
 		list = append(list, proxyAccessLogView(event))
+	}
+	if err := reveal.audit(len(page.List)); err != nil {
+		return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseInsertError), "failed to audit sensitive log reveal")
 	}
 	resp := &types.FilterProxyAccessLogResponse{List: list, HasMore: page.HasMore}
 	if page.HasMore && len(page.List) > 0 {
@@ -114,6 +122,7 @@ func proxyAccessFilter(req *types.FilterProxyAccessLogRequest, now time.Time) (a
 		Destination:     destination,
 		Status:          status,
 		Limit:           limit,
+		RevealSensitive: req.RevealSensitive,
 	}
 	if req.Cursor != "" {
 		cursor, err := decodeProxyAccessCursor(req.Cursor)
@@ -134,20 +143,28 @@ func proxyAccessLogView(event analytics.AccessEvent) types.ProxyAccessLog {
 	if destination == "" {
 		destination = event.DestinationIP
 	}
+	sourceIP := event.SourceIP
+	reason := event.Reason
+	if !event.Revealed {
+		sourceIP = privacy.MaskIP(sourceIP)
+		destination = maskProxyDestination(destination)
+		reason = privacy.MaskIdentifier(reason)
+	}
 	return types.ProxyAccessLog{
 		EventId:         event.EventID.String(),
 		Timestamp:       event.EventTime.UnixMilli(),
 		ServerId:        event.ServerID,
 		UserId:          event.UserID,
 		UserSubscribeId: event.UserSubscribeID,
-		SourceIP:        privacy.MaskIP(event.SourceIP),
+		SourceIP:        sourceIP,
 		SourcePort:      event.SourcePort,
-		Destination:     maskProxyDestination(destination),
+		Destination:     destination,
 		DestinationPort: event.DestinationPort,
 		Network:         event.Network,
 		Status:          event.Status,
 		OutboundTag:     event.OutboundTag,
-		Reason:          privacy.MaskIdentifier(event.Reason),
+		Reason:          reason,
+		Revealed:        event.Revealed,
 	}
 }
 

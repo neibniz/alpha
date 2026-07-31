@@ -32,7 +32,7 @@ func TestEnrichSystemLogFieldsStoresStructuredActivityFields(t *testing.T) {
 	}).Marshal()
 	registerLog := &SystemLog{Type: TypeRegister.Uint8(), Content: string(registerContent)}
 	enrichSystemLogFields(registerLog)
-	if registerLog.Method != "github" || registerLog.Identifier != "oaut...r-id" || registerLog.IP != "203.0.113.20" || registerLog.UserAgent != "AlphaRegister/1.0" || registerLog.EventAt != 1717200000456 {
+	if registerLog.Method != "github" || registerLog.Identifier != "oauth-user-id" || registerLog.IP != "203.0.113.20" || registerLog.UserAgent != "AlphaRegister/1.0" || registerLog.EventAt != 1717200000456 {
 		t.Fatalf("register structured fields not enriched: %#v", registerLog)
 	}
 }

@@ -28,16 +28,24 @@ func NewFilterSubscribeLogLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *FilterSubscribeLogLogic) FilterSubscribeLog(req *types.FilterSubscribeLogRequest) (resp *types.FilterSubscribeLogResponse, err error) {
+	reveal, err := prepareSensitiveLogReveal(l.ctx, l.svcCtx, req.RevealSensitive, req.RevealReason, "subscribe_access")
+	if err != nil {
+		return nil, err
+	}
 	data, total, err := l.svcCtx.LogModel.FilterSubscribeAccessLog(l.ctx, &log.SubscribeAccessFilterParams{
 		Page:            req.Page,
 		Size:            req.Size,
 		Date:            req.Date,
 		UserId:          req.UserId,
 		UserSubscribeId: req.UserSubscribeId,
+		RevealSensitive: req.RevealSensitive,
 	})
 	if err != nil {
 		l.Errorf("[FilterSubscribeLog] failed to filter subscribe access log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter subscribe access log")
+	}
+	if err := reveal.audit(len(data)); err != nil {
+		return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseInsertError), "failed to audit sensitive log reveal")
 	}
 
 	return &types.FilterSubscribeLogResponse{

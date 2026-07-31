@@ -108,6 +108,7 @@ export interface ProTableProps<TData, TValue> {
 export interface ProTableActions {
   refresh: () => void;
   reset: () => void;
+  clear: () => void;
   updateRow: (row: Record<string, unknown> & { id?: string | number }) => void;
 }
 
@@ -300,6 +301,13 @@ export function ProTable<
     () => ({
       refresh: fetchData,
       reset,
+      clear: () => {
+        requestSequenceRef.current += 1;
+        setData([]);
+        setRowCount(0);
+        setRowSelection({});
+        setLoading(false);
+      },
       updateRow: (row) => {
         setData((previous) =>
           previous.map((item) =>

@@ -27,18 +27,26 @@ func NewFilterEmailLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fi
 	}
 }
 
-func (l *FilterEmailLogLogic) FilterEmailLog(req *types.FilterLogParams) (resp *types.FilterEmailLogResponse, err error) {
+func (l *FilterEmailLogLogic) FilterEmailLog(req *types.FilterEmailLogRequest) (resp *types.FilterEmailLogResponse, err error) {
+	reveal, err := prepareSensitiveLogReveal(l.ctx, l.svcCtx, req.RevealSensitive, req.RevealReason, "email")
+	if err != nil {
+		return nil, err
+	}
 	data, total, err := l.svcCtx.LogModel.FilterMessageLogs(l.ctx, &modelLog.FilterParams{
-		Page:   req.Page,
-		Size:   req.Size,
-		Type:   modelLog.TypeEmailMessage.Uint8(),
-		Data:   req.Date,
-		Search: req.Search,
+		Page:            req.Page,
+		Size:            req.Size,
+		Type:            modelLog.TypeEmailMessage.Uint8(),
+		Data:            req.Date,
+		Search:          req.Search,
+		RevealSensitive: req.RevealSensitive,
 	})
 
 	if err != nil {
 		l.Errorf("[FilterEmailLog] failed to filter system log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
+	}
+	if err := reveal.audit(len(data)); err != nil {
+		return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseInsertError), "failed to audit sensitive log reveal")
 	}
 
 	return &types.FilterEmailLogResponse{

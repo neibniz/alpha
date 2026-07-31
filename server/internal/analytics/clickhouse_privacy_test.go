@@ -56,6 +56,29 @@ func TestProtectAccessEventEncryptsPrivateFields(t *testing.T) {
 	}
 }
 
+func TestOpenAccessEventDecryptsPrivateFields(t *testing.T) {
+	codec := newAnalyticsPrivacyCodec(t)
+	store := &clickHouseStore{privacy: codec}
+	event := AccessEvent{
+		EventID:         uuid.New(),
+		SourceIP:        "203.0.113.42",
+		DestinationHost: "private.example.com",
+		DestinationIP:   "198.51.100.8",
+		Reason:          "private rejection reason",
+	}
+	protected, err := store.protectAccessEvent(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened := protected.AccessEvent
+	if err := store.openAccessEvent(&opened); err != nil {
+		t.Fatal(err)
+	}
+	if opened.SourceIP != event.SourceIP || opened.DestinationHost != event.DestinationHost || opened.DestinationIP != event.DestinationIP || opened.Reason != event.Reason {
+		t.Fatalf("opened event = %#v, want %#v", opened, event)
+	}
+}
+
 func TestProtectAccessEventGroupsIPv6By64(t *testing.T) {
 	codec := newAnalyticsPrivacyCodec(t)
 	store := &clickHouseStore{privacy: codec}

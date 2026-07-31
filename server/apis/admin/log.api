@@ -11,6 +11,17 @@ info (
 import "../types.api"
 
 type (
+	AdminMessageLog {
+		Id        int64           `json:"id"`
+		Type      uint8           `json:"type"`
+		Platform  string          `json:"platform"`
+		To        string          `json:"to"`
+		Subject   string          `json:"subject"`
+		Content   json.RawMessage `json:"content"`
+		Status    uint8           `json:"status"`
+		CreatedAt int64           `json:"created_at"`
+		Revealed  bool            `json:"revealed"`
+	}
 	GetMessageLogListRequest {
 		Page   int    `form:"page"`
 		Size   int    `form:"size"`
@@ -18,8 +29,8 @@ type (
 		Search string `form:"search,optional"`
 	}
 	GetMessageLogListResponse {
-		Total int64        `json:"total"`
-		List  []MessageLog `json:"list"`
+		Total int64             `json:"total"`
+		List  []AdminMessageLog `json:"list"`
 	}
 	FilterLogParams {
 		Page   int    `form:"page"`
@@ -27,9 +38,14 @@ type (
 		Date   string `form:"date,optional"`
 		Search string `form:"search,optional"`
 	}
+	FilterEmailLogRequest {
+		FilterLogParams
+		RevealSensitive bool   `form:"reveal_sensitive,optional"`
+		RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+	}
 	FilterEmailLogResponse {
-		Total int64        `json:"total"`
-		List  []MessageLog `json:"list"`
+		Total int64             `json:"total"`
+		List  []AdminMessageLog `json:"list"`
 	}
 	SubscribeLog {
 		UserId          int64  `json:"user_id"`
@@ -41,11 +57,14 @@ type (
 		Location        string `json:"location,omitempty"`
 		UserSubscribeId int64  `json:"user_subscribe_id"`
 		Timestamp       int64  `json:"timestamp"`
+		Revealed        bool   `json:"revealed"`
 	}
 	FilterSubscribeLogRequest {
 		FilterLogParams
 		UserId          int64 `form:"user_id,optional"`
 		UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+		RevealSensitive bool   `form:"reveal_sensitive,optional"`
+		RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 	}
 	FilterSubscribeLogResponse {
 		Total int64          `json:"total"`
@@ -61,10 +80,13 @@ type (
 		UserAgent    string `json:"user_agent"`
 		Success      bool   `json:"success"`
 		Timestamp    int64  `json:"timestamp"`
+		Revealed     bool   `json:"revealed"`
 	}
 	FilterLoginLogRequest {
 		FilterLogParams
-		UserId int64 `form:"user_id,optional"`
+		UserId          int64 `form:"user_id,optional"`
+		RevealSensitive bool   `form:"reveal_sensitive,optional"`
+		RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 	}
 	FilterLoginLogResponse {
 		Total int64      `json:"total"`
@@ -80,10 +102,13 @@ type (
 		Location     string `json:"location,omitempty"`
 		UserAgent    string `json:"user_agent"`
 		Timestamp    int64  `json:"timestamp"`
+		Revealed     bool   `json:"revealed"`
 	}
 	FilterRegisterLogRequest {
 		FilterLogParams
-		UserId int64 `form:"user_id,optional"`
+		UserId          int64 `form:"user_id,optional"`
+		RevealSensitive bool   `form:"reveal_sensitive,optional"`
+		RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 	}
 	FilterRegisterLogResponse {
 		Total int64         `json:"total"`
@@ -195,6 +220,7 @@ type (
 		Status          string `json:"status"`
 		OutboundTag     string `json:"outbound_tag,omitempty"`
 		Reason          string `json:"reason,omitempty"`
+		Revealed        bool   `json:"revealed"`
 	}
 	FilterProxyAccessLogRequest {
 		StartTime       int64  `form:"start_time,optional"`
@@ -207,6 +233,8 @@ type (
 		Status          string `form:"status,optional"`
 		Size            int    `form:"size,optional"`
 		Cursor          string `form:"cursor,optional"`
+		RevealSensitive bool   `form:"reveal_sensitive,optional"`
+		RevealReason    string `form:"reveal_reason,optional" validate:"omitempty,oneof=customer_support account_verification security_incident billing_dispute compliance"`
 	}
 	FilterProxyAccessLogResponse {
 		List       []ProxyAccessLog `json:"list"`
@@ -241,7 +269,7 @@ service alpha {
 
 	@doc "Filter email log"
 	@handler FilterEmailLog
-	get /email/list (FilterLogParams) returns (FilterEmailLogResponse)
+	get /email/list (FilterEmailLogRequest) returns (FilterEmailLogResponse)
 
 	@doc "Filter subscribe log"
 	@handler FilterSubscribeLog

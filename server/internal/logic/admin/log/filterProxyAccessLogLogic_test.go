@@ -72,3 +72,17 @@ func TestProxyAccessLogViewMasksNetworkIdentifiers(t *testing.T) {
 		t.Fatalf("unmasked view = %+v", view)
 	}
 }
+
+func TestProxyAccessLogViewReturnsAuditedRevealedFields(t *testing.T) {
+	view := proxyAccessLogView(analytics.AccessEvent{
+		EventID:         uuid.MustParse("00000000-0000-5000-8000-000000000002"),
+		EventTime:       time.UnixMilli(1234),
+		SourceIP:        "203.0.113.42",
+		DestinationHost: "private.example.com",
+		Reason:          "connection refused for user@example.com",
+		Revealed:        true,
+	})
+	if view.SourceIP != "203.0.113.42" || view.Destination != "private.example.com" || view.Reason != "connection refused for user@example.com" || !view.Revealed {
+		t.Fatalf("revealed view = %+v", view)
+	}
+}

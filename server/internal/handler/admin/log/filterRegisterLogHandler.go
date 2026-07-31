@@ -11,6 +11,7 @@ import (
 // Filter register log
 func FilterRegisterLogHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		privateLogResponse(c)
 		var req types.FilterRegisterLogRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)

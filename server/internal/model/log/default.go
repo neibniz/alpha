@@ -29,6 +29,7 @@ type (
 		LookupIPLocation           func(context.Context, string) IPLocation
 		SystemLogInserted          func(context.Context, *SystemLog)
 		SubscribeAccessLogInserted func(context.Context, *SubscribeAccessLog)
+		Privacy                    *privacy.Codec
 	}
 	IPLocation struct {
 		CountryShort string
@@ -37,19 +38,27 @@ type (
 	}
 	defaultLogModel struct {
 		*gorm.DB
-		hooks Hooks
+		hooks        Hooks
+		privacyCodec *privacy.Codec
 	}
 )
 
 func newSystemLogModel(db *gorm.DB, hooks Hooks) *defaultLogModel {
+	codec := hooks.Privacy
+	if codec == nil {
+		codec = privacy.DisabledCodec()
+	}
 	return &defaultLogModel{
-		DB:    db,
-		hooks: hooks,
+		DB:           db,
+		hooks:        hooks,
+		privacyCodec: codec,
 	}
 }
 
 func (m *defaultLogModel) Insert(ctx context.Context, data *SystemLog) error {
-	m.enrichSystemLog(ctx, data)
+	if err := m.enrichSystemLog(ctx, data); err != nil {
+		return err
+	}
 	if err := m.WithContext(ctx).Create(data).Error; err != nil {
 		return err
 	}
@@ -60,7 +69,9 @@ func (m *defaultLogModel) Insert(ctx context.Context, data *SystemLog) error {
 }
 
 func (m *defaultLogModel) InsertSubscribeAccessLog(ctx context.Context, data *SubscribeAccessLog) error {
-	m.enrichSubscribeAccessLog(ctx, data)
+	if err := m.enrichSubscribeAccessLog(ctx, data); err != nil {
+		return err
+	}
 	if err := m.WithContext(ctx).Create(data).Error; err != nil {
 		return err
 	}
@@ -87,9 +98,9 @@ func (m *defaultLogModel) Delete(ctx context.Context, id int64) error {
 	return m.WithContext(ctx).Where("id = ?", id).Delete(&SystemLog{}).Error
 }
 
-func (m *defaultLogModel) enrichSystemLog(ctx context.Context, data *SystemLog) {
+func (m *defaultLogModel) enrichSystemLog(ctx context.Context, data *SystemLog) error {
 	if data == nil {
-		return
+		return nil
 	}
 	enrichSystemLogFields(data)
 	if data.IP != "" && m.hooks.LookupIPLocation != nil {
@@ -101,15 +112,19 @@ func (m *defaultLogModel) enrichSystemLog(ctx context.Context, data *SystemLog) 
 			data.Location = formatIPLocation(location.CountryShort, location.Region)
 		}
 	}
+	if err := m.protectSystemLog(data); err != nil {
+		return err
+	}
 	data.IP = privacy.MaskIP(data.IP)
 	data.UserAgent = privacy.MaskUserAgent(data.UserAgent)
 	data.Identifier = privacy.MaskIdentifier(data.Identifier)
 	data.Content = string(privacy.MaskJSON([]byte(data.Content)))
+	return nil
 }
 
-func (m *defaultLogModel) enrichSubscribeAccessLog(ctx context.Context, data *SubscribeAccessLog) {
+func (m *defaultLogModel) enrichSubscribeAccessLog(ctx context.Context, data *SubscribeAccessLog) error {
 	if data == nil {
-		return
+		return nil
 	}
 	if data.ClientIP != "" && m.hooks.LookupIPLocation != nil {
 		location := m.hooks.LookupIPLocation(ctx, data.ClientIP)
@@ -120,8 +135,12 @@ func (m *defaultLogModel) enrichSubscribeAccessLog(ctx context.Context, data *Su
 			data.Location = formatIPLocation(location.CountryShort, location.Region)
 		}
 	}
+	if err := m.protectSubscribeAccessLog(data); err != nil {
+		return err
+	}
 	data.ClientIP = privacy.MaskIP(data.ClientIP)
 	data.UserAgent = privacy.MaskUserAgent(data.UserAgent)
+	return nil
 }
 
 func formatIPLocation(countryShort, region string) string {
@@ -155,7 +174,7 @@ func enrichSystemLogFields(data *SystemLog) {
 				data.Method = content.AuthMethod
 			}
 			if data.Identifier == "" {
-				data.Identifier = privacy.MaskIdentifier(content.Identifier)
+				data.Identifier = content.Identifier
 			}
 		}
 	case TypeLogout:

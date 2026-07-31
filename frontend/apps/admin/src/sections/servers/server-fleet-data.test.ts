@@ -27,9 +27,18 @@ function status(overrides: Partial<API.ServerStatus> = {}) {
 describe("server fleet health", () => {
   it("marks stale heartbeats offline", () => {
     expect(statusIsOffline(status(), NOW)).toBe(false);
-    expect(statusIsOffline(status({ last_seen: NOW - 31_000 }), NOW)).toBe(
-      true
+    expect(
+      statusIsOffline(status({ status: "", last_seen: NOW - 31_000 }), NOW)
+    ).toBe(true);
+  });
+
+  it("trusts an explicit server status over a stale browser cache", () => {
+    expect(statusIsOffline(status({ last_seen: NOW - 60_000 }), NOW)).toBe(
+      false
     );
+    expect(
+      statusIsOffline(status({ status: "offline", last_seen: NOW - 1000 }), NOW)
+    ).toBe(true);
   });
 
   it("prioritizes failed and pending configuration states", () => {

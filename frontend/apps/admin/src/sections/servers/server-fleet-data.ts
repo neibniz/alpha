@@ -8,7 +8,9 @@ export function statusIsOffline(
   status: Partial<API.ServerStatus>,
   now = Date.now()
 ) {
-  if (status.status === "offline") return true;
+  const state = status.status?.toLowerCase();
+  if (state === "offline") return true;
+  if (state === "online") return false;
   return Boolean(
     status.last_seen && now - status.last_seen > SERVER_STATUS_TTL_MS
   );

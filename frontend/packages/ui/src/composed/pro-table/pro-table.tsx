@@ -111,10 +111,6 @@ export interface ProTableActions {
   updateRow: (row: Record<string, unknown> & { id?: string | number }) => void;
 }
 
-interface ProTableActionMeta<TData> {
-  render?: (row: TData) => React.ReactNode[];
-}
-
 export function ProTable<
   TData extends Record<string, unknown> & { id?: string | number },
   TValue extends Record<string, unknown>,
@@ -153,6 +149,8 @@ export function ProTable<
   const [loading, setLoading] = useState(false);
   const requestSequenceRef = useRef(0);
   const requestRef = useRef(request);
+  const rowActionRenderRef = useRef(actions?.render);
+  rowActionRenderRef.current = actions?.render;
 
   useEffect(() => {
     requestRef.current = request;
@@ -167,13 +165,10 @@ export function ProTable<
   const hasBatchActions = Boolean(actions?.batchRender);
   const hasRowActions = Boolean(actions?.render);
   const renderActionsCell = useCallback(
-    ({ column, row }: CellContext<TData, TValue>) => {
-      const meta = column.columnDef.meta as
-        | ProTableActionMeta<TData>
-        | undefined;
+    ({ row }: CellContext<TData, TValue>) => {
       return (
         <div className="flex items-center justify-end gap-2">
-          {meta?.render?.(row.original)}
+          {rowActionRenderRef.current?.(row.original)}
         </div>
       );
     },
@@ -218,9 +213,6 @@ export function ProTable<
                 cell: renderActionsCell,
                 enableSorting: false,
                 enableHiding: false,
-                meta: {
-                  render: actions?.render,
-                },
                 size: actions?.columnSize,
               },
             ] as ColumnDef<TData, TValue>[])
@@ -228,7 +220,6 @@ export function ProTable<
       ] as ColumnDef<TData, TValue>[],
     [
       actions?.columnSize,
-      actions?.render,
       columns,
       hasBatchActions,
       hasRowActions,

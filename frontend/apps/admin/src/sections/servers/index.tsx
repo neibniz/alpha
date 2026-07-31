@@ -45,8 +45,6 @@ import {
   ProTable,
   type ProTableActions,
 } from "@workspace/ui/composed/pro-table/pro-table";
-import { getAuthorizationToken } from "@workspace/ui/lib/auth-token";
-import { getApiBaseURL, getApiPrefix } from "@workspace/ui/lib/runtime-config";
 import { cn } from "@workspace/ui/lib/utils";
 import {
   createServer,
@@ -79,11 +77,13 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Line, LineChart } from "recharts";
 import { toast } from "sonner";
 import { AdminPage, AdminPageHeader } from "@/components/admin-page";
+import { mergeRealtimeStatus } from "@/lib/server-realtime-data";
+import { useServerRealtime } from "@/lib/use-server-realtime";
 import { useNode } from "@/stores/node";
 import { useServer } from "@/stores/server";
 import ServerXrayTemplateBindForm from "../xray-templates/server-bind-form";
@@ -110,54 +110,7 @@ import {
 import ServerForm from "./server-form";
 import ServerInstall from "./server-install";
 
-const REALTIME_STATUS_DEFAULTS: Partial<API.ServerStatus> = {
-  connections: 0,
-  system_connections: 0,
-  system_inbound_connections: 0,
-  system_outbound_connections: 0,
-  xray_connections: 0,
-  xray_inbound_connections: 0,
-  xray_outbound_connections: 0,
-  online_users: 0,
-  net_rx_bps: 0,
-  net_tx_bps: 0,
-  net_rx_bytes: 0,
-  net_tx_bytes: 0,
-  xray_rx_bps: 0,
-  xray_tx_bps: 0,
-  xray_rx_bytes: 0,
-  xray_tx_bytes: 0,
-  load1: 0,
-  load5: 0,
-  load15: 0,
-  uptime: 0,
-  xray_stats_error: "",
-  pending_config_hash: "",
-  last_config_error: "",
-  last_apply_error: "",
-};
-
 type ToolPanel = "multiplier" | "config" | null;
-
-function normalizeRealtimeStatus(status: Partial<API.ServerStatus>) {
-  return { ...REALTIME_STATUS_DEFAULTS, ...status };
-}
-
-function serverStatusVersion(status?: Partial<API.ServerStatus>) {
-  if (!status) return 0;
-  return Math.max(status.last_seen || 0, status.updated_at || 0);
-}
-
-function buildRealtimeWsUrl(serverIDs: number[]) {
-  const base = getApiBaseURL() || window.location.origin;
-  const prefix = getApiPrefix();
-  const url = new URL(`${prefix}/v1/admin/server/realtime/ws`, base);
-  if (serverIDs.length > 0) {
-    url.searchParams.set("server_ids", serverIDs.join(","));
-  }
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  return url.toString();
-}
 
 function usageColor(value: number) {
   if (value >= 90) return "bg-red-500";
@@ -664,11 +617,36 @@ export default function Servers() {
   const [historyServerIds, setHistoryServerIds] = useState<number[]>([]);
   const tableRef = useRef<ProTableActions>(null);
 
+  const applyRealtimeStatus = useCallback(
+    (serverId: number, status: Partial<API.ServerStatus>) => {
+      setNetworkRateHistory((previous) => ({
+        ...previous,
+        [serverId]: mergeServerNetworkRatePoint(
+          previous[serverId] || [],
+          serverStatusToNetworkRatePoint(status)
+        ),
+      }));
+      setRealtimeStatus((previous) => {
+        const previousStatus = previous[serverId];
+        const nextStatus = mergeRealtimeStatus(previousStatus, status);
+        if (nextStatus === previousStatus) return previous;
+        return { ...previous, [serverId]: nextStatus };
+      });
+    },
+    []
+  );
+
+  useServerRealtime(
+    historyServerIds,
+    applyRealtimeStatus,
+    historyServerIds.length > 0
+  );
+
   const getStatus = (server: API.ServerListItem) => {
-    const status = {
-      ...(server.status || {}),
-      ...(realtimeStatus[server.id] || {}),
-    };
+    const realtime = realtimeStatus[server.id];
+    const status = realtime
+      ? mergeRealtimeStatus(server.status, realtime)
+      : server.status || {};
     return statusIsOffline(status) ? { ...status, status: "offline" } : status;
   };
 
@@ -749,75 +727,6 @@ export default function Servers() {
       });
     return () => {
       cancelled = true;
-    };
-  }, [historyServerIds]);
-
-  useEffect(() => {
-    if (!getAuthorizationToken() || historyServerIds.length === 0) return;
-    let closed = false;
-    let ws: WebSocket | undefined;
-    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const applyStatus = (
-      item: Partial<API.ServerStatus> & { server_id?: number }
-    ) => {
-      if (!item.server_id) return;
-      const { server_id: serverId, ...incomingStatus } = item;
-      const status = normalizeRealtimeStatus(incomingStatus);
-      setNetworkRateHistory((previous) => ({
-        ...previous,
-        [serverId]: mergeServerNetworkRatePoint(
-          previous[serverId] || [],
-          serverStatusToNetworkRatePoint(status)
-        ),
-      }));
-      setRealtimeStatus((previous) => {
-        const previousStatus = previous[serverId];
-        const previousVersion = serverStatusVersion(previousStatus);
-        const nextVersion = serverStatusVersion(status);
-        if (
-          previousVersion > 0 &&
-          nextVersion > 0 &&
-          nextVersion < previousVersion
-        ) {
-          return previous;
-        }
-        return {
-          ...previous,
-          [serverId]: { ...(previousStatus || {}), ...status },
-        };
-      });
-    };
-
-    const connect = () => {
-      const token = getAuthorizationToken();
-      ws = new WebSocket(
-        buildRealtimeWsUrl(historyServerIds),
-        token ? ["alpha-auth", token] : undefined
-      );
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === "snapshot" && Array.isArray(message.data)) {
-            for (const item of message.data) applyStatus(item);
-          } else if (message.type === "node_status") {
-            applyStatus(message);
-          }
-        } catch {
-          // Ignore malformed realtime messages.
-        }
-      };
-      ws.onclose = () => {
-        if (!closed) reconnectTimer = setTimeout(connect, 3000);
-      };
-      ws.onerror = () => ws?.close();
-    };
-
-    connect();
-    return () => {
-      closed = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      ws?.close();
     };
   }, [historyServerIds]);
 

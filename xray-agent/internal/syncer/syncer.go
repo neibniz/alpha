@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/neibniz/alpha/xray-agent/internal/accesslog"
 	"github.com/neibniz/alpha/xray-agent/internal/config"
 	"github.com/neibniz/alpha/xray-agent/internal/panel"
@@ -15,7 +16,6 @@ import (
 	"github.com/neibniz/alpha/xray-agent/internal/supervisor"
 	"github.com/neibniz/alpha/xray-agent/internal/trafficreport"
 	"github.com/neibniz/alpha/xray-agent/internal/xray"
-	"github.com/gorilla/websocket"
 )
 
 type Runner struct {
@@ -457,6 +457,9 @@ func (r *Runner) reportStatusWS(ctx context.Context, collector *status.Collector
 			}
 		}
 	}()
+	if err := conn.WriteJSON(collector.Collect()); err != nil {
+		return err
+	}
 
 	ticker := time.NewTicker(r.cfg.Report.StatusInterval)
 	defer ticker.Stop()

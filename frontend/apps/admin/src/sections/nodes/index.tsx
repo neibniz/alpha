@@ -76,6 +76,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AdminPage, AdminPageHeader } from "@/components/admin-page";
+import { mergeRealtimeStatus } from "@/lib/server-realtime-data";
+import { useServerRealtime } from "@/lib/use-server-realtime";
 import { useNode } from "@/stores/node";
 import { useServer } from "@/stores/server";
 import {
@@ -91,6 +93,8 @@ import {
   sortNodes,
 } from "./node-directory-data";
 import NodeForm, { type NodeFormValues } from "./node-form";
+
+const SERVER_STATUS_FALLBACK_REFRESH_MS = 15_000;
 
 function formatTimestamp(timestamp?: number) {
   if (!timestamp) return null;
@@ -335,12 +339,44 @@ export default function Nodes() {
 
   const { nodes, fetchNodes, fetchTags } = useNode();
   const { servers, fetchServers } = useServer();
+  const nodeList = nodes as API.NodeListItem[];
+  const linkedServerIDs = useMemo(
+    () => Array.from(new Set(nodeList.map((node) => node.server_id))),
+    [nodeList]
+  );
+  const [realtimeStatus, setRealtimeStatus] = useState<
+    Record<number, Partial<API.ServerStatus>>
+  >({});
+  const applyRealtimeStatus = useCallback(
+    (serverId: number, status: Partial<API.ServerStatus>) => {
+      setRealtimeStatus((previous) => {
+        const previousStatus = previous[serverId];
+        const nextStatus = mergeRealtimeStatus(previousStatus, status);
+        if (nextStatus === previousStatus) return previous;
+        return { ...previous, [serverId]: nextStatus };
+      });
+    },
+    []
+  );
+
+  useServerRealtime(
+    linkedServerIDs,
+    applyRealtimeStatus,
+    linkedServerIDs.length > 0
+  );
 
   const serverById = useMemo(
-    () => new Map(servers.map((server) => [server.id, server])),
-    [servers]
+    () =>
+      new Map(
+        servers.map((server) => {
+          const realtime = realtimeStatus[server.id];
+          if (!realtime) return [server.id, server] as const;
+          const status = mergeRealtimeStatus(server.status, realtime);
+          return [server.id, { ...server, status }] as const;
+        })
+      ),
+    [realtimeStatus, servers]
   );
-  const nodeList = nodes as API.NodeListItem[];
   const analysis = useMemo(
     () => analyseNodes(nodeList, serverById),
     [nodeList, serverById]
@@ -366,6 +402,24 @@ export default function Nodes() {
     const timer = window.setTimeout(() => setSearch(searchInput.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    const refreshVisibleServers = () => {
+      if (document.visibilityState === "visible") {
+        fetchServers().catch(() => undefined);
+      }
+    };
+    refreshVisibleServers();
+    const timer = window.setInterval(
+      refreshVisibleServers,
+      SERVER_STATUS_FALLBACK_REFRESH_MS
+    );
+    document.addEventListener("visibilitychange", refreshVisibleServers);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshVisibleServers);
+    };
+  }, [fetchServers]);
 
   const filteredNodes = useMemo(() => {
     const query = search.toLocaleLowerCase();

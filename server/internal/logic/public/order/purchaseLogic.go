@@ -69,7 +69,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		req.Quantity = 1
 	}
 
-	if err = requireActiveMember(u); err != nil {
+	if err = requireActiveMember(l.ctx, l.svcCtx, u); err != nil {
 		return nil, err
 	}
 

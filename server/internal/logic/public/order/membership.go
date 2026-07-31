@@ -26,7 +26,31 @@ func isActiveMember(u *user.User) bool {
 	return u != nil && !u.MemberExpiredAt.IsZero() && u.MemberExpiredAt.After(time.Now())
 }
 
-func requireActiveMember(u *user.User) error {
+func membershipFeatureEnabled(ctx context.Context, svcCtx *svc.ServiceContext) (bool, error) {
+	var plan membership.Plan
+	err := svcCtx.DB.WithContext(ctx).
+		Model(&membership.Plan{}).
+		Select("id").
+		Where("enabled = ?", true).
+		Order("\"sort\" ASC, id ASC").
+		First(&plan).Error
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	return false, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query membership feature state error: %v", err)
+}
+
+func requireActiveMember(ctx context.Context, svcCtx *svc.ServiceContext, u *user.User) error {
+	enabled, err := membershipFeatureEnabled(ctx, svcCtx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return nil
+	}
 	if isActiveMember(u) {
 		return nil
 	}

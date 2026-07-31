@@ -2,9 +2,9 @@
   "workspace": "商业管理",
   "cardDescription": "描述",
   "cardSettings": "会员卡设置",
-  "cardSettingsDescription": "当前用户端只售卖一个默认会员卡。",
+  "cardSettingsDescription": "此开关统一控制购买和续费订阅时是否要求会员。",
   "days": "天",
-  "description": "配置用户购买订阅商品前必须拥有的会员卡。",
+  "description": "控制是否要求会员，并配置会员卡及相关限制策略。",
   "descriptionPlaceholder": "购买订阅商品前需要开通会员卡。",
   "duration": {
     "Day": "天",
@@ -17,8 +17,10 @@
   "durationValue": "时长",
   "emptyDescription": "暂未填写描述。",
   "emptyName": "会员卡",
-  "enabled": "启用",
-  "enabledDescription": "关闭后，用户无法购买或续费该会员卡。",
+  "disabledDescription": "保存后，购买和续费订阅不再校验会员有效期，所有会员限制策略暂停执行；已有会员到期时间和历史订单不会被删除。",
+  "disabledTitle": "会员校验已屏蔽",
+  "enabled": "启用会员体系",
+  "enabledDescription": "关闭后，用户无需会员即可购买和续费订阅，所有会员限制策略同时暂停。",
   "name": "名称",
   "namePlaceholder": "年度会员卡",
   "nameRequired": "请输入会员卡名称",
@@ -35,7 +37,7 @@
     "title": "防滥用策略"
   },
   "preview": "预览",
-  "previewDescription": "用户将购买到的内容。",
+  "previewDescription": "为用户端保留的会员卡配置。",
   "previewDuration": "有效期",
   "previewPolicies": "策略",
   "previewPrice": "价格",
@@ -45,7 +47,7 @@
   "retry": "重试",
   "save": "保存",
   "status": {
-    "disabled": "已停用",
+    "disabled": "已屏蔽校验",
     "enabled": "已启用"
   },
   "title": "会员卡管理",

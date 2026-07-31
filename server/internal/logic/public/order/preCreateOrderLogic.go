@@ -48,7 +48,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		l.Debugf("[PreCreateOrder] Quantity is less than or equal to 0, setting to 1")
 		req.Quantity = 1
 	}
-	if err = requireActiveMember(u); err != nil {
+	if err = requireActiveMember(l.ctx, l.svcCtx, u); err != nil {
 		return nil, err
 	}
 

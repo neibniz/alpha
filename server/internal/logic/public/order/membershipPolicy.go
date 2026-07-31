@@ -132,6 +132,7 @@ func queryMembershipPolicyPlan(ctx context.Context, svcCtx *svc.ServiceContext) 
 	err := svcCtx.DB.WithContext(ctx).
 		Model(&membership.Plan{}).
 		Select(membershipPolicySelectColumns).
+		Where("enabled = ?", true).
 		Order("\"sort\" ASC, id ASC").
 		First(&plan).Error
 	return &plan, err

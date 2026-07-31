@@ -57,7 +57,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 	} else if found {
 		return &types.RenewalOrderResponse{OrderNo: orderNo}, nil
 	}
-	if err = requireActiveMember(u); err != nil {
+	if err = requireActiveMember(l.ctx, l.svcCtx, u); err != nil {
 		return nil, err
 	}
 

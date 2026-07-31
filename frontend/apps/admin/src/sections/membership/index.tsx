@@ -211,7 +211,7 @@ export default function Membership() {
           }
           description={t(
             "description",
-            "Configure the membership card users must hold before purchasing subscription products."
+            "Control whether membership is required, then configure the membership card and its policies."
           )}
           eyebrow={t("workspace", "Commerce")}
           title={t("title", "Membership Management")}
@@ -251,7 +251,7 @@ export default function Membership() {
               <CardDescription>
                 {t(
                   "cardSettingsDescription",
-                  "Only one default membership card is currently sold to users."
+                  "This switch controls the entire membership requirement across subscription purchases and renewals."
                 )}
               </CardDescription>
             </CardHeader>
@@ -259,11 +259,11 @@ export default function Membership() {
               <div className="border-y py-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">
-                    <Label>{t("enabled", "Enabled")}</Label>
+                    <Label>{t("enabled", "Enable membership")}</Label>
                     <p className="text-muted-foreground text-sm">
                       {t(
                         "enabledDescription",
-                        "When disabled, users cannot purchase or renew this membership card."
+                        "When disabled, users can purchase and renew subscriptions without membership checks, and all membership policies are paused."
                       )}
                     </p>
                   </div>
@@ -276,6 +276,21 @@ export default function Membership() {
                   />
                 </div>
               </div>
+
+              {!form.enabled ? (
+                <Alert>
+                  <CircleAlert />
+                  <AlertTitle>
+                    {t("disabledTitle", "Membership checks are disabled")}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t(
+                      "disabledDescription",
+                      "After saving, membership expiry is no longer checked for subscription purchases or renewals. Existing membership expiry dates and orders are retained."
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
@@ -587,7 +602,10 @@ export default function Membership() {
             <CardHeader>
               <CardTitle>{t("preview", "Preview")}</CardTitle>
               <CardDescription>
-                {t("previewDescription", "What users will purchase.")}
+                {t(
+                  "previewDescription",
+                  "The membership card configuration retained for the user experience."
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
@@ -599,7 +617,7 @@ export default function Membership() {
                   <Badge variant={form.enabled ? "default" : "outline"}>
                     {form.enabled
                       ? t("status.enabled", "Enabled")
-                      : t("status.disabled", "Disabled")}
+                      : t("status.disabled", "Checks disabled")}
                   </Badge>
                 </div>
                 <p className="min-h-10 text-muted-foreground text-sm">

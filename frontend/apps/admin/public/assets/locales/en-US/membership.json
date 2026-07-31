@@ -2,9 +2,9 @@
   "workspace": "Commerce",
   "cardDescription": "Description",
   "cardSettings": "Card Settings",
-  "cardSettingsDescription": "Only one default membership card is currently sold to users.",
+  "cardSettingsDescription": "This switch controls the entire membership requirement across subscription purchases and renewals.",
   "days": "days",
-  "description": "Configure the membership card users must hold before purchasing subscription products.",
+  "description": "Control whether membership is required, then configure the membership card and its policies.",
   "descriptionPlaceholder": "Required before purchasing subscription products.",
   "duration": {
     "Day": "Day",
@@ -17,8 +17,10 @@
   "durationValue": "Duration",
   "emptyDescription": "No description yet.",
   "emptyName": "Membership Card",
-  "enabled": "Enabled",
-  "enabledDescription": "When disabled, users cannot purchase or renew this membership card.",
+  "disabledDescription": "After saving, membership expiry is no longer checked for subscription purchases or renewals. All membership policies are paused, while existing expiry dates and orders are retained.",
+  "disabledTitle": "Membership checks are disabled",
+  "enabled": "Enable membership",
+  "enabledDescription": "When disabled, users can purchase and renew subscriptions without membership checks, and all membership policies are paused.",
   "name": "Name",
   "namePlaceholder": "Annual Membership",
   "nameRequired": "Please enter a membership card name",
@@ -35,7 +37,7 @@
     "title": "Abuse Prevention Policies"
   },
   "preview": "Preview",
-  "previewDescription": "What users will purchase.",
+  "previewDescription": "The membership card configuration retained for the user experience.",
   "previewDuration": "Duration",
   "previewPolicies": "Policies",
   "previewPrice": "Price",
@@ -45,7 +47,7 @@
   "retry": "Retry",
   "save": "Save",
   "status": {
-    "disabled": "Disabled",
+    "disabled": "Checks disabled",
     "enabled": "Enabled"
   },
   "title": "Membership Management",

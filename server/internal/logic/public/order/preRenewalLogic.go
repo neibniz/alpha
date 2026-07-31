@@ -36,7 +36,7 @@ func (l *PreRenewalLogic) PreRenewal(req *types.PreRenewalOrderRequest) (*types.
 	if !ok {
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidAccess), "current user is not available")
 	}
-	if err := requireActiveMember(u); err != nil {
+	if err := requireActiveMember(l.ctx, l.svcCtx, u); err != nil {
 		return nil, err
 	}
 

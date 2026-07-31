@@ -1,0 +1,169 @@
+name: Forwared
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ["forwared/v*"]
+    paths:
+      - "forwared/**"
+      - ".github/scripts/validate-release-ref.sh"
+      - ".github/workflows/forwared.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "forwared/**"
+      - ".github/scripts/validate-release-ref.sh"
+      - ".github/workflows/forwared.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: forwared
+    steps:
+      - name: Reject release tag mutation
+        if: >-
+          github.event_name == 'push' &&
+          startsWith(github.ref, 'refs/tags/forwared/v') &&
+          (github.event.created == false || github.event.deleted == true || github.event.forced == true)
+        run: |
+          printf 'release tags are immutable and must be newly created\n' >&2
+          exit 1
+        working-directory: ${{ github.workspace }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate release tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/forwared/v')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMPONENT: forwared
+        run: bash ../.github/scripts/validate-release-ref.sh
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: forwared/go.mod
+          cache: true
+          cache-dependency-path: forwared/go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+  docker:
+    name: Build container
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Revalidate release tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/forwared/v')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMPONENT: forwared
+        run: bash .github/scripts/validate-release-ref.sh
+
+      - name: Set up QEMU
+        if: github.event_name != 'pull_request'
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/alpha-forwared
+          tags: |
+            type=match,pattern=forwared/v(.*),group=1,enable=${{ github.event_name == 'push' && github.event.created == true && github.event.deleted == false && github.event.forced == false }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.event.created == true && github.event.deleted == false && github.event.forced == false && startsWith(github.ref, 'refs/tags/forwared/v') }}
+            type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=pr
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ./forwared
+          file: ./forwared/Dockerfile
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=alpha-forwared
+          cache-to: type=gha,mode=max,scope=alpha-forwared,ignore-error=true
+
+  publish-release:
+    name: Publish release
+    if: >-
+      github.event_name == 'push' &&
+      github.event.created == true &&
+      github.event.deleted == false &&
+      github.event.forced == false &&
+      startsWith(github.ref, 'refs/tags/forwared/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: docker
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Revalidate release tag
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_COMPONENT: forwared
+        run: bash .github/scripts/validate-release-ref.sh
+
+      - name: Publish GitHub release
+        shell: bash
+        run: |
+          release_state="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+          if [ -n "${release_state}" ]; then
+            printf 'release %s already exists; refusing to publish over it\n' "${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --verify-tag \
+            --title "Forwared ${RELEASE_TAG#forwared/v}" \
+            --generate-notes

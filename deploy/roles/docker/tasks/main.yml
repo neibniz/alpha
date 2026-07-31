@@ -1,0 +1,120 @@
+---
+- name: Check whether Docker is installed
+  ansible.builtin.command:
+    cmd: docker --version
+  register: docker_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Check whether Docker Compose is installed
+  ansible.builtin.command:
+    cmd: docker compose version
+  register: docker_compose_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Validate Docker installation platform
+  ansible.builtin.assert:
+    that:
+      - >-
+        docker_version_check.rc == 0
+        and docker_compose_version_check.rc == 0
+        or ansible_os_family in ['Debian', 'RedHat']
+    fail_msg: >-
+      Automatic Docker installation supports Debian/Ubuntu and RHEL-compatible systems.
+      Install Docker Engine and the Compose plugin before deploying on this host.
+
+- name: Install Docker on Debian/Ubuntu
+  when:
+    - docker_version_check.rc != 0 or docker_compose_version_check.rc != 0
+    - ansible_os_family == "Debian"
+  block:
+    - name: Install Docker prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - python3-debian
+        state: present
+        update_cache: true
+
+    - name: Add Docker apt repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: [deb]
+        uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+        suites: ["{{ ansible_distribution_release }}"]
+        components: [stable]
+        architectures:
+          - >-
+            {{ docker_apt_arch | default(
+              {'x86_64': 'amd64', 'aarch64': 'arm64', 'armv7l': 'armhf'}.get(
+                ansible_architecture, ansible_architecture
+              )
+            ) }}
+        signed_by: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+        state: present
+
+    - name: Refresh apt package metadata
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Docker packages
+      ansible.builtin.apt:
+        name: >-
+          {{
+            ['docker-buildx-plugin', 'docker-compose-plugin']
+            if docker_version_check.rc == 0
+            else [
+              'docker-ce',
+              'docker-ce-cli',
+              'containerd.io',
+              'docker-buildx-plugin',
+              'docker-compose-plugin'
+            ]
+          }}
+        state: present
+
+- name: Install Docker on RHEL-compatible systems
+  when:
+    - docker_version_check.rc != 0 or docker_compose_version_check.rc != 0
+    - ansible_os_family == "RedHat"
+  block:
+    - name: Install yum utilities
+      ansible.builtin.package:
+        name: yum-utils
+        state: present
+
+    - name: Add Docker yum repository
+      ansible.builtin.command:
+        cmd: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Install Docker packages
+      ansible.builtin.package:
+        name: >-
+          {{
+            ['docker-buildx-plugin', 'docker-compose-plugin']
+            if docker_version_check.rc == 0
+            else [
+              'docker-ce',
+              'docker-ce-cli',
+              'containerd.io',
+              'docker-buildx-plugin',
+              'docker-compose-plugin'
+            ]
+          }}
+        state: present
+
+- name: Start and enable Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Verify Docker Compose plugin
+  ansible.builtin.command:
+    cmd: docker compose version
+  changed_when: false

@@ -1,0 +1,53 @@
+name: Deployment validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Ansible
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ANSIBLE_INVENTORY: inventories/prod/ci.yml
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: deploy/requirements-ci.txt
+
+      - name: Install Ansible
+        run: python -m pip install -r requirements-ci.txt
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: Validate inventory and playbooks
+        run: make check

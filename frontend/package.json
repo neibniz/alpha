@@ -1,0 +1,75 @@
+{
+  "name": "frontend",
+  "version": "1.4.2",
+  "private": true,
+  "homepage": "https://github.com/neibniz/alpha/tree/main/frontend",
+  "bugs": {
+    "url": "https://github.com/neibniz/alpha/issues/new"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neibniz/alpha.git",
+    "directory": "frontend"
+  },
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "build": "turbo build",
+    "build:admin": "bun --filter alpha-admin-web build",
+    "build:user": "bun --filter alpha-user-next build",
+    "dev": "turbo dev",
+    "deploy:cloudflare:admin": "bun --filter alpha-admin-web deploy:cloudflare",
+    "deploy:cloudflare:user": "bun --filter alpha-user-next deploy:cloudflare",
+    "lint": "turbo lint",
+    "check": "turbo check",
+    "test": "turbo test",
+    "i18n:extract": "turbo i18n:extract",
+    "i18n:sync": "turbo i18n:sync",
+    "i18n:status": "turbo i18n:status"
+  },
+  "overrides": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@babel/core": "7.29.6",
+    "ajv": "8.18.0",
+    "basic-ftp": "5.3.1",
+    "dompurify": "3.4.11",
+    "diff": "8.0.3",
+    "fast-uri": "3.1.2",
+    "form-data": "4.0.6",
+    "handlebars": "4.7.9",
+    "js-cookie": "3.0.7",
+    "launch-editor": "2.14.1",
+    "lodash": "4.18.0",
+    "lodash-es": "4.18.0",
+    "mdast-util-to-hast": "13.2.1",
+    "picomatch": "4.0.4",
+    "postcss": "8.5.10",
+    "preact": "10.28.2",
+    "rollup": "4.59.0",
+    "seroval": "1.4.1",
+    "shell-quote": "1.8.4",
+    "tar": "7.5.16",
+    "vite": "7.3.6",
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.3",
+    "@types/react-copy-to-clipboard": "^5.0.7",
+    "@workspace/typescript-config": "workspace:*",
+    "baseline-browser-mapping": "^2.10.42",
+    "i18next-cli": "^1.65.0",
+    "turbo": "^2.10.4",
+    "typescript": "^5.9.3",
+    "ultracite": "^6.5.1"
+  },
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

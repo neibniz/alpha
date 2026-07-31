@@ -1,0 +1,87 @@
+name: alpha-frontend
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  user:
+    image: ${ALPHA_USER_IMAGE:-alpha-frontend-user:local}
+    build:
+      context: .
+      dockerfile: docker/user.Dockerfile
+      args:
+        NEXT_PUBLIC_ALPHA_DEMO: ${NEXT_PUBLIC_ALPHA_DEMO:-false}
+    restart: unless-stopped
+    init: true
+    user: bun
+    read_only: true
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_ALPHA_DEMO: ${NEXT_PUBLIC_ALPHA_DEMO:-false}
+      ALPHA_UPSTREAM_URL: ${ALPHA_UPSTREAM_URL:-http://host.docker.internal:27001}
+      ALPHA_UPSTREAM_API_PREFIX: ${ALPHA_UPSTREAM_API_PREFIX:-}
+      ALPHA_SUBSCRIPTION_PROXY_PATH: ${ALPHA_SUBSCRIPTION_PROXY_PATH:-/api/subscribe}
+      ALPHA_AUTH_COOKIE_NAME: ${ALPHA_AUTH_COOKIE_NAME:-alpha_user_authorization}
+      ALPHA_AUTH_COOKIE_MAX_AGE: ${ALPHA_AUTH_COOKIE_MAX_AGE:-3600}
+      ALPHA_AUTH_COOKIE_SECURE: ${ALPHA_AUTH_COOKIE_SECURE:-false}
+      ALPHA_PUBLIC_ORIGIN: ${ALPHA_PUBLIC_ORIGIN:-http://localhost:3000}
+      ALPHA_TRUST_PROXY_HEADERS: ${ALPHA_TRUST_PROXY_HEADERS:-false}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "${ALPHA_USER_BIND_HOST:-127.0.0.1}:${ALPHA_USER_PORT:-3000}:3000"
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/apps/user-next/.next/cache:size=64m,uid=1000,gid=1000,mode=0750
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    mem_limit: 512m
+    cpus: 1.0
+    stop_grace_period: 15s
+    logging: *default-logging
+
+  admin:
+    image: ${ALPHA_ADMIN_IMAGE:-alpha-frontend-admin:local}
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_API_PREFIX: ${VITE_API_PREFIX:-/api}
+        VITE_AUTH_COOKIE_NAME: ${VITE_AUTH_COOKIE_NAME:-alpha_admin_authorization}
+    restart: unless-stopped
+    read_only: true
+    environment:
+      ALPHA_ADMIN_UPSTREAM: ${ALPHA_ADMIN_UPSTREAM:-http://host.docker.internal:27001}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "${ALPHA_ADMIN_BIND_HOST:-127.0.0.1}:${ALPHA_ADMIN_PORT:-3001}:80"
+    tmpfs:
+      - /etc/nginx/conf.d:size=1m,mode=0755
+      - /var/cache/nginx:size=32m,mode=0755
+      - /var/run:size=1m,mode=0755
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    mem_limit: 256m
+    cpus: 0.5
+    stop_grace_period: 10s
+    logging: *default-logging

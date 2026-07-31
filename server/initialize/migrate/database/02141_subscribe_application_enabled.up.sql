@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE "subscribe_application"
+  ADD COLUMN IF NOT EXISTS "enabled" BOOLEAN NOT NULL DEFAULT TRUE;
+
+COMMIT;

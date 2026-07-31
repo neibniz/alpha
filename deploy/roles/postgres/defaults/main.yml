@@ -1,0 +1,26 @@
+---
+postgres_image: postgres:16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
+postgres_container_uid: "70"
+postgres_container_gid: "70"
+postgres_bind_host: 127.0.0.1
+postgres_port: 5432
+postgres_username: alpha
+postgres_password: ""
+postgres_dbname: alpha
+postgres_primary_group: postgres_primary
+postgres_replica_group: postgres_replicas
+postgres_replication_enabled: false
+postgres_replication_user: replicator
+postgres_replication_password: ""
+postgres_replication_sslmode: disable
+postgres_replication_hba_method: scram-sha-256
+postgres_replication_allowed_cidrs: []
+postgres_replication_slot_prefix: alpha_replica
+postgres_replication_use_slots: true
+postgres_replication_recreate_replica: false
+postgres_listen_addresses: "*"
+postgres_wal_level: replica
+postgres_max_wal_senders: 10
+postgres_max_replication_slots: 10
+postgres_wal_keep_size: 1GB
+postgres_hot_standby: "on"

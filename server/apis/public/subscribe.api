@@ -1,0 +1,59 @@
+syntax = "v1"
+
+info (
+	title:   "Subscribe API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	QuerySubscribeListRequest {
+		Language string `form:"language"`
+	}
+	QueryUserSubscribeNodeListResponse {
+		List []UserSubscribeInfo `json:"list"`
+	}
+	UserSubscribeInfo {
+		Id       int64                   `json:"id"`
+		Nodes    []UserSubscribeNodeInfo `json:"nodes"`
+		Profiles []UserSubscribeProfile  `json:"profiles"`
+		Presets  []UserSubscribePreset   `json:"presets"`
+	}
+	UserSubscribeNodeInfo {
+		Id           int64    `json:"id"`
+		Name         string   `json:"name"`
+		Uuid         string   `json:"uuid"`
+		Protocol     string   `json:"protocol"`
+		InboundAlias string   `json:"inbound_alias"`
+		ProfileKey   string   `json:"profile_key"`
+		ProfileName  string   `json:"profile_name"`
+		ItemKey      string   `json:"item_key"`
+		ServerId     int64    `json:"server_id"`
+		ServerName   string   `json:"server_name"`
+		Port         uint16   `json:"port"`
+		Address      string   `json:"address"`
+		Tags         []string `json:"tags"`
+		Country      string   `json:"country"`
+		City         string   `json:"city"`
+		CreatedAt    int64    `json:"created_at"`
+	}
+)
+
+@server (
+	prefix:     v1/public/subscribe
+	group:      public/subscribe
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Get subscribe list"
+	@handler QuerySubscribeList
+	get /list (QuerySubscribeListRequest) returns (QuerySubscribeListResponse)
+
+	@doc "Get user subscribe node info"
+	@handler QueryUserSubscribeNodeList
+	get /node/list returns (QueryUserSubscribeNodeListResponse)
+}

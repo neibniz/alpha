@@ -1,0 +1,9 @@
+.git
+.github
+log
+forwared
+config/*.crt
+config/*.key
+config/*.pem
+config/IP2LOCATION-LITE-DB*.BIN
+config/forwared.yaml

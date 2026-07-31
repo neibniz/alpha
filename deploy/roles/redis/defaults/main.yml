@@ -1,0 +1,11 @@
+---
+redis_image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+redis_container_uid: "999"
+redis_container_gid: "1000"
+redis_bind_host: 127.0.0.1
+redis_port: 6379
+redis_password: ""
+redis_db: 0
+redis_memory_limit: 1g
+redis_cpu_limit: 1.0
+redis_pids_limit: 200

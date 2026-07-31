@@ -1,0 +1,14 @@
+services:
+  alpha:
+    container_name: alpha-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ALPHA_GEOIP_ENABLED: ${ALPHA_GEOIP_ENABLED:-true}
+      ALPHA_GEOIP_DATABASE_PATH: ${ALPHA_GEOIP_DATABASE_PATH:-/usr/share/alpha/geoip/dbip-city-lite.mmdb}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./etc/alpha.yaml:/app/etc/alpha.yaml
+    restart: always

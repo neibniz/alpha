@@ -1,0 +1,22 @@
+syntax = "v1"
+
+info (
+	title:   "Announcement API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+@server (
+	prefix:     v1/public/announcement
+	group:      public/announcement
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Query announcement"
+	@handler QueryAnnouncement
+	get /list (QueryAnnouncementRequest) returns (QueryAnnouncementResponse)
+}

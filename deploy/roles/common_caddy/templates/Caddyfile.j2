@@ -1,0 +1,7 @@
+{
+	email {{ caddy_email }}
+	http_port {{ common_caddy_http_port }}
+	https_port {{ common_caddy_https_port }}
+}
+
+import /etc/caddy/sites/*.caddy

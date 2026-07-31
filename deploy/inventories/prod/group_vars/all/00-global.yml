@@ -1,0 +1,11 @@
+---
+# Controller and remote filesystem settings shared by every deployment.
+deploy_root: /data/alpha
+repo_root: "{{ playbook_dir }}/../.."
+timezone: Asia/Shanghai
+ansible_ssh_private_key_file: ~/.ssh/ssh_linkwater
+
+caddy_email: admin@example.com
+caddy_image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+caddy_http_port: 80
+caddy_https_port: 443

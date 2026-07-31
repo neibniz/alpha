@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "nameRequired": "请输入名称",
+    "inboundRequired": "请选择 inbound",
+    "portRange": "端口必须在 1 到 65535 之间",
+    "protocolRequired": "请选择协议",
+    "serverAddrRequired": "请输入入口地址",
+    "serverRequired": "请选择服务器"
+  },
+  "form": {
+    "validation": {
+      "nameRequired": "客户端名称必填",
+      "userAgentRequiredSuffix": "是必填项"
+    }
+  },
+  "tos": "服务条款"
+}

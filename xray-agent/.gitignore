@@ -1,0 +1,5 @@
+/xray-agent
+/dist/
+*.log
+current.json
+last_good.json

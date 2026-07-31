@@ -1,0 +1,2 @@
+ALTER TABLE "nodes"
+    ALTER COLUMN "port" TYPE SMALLINT USING "port"::SMALLINT;

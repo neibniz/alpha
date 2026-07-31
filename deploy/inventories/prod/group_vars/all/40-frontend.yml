@@ -1,0 +1,33 @@
+---
+user_domain: user.euler.icu
+admin_domain: admin.euler.icu
+
+frontend_package_enabled: true
+frontend_release_version: frontend/v1.4.2
+frontend_release_base_url: https://github.com/neibniz/alpha/releases
+frontend_api_base_url: "https://{{ server_domain }}"
+frontend_api_prefix: ""
+
+frontend_admin_deployment_mode: package
+frontend_admin_container_image: ghcr.io/neibniz/alpha-frontend-admin:1.4.2
+frontend_port: 3001
+frontend_container_upstream_url: "http://127.0.0.1:{{ server_container_port }}"
+frontend_package_checksum: ""
+frontend_keep_releases: 3
+
+frontend_next_subscribe_proxy_enabled: true
+frontend_next_subscribe_proxy_path: /v1/subscribe/config
+frontend_next_subscribe_proxy_upstream: "127.0.0.1:{{ server_container_port }}"
+
+frontend_next_deployment_mode: package
+frontend_next_image: oven/bun:1.3.14-slim@sha256:d56a2534ffd262e92c12fd3249d3924d296d97086da773f821d7d0477435ea04
+frontend_next_container_image: ghcr.io/neibniz/alpha-frontend-user:1.4.2
+frontend_next_package_checksum: ""
+frontend_next_port: 3000
+frontend_next_upstream_url: "http://127.0.0.1:{{ server_container_port }}"
+frontend_next_api_prefix: ""
+frontend_next_auth_cookie_name: alpha_user_authorization
+frontend_next_auth_cookie_max_age: "{{ server_jwt_access_expire }}"
+frontend_next_auth_cookie_secure: true
+frontend_next_trust_proxy_headers: true
+frontend_next_keep_releases: 3

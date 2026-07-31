@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS "idx_nodes_port_text_trgm";
+DROP INDEX IF EXISTS "idx_nodes_tags_trgm";
+DROP INDEX IF EXISTS "idx_nodes_address_trgm";
+DROP INDEX IF EXISTS "idx_nodes_name_trgm";
+DROP INDEX IF EXISTS "idx_nodes_enabled_sort_id";
+DROP INDEX IF EXISTS "idx_nodes_server_sort_id";
+DROP INDEX IF EXISTS "idx_nodes_sort_id";
+DROP INDEX IF EXISTS "idx_servers_address_trgm";
+DROP INDEX IF EXISTS "idx_servers_name_trgm";
+DROP INDEX IF EXISTS "idx_servers_sort_id";

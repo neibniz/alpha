@@ -1,0 +1,296 @@
+---
+- name: Validate server runtime settings
+  ansible.builtin.assert:
+    that:
+      - server_container_port | int > 0
+      - server_container_port | int <= 65535
+      - server_bind_host == '127.0.0.1'
+      - (server_uid | string) is match('^[0-9]+$')
+      - (server_gid | string) is match('^[0-9]+$')
+      - server_domain is match('^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$')
+      - server_geoip_database_path is match('^/[A-Za-z0-9._/-]+$')
+      - server_privacy_key_file is match('^/run/secrets/[A-Za-z0-9._-]+$')
+      - server_pids_limit | int > 0
+    fail_msg: Server ports, identity, domain, paths, and resource limits are invalid.
+
+- name: Validate required server secrets
+  ansible.builtin.assert:
+    that:
+      - server_jwt_access_secret | default("") | length >= 32
+      - "'\\n' not in (server_jwt_access_secret | default(''))"
+      - "'\\r' not in (server_jwt_access_secret | default(''))"
+      - postgres_password | default("") | length >= 20
+      - "'\\n' not in (postgres_password | default(''))"
+      - "'\\r' not in (postgres_password | default(''))"
+      - redis_password | default("") | length >= 20
+      - "'\\n' not in (redis_password | default(''))"
+      - "'\\r' not in (redis_password | default(''))"
+      - server_admin_password | default("") | length >= 12
+      - "'\\n' not in (server_admin_password | default(''))"
+      - "'\\r' not in (server_admin_password | default(''))"
+      - server_node_master_secret | default("") | length >= 32
+      - "'\\n' not in (server_node_master_secret | default(''))"
+      - "'\\r' not in (server_node_master_secret | default(''))"
+      - server_node_deploy_secret | default("") | length >= 32
+      - "'\\n' not in (server_node_deploy_secret | default(''))"
+      - "'\\r' not in (server_node_deploy_secret | default(''))"
+      - server_forwarder_bootstrap_secret | default("") | length >= 32
+      - "'\\n' not in (server_forwarder_bootstrap_secret | default(''))"
+      - "'\\r' not in (server_forwarder_bootstrap_secret | default(''))"
+      - not (clickhouse_enabled | default(false) | bool) or (clickhouse_password | default("") | length >= 20)
+      - not (clickhouse_enabled | default(false) | bool) or ('\n' not in (clickhouse_password | default('')))
+      - not (clickhouse_enabled | default(false) | bool) or ('\r' not in (clickhouse_password | default('')))
+      - not (server_privacy_enabled | default(true) | bool) or (server_privacy_keyring_json | default("") | length > 0)
+    fail_msg: Required credentials must be supplied through Ansible Vault or protected extra vars.
+  no_log: true
+
+- name: Decode privacy encryption keyring
+  ansible.builtin.set_fact:
+    server_privacy_keyring_parsed: "{{ server_privacy_keyring_json | from_json }}"
+  when: server_privacy_enabled | default(true) | bool
+  no_log: true
+
+- name: Validate privacy encryption keyring structure
+  ansible.builtin.assert:
+    that:
+      - server_privacy_keyring_parsed is mapping
+      - server_privacy_keyring_parsed.active_key_id | default('') is match('^[A-Za-z0-9_-]{1,32}$')
+      - server_privacy_keyring_parsed.encryption_keys | default({}) is mapping
+      - >-
+        (server_privacy_keyring_parsed.active_key_id | default(''))
+        in (server_privacy_keyring_parsed.encryption_keys | default({}))
+      - >-
+        server_privacy_keyring_parsed.index_key
+        | default('')
+        is match('^[A-Za-z0-9+/]{43}=$')
+      - >-
+        (server_privacy_keyring_parsed.index_key | default(''))
+        not in (
+          server_privacy_keyring_parsed.encryption_keys
+          | default({})
+          | dict2items
+          | map(attribute='value')
+          | list
+        )
+    fail_msg: Privacy keyring JSON must match the Server keyring schema and contain 32-byte keys.
+  when: server_privacy_enabled | default(true) | bool
+  no_log: true
+
+- name: Validate privacy encryption keys
+  ansible.builtin.assert:
+    that:
+      - item.key is match('^[A-Za-z0-9_-]{1,32}$')
+      - item.value is match('^[A-Za-z0-9+/]{43}=$')
+    fail_msg: Every privacy encryption key must be a valid 32-byte Base64 value.
+  loop: "{{ server_privacy_keyring_parsed.encryption_keys | dict2items }}"
+  when: server_privacy_enabled | default(true) | bool
+  no_log: true
+
+- name: Ensure server directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ deploy_root }}/server"
+    - "{{ deploy_root }}/server/config"
+    - "{{ deploy_root }}/server/secrets"
+
+- name: Ensure server log directory is writable by the container
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/server/log"
+    state: directory
+    owner: "{{ server_uid }}"
+    group: "{{ server_gid }}"
+    mode: "0750"
+
+- name: Install server runtime secrets
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ deploy_root }}/server/secrets/{{ item.name }}"
+    owner: "{{ server_uid }}"
+    group: "{{ server_gid }}"
+    mode: "0600"
+  loop:
+    - name: jwt-access-secret
+      value: "{{ server_jwt_access_secret }}"
+    - name: postgres-password
+      value: "{{ postgres_password }}"
+    - name: redis-password
+      value: "{{ redis_password }}"
+    - name: node-secret
+      value: "{{ server_node_master_secret }}"
+    - name: node-deploy-secret
+      value: "{{ server_node_deploy_secret }}"
+    - name: forwarder-bootstrap-secret
+      value: "{{ server_forwarder_bootstrap_secret }}"
+    - name: admin-password
+      value: "{{ server_admin_password }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: server_runtime_secrets
+  no_log: true
+
+- name: Install ClickHouse runtime secret
+  ansible.builtin.copy:
+    content: "{{ clickhouse_password }}\n"
+    dest: "{{ deploy_root }}/server/secrets/clickhouse-password"
+    owner: "{{ server_uid }}"
+    group: "{{ server_gid }}"
+    mode: "0600"
+  when: clickhouse_enabled | default(false) | bool
+  register: server_clickhouse_secret
+  no_log: true
+
+- name: Remove stale ClickHouse runtime secret
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/server/secrets/clickhouse-password"
+    state: absent
+  when: not (clickhouse_enabled | default(false) | bool)
+  register: server_stale_clickhouse_secret
+  no_log: true
+
+- name: Install privacy encryption keyring
+  ansible.builtin.copy:
+    content: "{{ server_privacy_keyring_json }}"
+    dest: "{{ deploy_root }}/server/secrets/privacy-keyring.json"
+    owner: "{{ server_uid }}"
+    group: "{{ server_gid }}"
+    mode: "0600"
+  when: server_privacy_enabled | default(true) | bool
+  register: server_privacy_keyring
+  no_log: true
+
+- name: Remove stale privacy encryption keyring
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/server/secrets/privacy-keyring.json"
+    state: absent
+  when: not (server_privacy_enabled | default(true) | bool)
+  register: server_stale_privacy_keyring
+  no_log: true
+
+- name: Render alpha config
+  ansible.builtin.template:
+    src: alpha.yaml.j2
+    dest: "{{ deploy_root }}/server/config/alpha.yaml"
+    owner: "{{ server_uid }}"
+    group: "{{ server_gid }}"
+    mode: "0600"
+  register: server_config
+  no_log: true
+
+- name: Render server compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/server/docker-compose.yml"
+    mode: "0644"
+  register: server_compose
+
+- name: Validate server compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/server/docker-compose.yml config --quiet
+  changed_when: false
+
+- name: Find legacy server Caddy site files
+  ansible.builtin.find:
+    paths: "{{ deploy_root }}/caddy/sites"
+    patterns: server-*.caddy
+    file_type: file
+    recurse: false
+  register: server_legacy_caddy_sites
+
+- name: Remove legacy server Caddy site files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ server_legacy_caddy_sites.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Render server Caddy site
+  ansible.builtin.template:
+    src: server.caddy.j2
+    dest: "{{ deploy_root }}/caddy/sites/server.caddy"
+    mode: "0644"
+
+- name: Validate Caddy after server site change
+  ansible.builtin.command:
+    argv: [docker, exec, alpha-caddy, caddy, validate, --config, /etc/caddy/Caddyfile]
+  changed_when: false
+
+- name: Pull server image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/server/docker-compose.yml pull
+  async: 1800
+  poll: 0
+  register: server_pull_job
+
+- name: Wait for server image pull
+  ansible.builtin.async_status:
+    jid: "{{ server_pull_job.ansible_job_id }}"
+  register: server_pull_result
+  until: server_pull_result.finished
+  retries: 360
+  delay: 5
+  changed_when: false
+
+- name: Remove legacy server container
+  ansible.builtin.command:
+    argv: [docker, rm, -f, m200-server]
+  register: server_legacy_remove
+  changed_when: server_legacy_remove.rc == 0
+  failed_when: false
+
+- name: Resolve whether server must be recreated
+  ansible.builtin.set_fact:
+    server_force_recreate: >-
+      {{
+        (server_runtime_secrets.changed | default(false))
+        or (server_clickhouse_secret.changed | default(false))
+        or (server_stale_clickhouse_secret.changed | default(false))
+        or (server_privacy_keyring.changed | default(false))
+        or (server_stale_privacy_keyring.changed | default(false))
+        or (server_config.changed | default(false))
+        or (server_compose.changed | default(false))
+      }}
+
+- name: Start server container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/server/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (['--force-recreate'] if (server_force_recreate | bool) else [])
+      }}
+  register: server_start
+  changed_when: >-
+    'Created' in (server_start.stdout ~ server_start.stderr)
+    or 'Started' in (server_start.stdout ~ server_start.stderr)
+    or 'Recreated' in (server_start.stdout ~ server_start.stderr)
+
+- name: Wait for server port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ server_container_port }}"
+    timeout: 180
+
+- name: Verify server heartbeat
+  ansible.builtin.uri:
+    url: "{{ server_healthcheck_url }}"
+    status_code: 200
+  register: server_healthcheck
+  until: server_healthcheck.status == 200
+  retries: 18
+  delay: 5
+
+- name: Reload Caddy after server site change
+  ansible.builtin.command:
+    cmd: docker exec alpha-caddy caddy reload --config /etc/caddy/Caddyfile
+  changed_when: false

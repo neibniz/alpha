@@ -1,0 +1,240 @@
+syntax = "v1"
+
+info (
+	title:   "Node API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	ServerBasic {
+		PushInterval int64 `json:"push_interval"`
+		PullInterval int64 `json:"pull_interval"`
+	}
+	ServerCommon {
+		Protocol string `form:"protocol"`
+		ServerId int64  `form:"server_id"`
+	}
+	ServerUser {
+		Id          int64  `json:"id"`
+		UUID        string `json:"uuid"`
+		SpeedLimit  int64  `json:"speed_limit"`
+		DeviceLimit int64  `json:"device_limit"`
+	}
+	UserTraffic {
+		SID      int64 `json:"uid"`
+		Upload   int64 `json:"upload"`
+		Download int64 `json:"download"`
+	}
+	TrafficReport {
+		ReportId        string        `json:"report_id" validate:"required,uuid"`
+		SampledAt       int64         `json:"sampled_at" validate:"required"`
+		IntervalSeconds int64         `json:"interval_seconds" validate:"required,min=1,max=3600"`
+		Sequence        int64         `json:"sequence,omitempty" validate:"omitempty,min=1"`
+		Traffic         []UserTraffic `json:"traffic" validate:"required,max=20000,dive"`
+	}
+	ServerPushUserTrafficRequest {
+		ServerCommon
+		Reports []TrafficReport `json:"reports,omitempty" validate:"omitempty,max=120,dive"`
+		Traffic []UserTraffic   `json:"traffic,omitempty" validate:"omitempty,max=20000,dive"`
+	}
+	ServerPushStatusRequest {
+		ServerCommon
+		Cpu           float64 `json:"cpu"`
+		Mem           float64 `json:"mem"`
+		Disk          float64 `json:"disk"`
+		Load1         float64 `json:"load1,omitempty"`
+		Load5         float64 `json:"load5,omitempty"`
+		Load15        float64 `json:"load15,omitempty"`
+		Uptime        int64   `json:"uptime,omitempty"`
+		XrayRunning   bool    `json:"xray_running,omitempty"`
+		XrayVersion   string  `json:"xray_version,omitempty"`
+		Connections   int64   `json:"connections,omitempty"`
+		SystemConnections       int64 `json:"system_connections,omitempty"`
+		SystemInboundConnections  int64 `json:"system_inbound_connections,omitempty"`
+		SystemOutboundConnections int64 `json:"system_outbound_connections,omitempty"`
+		XrayConnections         int64 `json:"xray_connections,omitempty"`
+		XrayInboundConnections  int64 `json:"xray_inbound_connections,omitempty"`
+		XrayOutboundConnections int64 `json:"xray_outbound_connections,omitempty"`
+		OnlineUsers   int64   `json:"online_users,omitempty"`
+		NetRxBps      int64   `json:"net_rx_bps,omitempty"`
+		NetTxBps      int64   `json:"net_tx_bps,omitempty"`
+		NetRxBytes    int64   `json:"net_rx_bytes,omitempty"`
+		NetTxBytes    int64   `json:"net_tx_bytes,omitempty"`
+		XrayRxBps     int64   `json:"xray_rx_bps,omitempty"`
+		XrayTxBps     int64   `json:"xray_tx_bps,omitempty"`
+		XrayRxBytes   int64   `json:"xray_rx_bytes,omitempty"`
+		XrayTxBytes   int64   `json:"xray_tx_bytes,omitempty"`
+		XrayStatsError string `json:"xray_stats_error"`
+		UpdatedAt     int64   `json:"updated_at"`
+		MemoryUsed    int64   `json:"memory_used,omitempty"`
+		MemoryTotal   int64   `json:"memory_total,omitempty"`
+		DiskUsed      int64   `json:"disk_used,omitempty"`
+		DiskTotal     int64   `json:"disk_total,omitempty"`
+		AgentVersion  string  `json:"agent_version,omitempty"`
+		ConfigVersion string  `json:"config_version,omitempty"`
+		ConfigSyncStatus  string `json:"config_sync_status,omitempty"`
+		ConfigApplyStatus string `json:"config_apply_status,omitempty"`
+		LastConfigHash    string `json:"last_config_hash,omitempty"`
+		RunningConfigHash string `json:"running_config_hash,omitempty"`
+		PendingConfigHash string `json:"pending_config_hash"`
+		LastSyncAt        int64  `json:"last_sync_at,omitempty"`
+		LastApplyAt       int64  `json:"last_apply_at,omitempty"`
+		LastConfigError   string `json:"last_config_error"`
+		LastApplyError    string `json:"last_apply_error"`
+	}
+	ServerPushOnlineUsersRequest {
+		ServerCommon
+		Mode       string  `json:"mode"`
+		InstanceID string  `json:"instance_id"`
+		Seq        int64   `json:"seq"`
+		Active     []int64 `json:"active,omitempty"`
+		Inactive   []int64 `json:"inactive,omitempty"`
+		TTLSeconds int64   `json:"ttl_seconds"`
+	}
+	XrayAccessEvent {
+		EventId         string `json:"event_id"`
+		Timestamp       int64  `json:"timestamp"`
+		UserSubscribeId int64  `json:"user_subscribe_id,omitempty"`
+		SourceIP        string `json:"source_ip,omitempty"`
+		SourcePort      uint16 `json:"source_port,omitempty"`
+		DestinationHost string `json:"destination_host,omitempty"`
+		DestinationIP   string `json:"destination_ip,omitempty"`
+		DestinationPort uint16 `json:"destination_port,omitempty"`
+		Network         string `json:"network,omitempty"`
+		Status          string `json:"status"`
+		OutboundTag     string `json:"outbound_tag,omitempty"`
+		Reason          string `json:"reason,omitempty"`
+		ParserVersion   uint16 `json:"parser_version"`
+	}
+	ServerPushAccessLogsRequest {
+		ServerCommon
+		Events []XrayAccessEvent `json:"events"`
+	}
+	XrayIPLimitDecision {
+		EventId         string `json:"event_id"`
+		UserSubscribeId int64  `json:"user_subscribe_id"`
+		SourceNetwork   string `json:"source_network"`
+		Blocked         bool   `json:"blocked"`
+		ExpiresAt       int64  `json:"expires_at"`
+		Active          int64  `json:"active"`
+		Limit           int64  `json:"limit"`
+	}
+	ServerPushAccessLogsResponse {
+		Accepted         int                   `json:"accepted"`
+		Rejected         int                   `json:"rejected"`
+		IPLimitDecisions []XrayIPLimitDecision `json:"ip_limit_decisions,omitempty"`
+	}
+	QueryServerXrayConfigRequest {
+		ServerID int64 `path:"server_id"`
+	}
+	QueryServerXrayConfigResponse {
+		Inbounds  []json.RawMessage `json:"inbounds"`
+		Outbounds []json.RawMessage `json:"outbounds"`
+		DNS       json.RawMessage   `json:"dns,omitempty"`
+		Routing   json.RawMessage   `json:"routing,omitempty"`
+		Geodata   json.RawMessage   `json:"geodata,omitempty"`
+		Templates []XrayTemplate    `json:"templates"`
+	}
+	QueryServerXrayUsersRequest {
+		ServerID int64  `path:"server_id"`
+		Version  string `form:"version,omitempty"`
+	}
+	QueryServerXrayUsersResponse {
+		Version string           `json:"version"`
+		Full    bool             `json:"full"`
+		Users   []ServerXrayUser `json:"users"`
+	}
+	QueryServerForwardTableRequest {
+		IP        string `form:"ip"`
+	}
+	QueryDeployServerListRequest {
+	}
+	QueryDeployServerListResponse {
+		List []DeployServer `json:"list"`
+	}
+	DeployServer {
+		Id      int64  `json:"id"`
+		Name    string `json:"name"`
+		Address string `json:"address"`
+		Token   string `json:"token"`
+	}
+	ServerForwardItem {
+		LocalPort  uint   `json:"port"`
+		TargetHost string `json:"target_host"`
+		TargetPort uint   `json:"target_port"`
+		NodeID     int64  `json:"node_id,omitempty"`
+		NodeName   string `json:"node_name,omitempty"`
+		ServerID   int64  `json:"server_id,omitempty"`
+		ServerName string `json:"server_name,omitempty"`
+		Inbound    string `json:"inbound,omitempty"`
+	}
+	QueryServerForwardTableResponse {
+		IP       string              `json:"ip"`
+		Items    []ServerForwardItem `json:"forwarded_items"`
+		Warnings []string            `json:"warnings"`
+	}
+	ServerXrayUser {
+		UserSubscribeID int64    `json:"user_subscribe_id"`
+		UserID          int64    `json:"user_id"`
+		Email           string   `json:"email"`
+		UUID            string   `json:"uuid"`
+		Password        string   `json:"password"`
+		Level           int      `json:"level"`
+		Inbounds        []string `json:"inbounds"`
+		SpeedLimit      int64    `json:"speed_limit,omitempty"`
+		DeviceLimit     int64    `json:"device_limit,omitempty"`
+		Enabled         bool     `json:"enabled"`
+		ExpiredAt       int64    `json:"expired_at,omitempty"`
+	}
+)
+
+@server (
+	prefix:     v1/server
+	group:      server
+	middleware: ServerMiddleware
+)
+service alpha {
+	@doc "Push user Traffic"
+	@handler ServerPushUserTraffic
+	post /push (ServerPushUserTrafficRequest)
+
+	@doc "Push server status"
+	@handler ServerPushStatus
+	post /status (ServerPushStatusRequest)
+
+	@doc "Push online users"
+	@handler ServerPushOnlineUsers
+	post /online-users (ServerPushOnlineUsersRequest)
+
+	@doc "Push Xray access logs"
+	@handler ServerPushAccessLogs
+	post /access-logs (ServerPushAccessLogsRequest) returns (ServerPushAccessLogsResponse)
+
+}
+
+@server (
+	prefix: v2/server
+	group:  server
+)
+service alpha {
+	@doc "Query deploy server list"
+	@handler QueryDeployServerList
+	get /deploy/servers (QueryDeployServerListRequest) returns (QueryDeployServerListResponse)
+
+	@doc "Get Server Xray Config"
+	@handler QueryServerXrayConfig
+	get /:server_id/xray-config (QueryServerXrayConfigRequest) returns (QueryServerXrayConfigResponse)
+
+	@doc "Get Server Xray Users"
+	@handler QueryServerXrayUsers
+	get /:server_id/xray-users (QueryServerXrayUsersRequest) returns (QueryServerXrayUsersResponse)
+
+	@doc "Get TCP forward table"
+	@handler QueryServerForwardTable
+	get /forward-table (QueryServerForwardTableRequest) returns (QueryServerForwardTableResponse)
+}

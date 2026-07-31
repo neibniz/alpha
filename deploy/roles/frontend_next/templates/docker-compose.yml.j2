@@ -1,0 +1,53 @@
+services:
+  user-next:
+    image: "{{ frontend_next_effective_image }}"
+    container_name: alpha-user-next
+    restart: unless-stopped
+    network_mode: host
+    init: true
+    user: bun
+    read_only: true
+{% if frontend_next_deployment_mode == 'package' %}
+    working_dir: /app
+    command: ["bun", "apps/user-next/server.js"]
+{% endif %}
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 127.0.0.1
+      PORT: "{{ frontend_next_port }}"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_ALPHA_DEMO: "false"
+      ALPHA_UPSTREAM_URL: {{ frontend_next_upstream_url | to_json }}
+      ALPHA_UPSTREAM_API_PREFIX: {{ frontend_next_api_prefix | to_json }}
+      ALPHA_SUBSCRIPTION_PROXY_PATH: {{ frontend_next_subscribe_proxy_path | to_json }}
+      ALPHA_AUTH_COOKIE_NAME: {{ frontend_next_auth_cookie_name | to_json }}
+      ALPHA_AUTH_COOKIE_MAX_AGE: {{ frontend_next_auth_cookie_max_age | string | to_json }}
+      ALPHA_AUTH_COOKIE_SECURE: {{ frontend_next_auth_cookie_secure | string | lower | to_json }}
+      ALPHA_PUBLIC_ORIGIN: {{ ('https://' ~ frontend_domain) | to_json }}
+      ALPHA_TRUST_PROXY_HEADERS: {{ frontend_next_trust_proxy_headers | bool | string | lower | to_json }}
+{% if frontend_next_deployment_mode == 'package' %}
+    volumes:
+      - {{ deploy_root }}/frontend/user-next/current:/app:ro
+{% endif %}
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/apps/user-next/.next/cache:size=64m,uid=1000,gid=1000,mode=0750
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 200
+    stop_grace_period: 15s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:{{ frontend_next_port }}/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

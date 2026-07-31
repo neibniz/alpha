@@ -1,0 +1,15 @@
+base_url: {{ forwared_server_base_url | default(frontend_api_base_url) | quote }}
+secret_key: {{ forwared_control_token | quote }}
+name: {{ forwared_name | default(inventory_hostname) | quote }}
+public_ip: {{ forwared_public_ip | default("") | quote }}
+public_ip_url: {{ forwared_public_ip_url | default("https://checkip.amazonaws.com") | quote }}
+fetch_ip_interval: {{ forwared_fetch_ip_interval | default(120) }}
+fetch_forward_table_interval: {{ forwared_fetch_forward_table_interval | default(10) }}
+logfile: "/app/log/forwared.log"
+geoipfile: "/app/config/IP2LOCATION-LITE-DB3.BIN"
+state_file: "/app/state/identity.json"
+spool_file: "/app/state/connection-events.jsonl"
+status_interval: {{ forwared_status_interval | default(5) }}
+event_batch_size: {{ forwared_event_batch_size | default(500) }}
+event_flush_interval: {{ forwared_event_flush_interval | default(5) }}
+max_spool_bytes: {{ forwared_max_spool_bytes | default(67108864) }}

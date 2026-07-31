@@ -1,0 +1,11 @@
+clickhouse_enabled: true
+clickhouse_image: clickhouse/clickhouse-server:26.3-alpine@sha256:de9b7b1fe8ed9aa13184a96872d08bc8cf7af35809e0ba2fe00dc6c8e624d2db
+clickhouse_bind_host: 127.0.0.1
+clickhouse_native_port: 9000
+clickhouse_http_port: 8123
+clickhouse_database: alpha_analytics
+clickhouse_username: alpha
+clickhouse_access_retention_days: 90
+clickhouse_traffic_raw_retention_hours: 72
+clickhouse_traffic_retention_days: 90
+clickhouse_traffic_hourly_retention_days: 730

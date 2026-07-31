@@ -1,0 +1,70 @@
+syntax = "v1"
+
+info (
+	title:   "Order API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+@server (
+	prefix:     v1/public/order
+	group:      public/order
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Pre create order"
+	@handler PreCreateOrder
+	post /pre (PurchaseOrderRequest) returns (PreOrderResponse)
+
+	@doc "purchase Subscription"
+	@handler Purchase
+	post /purchase (PurchaseOrderRequest) returns (PurchaseOrderResponse)
+
+	@doc "Get membership plan"
+	@handler QueryMembershipPlan
+	get /membership/plan returns (MembershipPlan)
+
+	@doc "Get membership card"
+	@handler QueryMembershipCard
+	get /membership/card returns (MembershipCardResponse)
+
+	@doc "Purchase membership card"
+	@handler PurchaseMembership
+	post /membership (PurchaseMembershipOrderRequest) returns (PurchaseMembershipOrderResponse)
+
+	@doc "Renewal Subscription"
+	@handler Renewal
+	post /renewal (RenewalOrderRequest) returns (RenewalOrderResponse)
+
+	@doc "Preview renewal with current product pricing"
+	@handler PreRenewal
+	post /renewal/pre (PreRenewalOrderRequest) returns (PreRenewalOrderResponse)
+
+	@doc "Reset traffic"
+	@handler ResetTraffic
+	post /reset (ResetTrafficOrderRequest) returns (ResetTrafficOrderResponse)
+
+	@doc "Preview a traffic reset with current product pricing"
+	@handler PreResetTraffic
+	post /reset/pre (PreResetTrafficOrderRequest) returns (PreResetTrafficOrderResponse)
+
+	@doc "Recharge"
+	@handler Recharge
+	post /recharge (RechargeOrderRequest) returns (RechargeOrderResponse)
+
+	@doc "Close order"
+	@handler CloseOrder
+	post /close (CloseOrderRequest)
+
+	@doc "Get order"
+	@handler QueryOrderDetail
+	get /detail (QueryOrderDetailRequest) returns (OrderDetail)
+
+	@doc "Get order list"
+	@handler QueryOrderList
+	get /list (QueryOrderListRequest) returns (QueryOrderListResponse)
+}

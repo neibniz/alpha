@@ -1,0 +1,32 @@
+---
+all:
+  hosts: {}
+  children:
+    server:
+      hosts: {}
+
+    frontend:
+      hosts: {}
+
+    postgres:
+      children:
+        postgres_primary:
+          hosts: {}
+        postgres_replicas:
+          hosts: {}
+
+    redis:
+      hosts: {}
+
+    clickhouse:
+      hosts: {}
+
+    xray_agent:
+      hosts: {}
+    xray_agent_deploy_targets:
+      hosts: {}
+
+    forwared:
+      hosts: {}
+    forwared_deploy_targets:
+      hosts: {}

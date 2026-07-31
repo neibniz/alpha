@@ -1,0 +1,11 @@
+syntax = "v1"
+
+info (
+	title:   "Node API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "./node/node.api"

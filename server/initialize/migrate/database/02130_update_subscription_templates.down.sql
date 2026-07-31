@@ -1,0 +1,3 @@
+-- 02130_update_subscription_templates.down.sql
+-- The previous template contents are not recoverable once overwritten.
+-- Keep this migration irreversible to avoid deleting administrator-customized templates.

@@ -1,0 +1,8 @@
+---
+common_caddy_image: >-
+  {{ caddy_image | default('caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648') }}
+common_caddy_http_port: "{{ caddy_http_port | default(80) }}"
+common_caddy_https_port: "{{ caddy_https_port | default(443) }}"
+common_caddy_memory_limit: 256m
+common_caddy_cpu_limit: 1.0
+common_caddy_pids_limit: 200

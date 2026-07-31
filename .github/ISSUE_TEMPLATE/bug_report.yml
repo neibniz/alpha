@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a reproducible problem in an Alpha component.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Server
+        - Admin frontend
+        - User frontend
+        - Xray agent
+        - Forwared
+        - Deploy
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag, commit SHA, or container image tag.
+      placeholder: server/v1.2.3 or abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, architecture, browser, and deployment method where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe what happened and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reliable sequence that reproduces the problem.
+      placeholder: |
+        1. Configure ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and screenshots
+      description: Remove credentials, tokens, personal data, and private network details before submitting.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed secrets and personal data from the report.
+          required: true

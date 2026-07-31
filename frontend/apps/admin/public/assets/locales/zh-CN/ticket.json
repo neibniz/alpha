@@ -1,0 +1,24 @@
+{
+  "cancel": "取消",
+  "check": "查看",
+  "close": "关闭",
+  "closeSuccess": "关闭成功",
+  "closeWarning": "一旦关闭，工单将无法操作，请谨慎操作。",
+  "confirm": "确认",
+  "confirmClose": "确定要关闭吗？",
+  "inputPlaceholder": "请输入您的问题，我们会尽快回复。",
+  "reply": "回复",
+  "send": "发送回复",
+  "status": {
+    "0": "状态",
+    "1": "待跟进",
+    "2": "待回复",
+    "3": "已解决",
+    "4": "已关闭"
+  },
+  "ticketList": "工单列表",
+  "title": "标题",
+  "updatedAt": "更新时间",
+  "uploadImage": "上传图片",
+  "user": "用户"
+}

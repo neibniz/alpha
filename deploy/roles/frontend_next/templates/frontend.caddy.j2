@@ -1,0 +1,24 @@
+{{ frontend_domain }} {
+	encode zstd gzip
+
+{% if frontend_next_subscribe_proxy_enabled | bool %}
+	@subscribe path {{ frontend_next_subscribe_proxy_path }}
+	handle @subscribe {
+		reverse_proxy {{ frontend_next_subscribe_proxy_upstream }}
+	}
+
+{% endif %}
+	handle {
+		reverse_proxy 127.0.0.1:{{ frontend_next_port }}
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https:"
+	}
+}

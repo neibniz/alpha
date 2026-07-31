@@ -1,0 +1,157 @@
+---
+- name: Validate Redis settings
+  ansible.builtin.assert:
+    that:
+      - redis_password | default("") | length >= 20
+      - "'\\n' not in redis_password"
+      - "'\\r' not in redis_password"
+      - redis_port | int > 0
+      - redis_port | int <= 65535
+      - redis_db | int >= 0
+      - redis_db | int <= 15
+      - (redis_container_uid | string) is match('^[0-9]+$')
+      - (redis_container_gid | string) is match('^[0-9]+$')
+      - redis_pids_limit | int > 0
+    fail_msg: Redis password, port, and database must be supplied through protected variables.
+  no_log: true
+
+- name: Ensure Redis deployment directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/redis"
+    state: directory
+    mode: "0750"
+
+- name: Ensure Redis data directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/redis/data"
+    state: directory
+    owner: "{{ redis_container_uid }}"
+    group: "{{ redis_container_gid }}"
+    mode: "0750"
+
+- name: Ensure Redis data is owned by the container user
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/redis/data"
+    owner: "{{ redis_container_uid }}"
+    group: "{{ redis_container_gid }}"
+    recurse: true
+
+- name: Install Redis runtime secret
+  ansible.builtin.copy:
+    content: "{{ redis_password }}\n"
+    dest: "{{ deploy_root }}/redis/redis-password"
+    owner: "{{ redis_container_uid }}"
+    group: "{{ redis_container_gid }}"
+    mode: "0600"
+  register: redis_runtime_secret
+  no_log: true
+
+- name: Render Redis compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/redis/docker-compose.yml"
+    mode: "0600"
+  register: redis_compose
+  no_log: true
+
+- name: Validate Redis compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/redis/docker-compose.yml config --quiet
+  changed_when: false
+  no_log: true
+
+- name: Remove legacy Redis container
+  ansible.builtin.command:
+    argv: [docker, rm, -f, m200-redis]
+  register: redis_legacy_remove
+  changed_when: redis_legacy_remove.rc == 0
+  failed_when: false
+
+- name: Start Redis container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/redis/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (
+          ['--force-recreate']
+          if (
+            (redis_runtime_secret.changed | default(false))
+            or (redis_compose.changed | default(false))
+          )
+          else []
+        )
+      }}
+  register: redis_start
+  changed_when: >-
+    'Created' in (redis_start.stdout ~ redis_start.stderr)
+    or 'Started' in (redis_start.stdout ~ redis_start.stderr)
+    or 'Recreated' in (redis_start.stdout ~ redis_start.stderr)
+
+- name: Wait for Redis port
+  ansible.builtin.wait_for:
+    host: "{{ '127.0.0.1' if redis_bind_host in ['0.0.0.0', '::'] else redis_bind_host }}"
+    port: "{{ redis_port }}"
+    timeout: 60
+
+- name: Build Redis CLI command
+  ansible.builtin.set_fact:
+    redis_cli_base_argv:
+      - docker
+      - exec
+      - alpha-redis
+      - sh
+      - -ec
+      - >-
+        REDISCLI_AUTH=$(cat /run/secrets/redis-password);
+        export REDISCLI_AUTH;
+        exec redis-cli "$@"
+      - redis-cli
+    redis_writable_check_dbs:
+      - "{{ redis_db | int }}"
+      - 5
+  no_log: true
+
+- name: Query Redis replication role
+  ansible.builtin.command:
+    argv: "{{ redis_cli_base_argv + ['INFO', 'replication'] }}"
+  register: redis_replication_info
+  changed_when: false
+  no_log: true
+
+- name: Promote managed Redis container to standalone primary
+  ansible.builtin.command:
+    argv: "{{ redis_cli_base_argv + ['REPLICAOF', 'NO', 'ONE'] }}"
+  when: "'role:master' not in redis_replication_info.stdout"
+  register: redis_promote_result
+  changed_when: "'OK' in redis_promote_result.stdout"
+  no_log: true
+
+- name: Verify Redis primary role
+  ansible.builtin.command:
+    argv: "{{ redis_cli_base_argv + ['INFO', 'replication'] }}"
+  register: redis_primary_check
+  changed_when: false
+  failed_when: "'role:master' not in redis_primary_check.stdout"
+  no_log: true
+
+- name: Verify Redis writable databases
+  ansible.builtin.command:
+    argv: "{{ redis_cli_base_argv + ['-n', (item | string), 'SET', 'alpha:deploy:redis-write-check', '1', 'EX', '30'] }}"
+  loop: "{{ redis_writable_check_dbs }}"
+  changed_when: false
+  no_log: true
+
+- name: Remove Redis writable check keys
+  ansible.builtin.command:
+    argv: "{{ redis_cli_base_argv + ['-n', (item | string), 'DEL', 'alpha:deploy:redis-write-check'] }}"
+  loop: "{{ redis_writable_check_dbs }}"
+  changed_when: false
+  no_log: true

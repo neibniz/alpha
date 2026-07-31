@@ -1,0 +1,2 @@
+ALTER TABLE "nodes"
+    ALTER COLUMN "port" TYPE INTEGER USING "port"::INTEGER;

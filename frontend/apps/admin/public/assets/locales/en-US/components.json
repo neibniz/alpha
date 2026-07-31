@@ -1,0 +1,155 @@
+{
+  "empty": {
+    "title": "Empty",
+    "tips": {
+      "0": "No data yet.",
+      "1": "There is nothing to display right now.",
+      "2": "No matching results were found.",
+      "3": "No records have been created yet.",
+      "4": "No items are available.",
+      "5": "Content will appear here after it is created.",
+      "6": "This list is empty.",
+      "7": "No new content yet.",
+      "8": "No related information is available.",
+      "9": "Data will appear here when it is ready."
+    }
+  },
+  "areaCode": {
+    "search": "Search area code...",
+    "select": "Select Area Code"
+  },
+  "carousel": {
+    "nextSlide": "Next slide",
+    "previousSlide": "Previous slide"
+  },
+  "combobox": {
+    "search": "Search...",
+    "select": "Select..."
+  },
+  "common": {
+    "close": "Close",
+    "loading": "Loading",
+    "more": "More"
+  },
+  "command": {
+    "description": "Search all administration pages",
+    "empty": "No matching page",
+    "placeholder": "Search users, orders, logs...",
+    "search": "Search pages",
+    "title": "Go to page"
+  },
+  "editor": {
+    "goTemplate": {
+      "description": "Go text/template syntax",
+      "descriptionWithSprig": "Go text/template syntax with Sprig functions",
+      "placeholder": "Enter your Go template here...",
+      "title": "Go Template Editor"
+    },
+    "html": {
+      "description": "Support HTML",
+      "preview": "HTML Preview",
+      "title": "HTML Editor"
+    },
+    "json": {
+      "title": "Edit JSON"
+    },
+    "markdown": {
+      "description": "Support markdown and HTML syntax",
+      "title": "Markdown Editor"
+    }
+  },
+  "error": {
+    "400": "The request parameters are incorrect, please check and resubmit.",
+    "401": "Request is too frequent, please try again later.",
+    "500": "The server is having some issues, please try again later.",
+    "10001": "Query was not successful, please try again later or check your conditions.",
+    "10002": "Update operation was not successful, please try again later.",
+    "10003": "Insert operation cannot be completed at the moment, please try again later.",
+    "10004": "Deletion operation could not be completed, please try again later.",
+    "20001": "The user information already exists, please retry with different information.",
+    "20002": "User not found, please check the information and try again.",
+    "20003": "Incorrect password, please re-enter.",
+    "20004": "The user is disabled, please contact customer service if you have questions.",
+    "20005": "Insufficient balance, please recharge and try again.",
+    "20006": "The registration function is temporarily unavailable, please try again later.",
+    "20008": "User information is incorrect, please check and try again.",
+    "20011": "Invalid account or password, please check and try again.",
+    "30001": "The node already exists, please do not add it again.",
+    "30002": "Related node not found, please check and try again.",
+    "30003": "Group already exists, please try using a different name.",
+    "30004": "Group not found, please verify the information and try again.",
+    "30005": "There is still content in the group, please clear it and try again.",
+    "40002": "Valid Token not found, please log in before retrying.",
+    "40003": "Current Token is invalid, please reacquire before trying again.",
+    "40004": "Token has expired, please log in again.",
+    "40005": "You do not have access permission, please contact the administrator if you have any questions.",
+    "50001": "Corresponding coupon information not found, please check and try again.",
+    "50002": "The coupon has been used, cannot be used again.",
+    "60001": "Subscription has expired, please renew before using.",
+    "60002": "Unable to use the subscription at the moment, please try again later.",
+    "60003": "An existing subscription is detected. Please cancel it before proceeding.",
+    "60004": "Unable to delete at the moment as the subscription has active users.",
+    "60005": "Single subscription mode has exceeded user limit",
+    "60006": "User quota limit has been reached, unable to continue.",
+    "60007": "Insufficient inventory, please try again later or contact the administrator.",
+    "60009": "This purchase exceeds your membership policy limit. Adjust the duration or renew your membership card first.",
+    "70001": "Incorrect verification code, please re-enter.",
+    "80001": "Task was not successfully queued, please try again later.",
+    "90001": "Please disable DEBUG mode and try again.",
+    "90015": "This account has reached the limit of sending times today, please try again tomorrow.",
+    "unknown": "An error occurred in the system, please try again later."
+  },
+  "filter": {
+    "choose": "Choose...",
+    "search": "Search..."
+  },
+  "language": "Language",
+  "pagination": {
+    "firstPage": "Go to first page",
+    "lastPage": "Go to last page",
+    "morePages": "More pages",
+    "next": "Next",
+    "nextPage": "Go to next page",
+    "pageInfo": "Page {{page}} of {{total}}",
+    "previous": "Previous",
+    "previousPage": "Go to previous page",
+    "selectPageNumber": "Select page number",
+    "rowsPerPage": "Rows per page"
+  },
+  "site": {
+    "adminConsole": "Operations console",
+    "defaultDescription": "A pure, professional proxy panel for learning and real-world use."
+  },
+  "sidebar": {
+    "currentWorkspace": "Current workspace",
+    "description": "Displays the mobile sidebar.",
+    "title": "Sidebar",
+    "toggle": "Toggle Sidebar",
+    "workspaces": "Workspaces"
+  },
+  "table": {
+    "asc": "ASC",
+    "desc": "DESC",
+    "hide": "Hide",
+    "resultCount": "{{count}} items",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "selectedRows": "Selected {{count}} rows",
+    "selectedRows_one": "Selected {{count}} row",
+    "selectedRows_other": "Selected {{count}} rows"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "toggle": "Toggle theme"
+  },
+  "timezone": {
+    "all": "All",
+    "current": "Current",
+    "recommended": "Recommended",
+    "search": "Search timezone...",
+    "server": "Server"
+  },
+  "unlimited": "Unlimited"
+}

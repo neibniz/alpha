@@ -1,0 +1,111 @@
+syntax = "v1"
+
+info (
+	title:   "User auth API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+type (
+	// User login request
+	UserLoginRequest {
+		Identifier string `json:"identifier"`
+		Email      string `json:"email" validate:"required"`
+		Password   string `json:"password" validate:"required,max=128"`
+		IP         string `header:"X-Original-Forwarded-For"`
+		UserAgent  string `header:"User-Agent"`
+		LoginType  string `header:"Login-Type"`
+		CfToken    string `json:"cf_token,optional"`
+	}
+	// Check user is exist request
+	CheckUserRequest {
+		Email string `form:"email" validate:"required"`
+	}
+	// User login response
+	CheckUserResponse {
+		Exist bool `json:"exist"`
+	}
+	// User login response
+	UserRegisterRequest {
+		Identifier string `json:"identifier"`
+		Email      string `json:"email" validate:"required"`
+		Password   string `json:"password" validate:"required,min=12,max=72"`
+		Invite     string `json:"invite,optional"`
+		Code       string `json:"code,optional"`
+		IP         string `header:"X-Original-Forwarded-For"`
+		UserAgent  string `header:"User-Agent"`
+		LoginType  string `header:"Login-Type"`
+		CfToken    string `json:"cf_token,optional"`
+	}
+	// User login response
+	ResetPasswordRequest {
+		Identifier string `json:"identifier"`
+		Email      string `json:"email" validate:"required"`
+		Password   string `json:"password" validate:"required,min=12,max=72"`
+		Code       string `json:"code,optional"`
+		IP         string `header:"X-Original-Forwarded-For"`
+		UserAgent  string `header:"User-Agent"`
+		LoginType  string `header:"Login-Type"`
+		CfToken    string `json:"cf_token,optional"`
+	}
+	LoginResponse {
+		Token string `json:"token"`
+	}
+	OAthLoginRequest {
+		Method   string `json:"method" validate:"required"` // github
+		Redirect string `json:"redirect"`
+	}
+	OAuthLoginResponse {
+		Redirect string `json:"redirect"`
+	}
+	OAuthCallbackPayload {
+		Code         string `json:"code,omitempty"`
+		State        string `json:"state,omitempty"`
+		TgAuthResult string `json:"tgAuthResult,omitempty"`
+	}
+	OAuthLoginGetTokenRequest {
+		Method   string               `json:"method" validate:"required"` // github
+		Callback OAuthCallbackPayload `json:"callback" validate:"required"`
+		Invite   string               `json:"invite,optional"`
+	}
+)
+
+@server (
+	prefix:     v1/auth
+	group:      auth
+)
+service alpha {
+	@doc "User login"
+	@handler UserLogin
+	post /login (UserLoginRequest) returns (LoginResponse)
+
+	@doc "Check user is exist"
+	@handler CheckUser
+	get /check (CheckUserRequest) returns (CheckUserResponse)
+
+	@doc "User register"
+	@handler UserRegister
+	post /register (UserRegisterRequest) returns (LoginResponse)
+
+	@doc "Reset password"
+	@handler ResetPassword
+	post /reset (ResetPasswordRequest) returns (LoginResponse)
+
+}
+
+@server (
+	prefix: v1/auth/oauth
+	group:  auth/oauth
+)
+service alpha {
+	@doc "OAuth login"
+	@handler OAuthLogin
+	post /login (OAthLoginRequest) returns (OAuthLoginResponse)
+
+	@doc "OAuth login get token"
+	@handler OAuthLoginGetToken
+	post /login/token (OAuthLoginGetTokenRequest) returns (LoginResponse)
+
+}

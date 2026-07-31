@@ -1,0 +1,2 @@
+ALTER TABLE "nodes"
+    ADD COLUMN "sort" INT  NOT NULL DEFAULT 0;

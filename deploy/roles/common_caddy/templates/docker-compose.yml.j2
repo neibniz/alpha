@@ -1,0 +1,30 @@
+services:
+  caddy:
+    image: "{{ common_caddy_image }}"
+    container_name: alpha-caddy
+    restart: unless-stopped
+    read_only: true
+    network_mode: host
+    volumes:
+      - {{ deploy_root }}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - {{ deploy_root }}/caddy/sites:/etc/caddy/sites:ro
+      - {{ deploy_root }}/caddy/data:/data
+      - {{ deploy_root }}/caddy/config:/config
+      - {{ deploy_root }}/frontend:/srv/frontend:ro
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    mem_limit: {{ common_caddy_memory_limit }}
+    cpus: {{ common_caddy_cpu_limit }}
+    pids_limit: {{ common_caddy_pids_limit }}
+    stop_grace_period: 15s
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

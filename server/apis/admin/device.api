@@ -1,0 +1,10 @@
+syntax = "v1"
+
+info (
+	title:   "Device API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+

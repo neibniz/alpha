@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+.vscode
+.DS_Store
+*.log
+*.log.*
+build
+dist
+configs/*.local.yaml
+configs/*-dev.yaml

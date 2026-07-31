@@ -1,0 +1,17 @@
+---
+# Copy this file to vault.yml and encrypt it with:
+# ansible-vault encrypt inventories/prod/group_vars/all/vault.yml
+
+server_jwt_access_secret: replace-with-at-least-32-random-characters
+server_admin_password: replace-with-at-least-12-random-characters
+server_node_master_secret: replace-with-at-least-32-random-characters
+server_node_deploy_secret: replace-with-at-least-32-random-characters
+server_forwarder_bootstrap_secret: replace-with-a-different-32-byte-random-secret
+postgres_password: replace-with-at-least-20-random-characters
+postgres_replication_password: replace-when-replication-is-enabled
+redis_password: replace-with-at-least-20-random-characters
+clickhouse_password: replace-with-at-least-20-random-characters
+server_privacy_keyring_json: >-
+  {"active_key_id":"v1","encryption_keys":{"v1":"replace-with-base64-encoded-32-byte-key"},"index_key":"replace-with-a-different-base64-encoded-32-byte-key"}
+xray_agent_deploy_token: replace-with-server-deployment-token
+forwared_control_token: replace-with-the-forwarder-bootstrap-secret

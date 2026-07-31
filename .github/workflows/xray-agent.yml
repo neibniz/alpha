@@ -1,0 +1,282 @@
+name: Xray Agent
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ["xray-agent/v*"]
+    paths:
+      - "xray-agent/**"
+      - "server/proto/**"
+      - ".github/scripts/validate-release-ref.sh"
+      - ".github/workflows/xray-agent.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "xray-agent/**"
+      - "server/proto/**"
+      - ".github/scripts/validate-release-ref.sh"
+      - ".github/workflows/xray-agent.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test and verify contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: xray-agent
+    steps:
+      - name: Reject release tag mutation
+        if: >-
+          github.event_name == 'push' &&
+          startsWith(github.ref, 'refs/tags/xray-agent/v') &&
+          (github.event.created == false || github.event.deleted == true || github.event.forced == true)
+        run: |
+          printf 'release tags are immutable and must be newly created\n' >&2
+          exit 1
+        working-directory: ${{ github.workspace }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate release tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/xray-agent/v')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMPONENT: xray-agent
+        run: bash ../.github/scripts/validate-release-ref.sh
+
+      - name: Verify shared Protobuf source
+        run: diff -ru ../server/proto proto
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: xray-agent/go.mod
+          cache: true
+          cache-dependency-path: xray-agent/go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Verify Protobuf contract
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace bufbuild/buf:1.60.0@sha256:edf71e8832862ae1b1cbbcea245231383fb66ad1b19dbb40fca74f02482b21f1 lint
+          docker run --rm -v "$PWD:/workspace" -w /workspace bufbuild/buf:1.60.0@sha256:edf71e8832862ae1b1cbbcea245231383fb66ad1b19dbb40fca74f02482b21f1 generate
+          git diff --exit-code -- proto internal/protocol
+
+  docker:
+    name: Build container
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [test, release]
+    if: >-
+      !cancelled() &&
+      needs.test.result == 'success' &&
+      (
+        !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/xray-agent/v')) ||
+        needs.release.result == 'success'
+      )
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Revalidate release tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/xray-agent/v')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMPONENT: xray-agent
+        run: bash .github/scripts/validate-release-ref.sh
+
+      - name: Set up QEMU
+        if: github.event_name != 'pull_request'
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/alpha-xray-agent
+          tags: |
+            type=match,pattern=xray-agent/v(.*),group=1,enable=${{ github.event_name == 'push' && github.event.created == true && github.event.deleted == false && github.event.forced == false }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.event.created == true && github.event.deleted == false && github.event.forced == false && startsWith(github.ref, 'refs/tags/xray-agent/v') }}
+            type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=pr
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ./xray-agent
+          file: ./xray-agent/Dockerfile
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=alpha-xray-agent
+          cache-to: type=gha,mode=max,scope=alpha-xray-agent,ignore-error=true
+
+  release:
+    name: Package linux/${{ matrix.goarch }}
+    if: >-
+      github.event_name == 'push' &&
+      github.event.created == true &&
+      github.event.deleted == false &&
+      github.event.forced == false &&
+      startsWith(github.ref, 'refs/tags/xray-agent/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        goarch: [amd64, arm64]
+    defaults:
+      run:
+        working-directory: xray-agent
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: xray-agent/go.mod
+          cache: true
+          cache-dependency-path: xray-agent/go.sum
+
+      - name: Build xray-agent and Xray-core
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist/bin
+          go build -trimpath -ldflags="-s -w" -o dist/bin/xray-agent ./cmd/xray-agent
+          go build -trimpath -ldflags="-s -w" -o dist/bin/xray github.com/xtls/xray-core/main
+
+      - name: Extract pinned Xray data assets
+        shell: bash
+        run: |
+          image="$(sed -n 's/^ARG XRAY_DATA_IMAGE=//p' Dockerfile)"
+          case "${image}" in
+            *@sha256:*) ;;
+            *)
+              printf 'XRAY_DATA_IMAGE must be pinned by digest\n' >&2
+              exit 1
+              ;;
+          esac
+          docker pull "${image}"
+          container="$(docker create "${image}")"
+          trap 'docker rm -f "${container}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container}:/usr/local/share/xray/geoip.dat" dist/geoip.dat
+          docker cp "${container}:/usr/local/share/xray/geosite.dat" dist/geosite.dat
+          test -s dist/geoip.dat
+          test -s dist/geosite.dat
+
+      - name: Assemble package
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          cp configs/example.yaml dist/xray-agent.yaml
+          cp -R deploy dist/deploy
+          cp README.md dist/README.md
+          archive="xray-agent-linux-${GOARCH}.tar.gz"
+          tar -C dist -czf "${archive}" .
+          sha256sum "${archive}" > "${archive}.sha256"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: xray-agent-linux-${{ matrix.goarch }}
+          path: |
+            xray-agent/xray-agent-linux-${{ matrix.goarch }}.tar.gz
+            xray-agent/xray-agent-linux-${{ matrix.goarch }}.tar.gz.sha256
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish release
+    if: >-
+      github.event_name == 'push' &&
+      github.event.created == true &&
+      github.event.deleted == false &&
+      github.event.forced == false &&
+      startsWith(github.ref, 'refs/tags/xray-agent/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [docker, release]
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Revalidate release tag
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_COMPONENT: xray-agent
+        run: bash .github/scripts/validate-release-ref.sh
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: xray-agent-linux-*
+          path: release
+          merge-multiple: true
+
+      - name: Verify release checksums
+        run: cd release && sha256sum --check ./*.sha256
+
+      - name: Publish GitHub release
+        shell: bash
+        run: |
+          version="${RELEASE_TAG#xray-agent/}"
+          release_state="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+          if [ "${release_state}" = "true" ]; then
+            gh release upload "${RELEASE_TAG}" release/* --clobber
+            gh release edit "${RELEASE_TAG}" --draft=false
+          elif [ -n "${release_state}" ]; then
+            printf 'release %s is already published; refusing to replace immutable assets\n' "${RELEASE_TAG}" >&2
+            exit 1
+          else
+            gh release create "${RELEASE_TAG}" release/* \
+              --verify-tag \
+              --title "Xray Agent ${version}" \
+              --generate-notes
+          fi

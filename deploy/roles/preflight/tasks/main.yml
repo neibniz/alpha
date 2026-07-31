@@ -1,0 +1,65 @@
+---
+- name: Validate deployment root
+  ansible.builtin.assert:
+    that:
+      - deploy_root is string
+      - deploy_root is match('^/data/[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$')
+      - "'.' not in deploy_root.split('/')"
+      - "'..' not in deploy_root.split('/')"
+    fail_msg: deploy_root must be an absolute path below /data without spaces or parent traversal.
+
+- name: Resolve canonical deployment root
+  ansible.builtin.command:
+    argv: [realpath, -m, "{{ deploy_root }}"]
+  register: preflight_canonical_deploy_root
+  changed_when: false
+
+- name: Reject deployment root symlink traversal
+  ansible.builtin.assert:
+    that:
+      - preflight_canonical_deploy_root.stdout | trim == deploy_root
+    fail_msg: deploy_root and all of its parent directories below /data must be real directories.
+
+- name: Check deployment root type
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}"
+    follow: false
+  register: preflight_deploy_root
+
+- name: Reject a symbolic-link deployment root
+  ansible.builtin.assert:
+    that:
+      - not (preflight_deploy_root.stat.islnk | default(false))
+    fail_msg: deploy_root must be a real directory below /data, not a symbolic link.
+
+- name: Check remote data directory
+  ansible.builtin.stat:
+    path: /data
+  register: preflight_data_directory
+
+- name: Require remote data directory
+  ansible.builtin.assert:
+    that:
+      - preflight_data_directory.stat.exists
+      - preflight_data_directory.stat.isdir
+    fail_msg: The target host must provide a /data directory before Alpha can be deployed.
+
+- name: Ensure deployment root exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}"
+    state: directory
+    mode: "0750"
+
+- name: Check free space below deployment root
+  ansible.builtin.command:
+    argv: [df, -Pk, "{{ deploy_root }}"]
+  register: preflight_disk_space
+  changed_when: false
+
+- name: Require enough free deployment space
+  ansible.builtin.assert:
+    that:
+      - (preflight_disk_space.stdout_lines[-1].split()[3] | int) >= (preflight_min_free_megabytes | int * 1024)
+    fail_msg: >-
+      The filesystem containing {{ deploy_root }} needs at least
+      {{ preflight_min_free_megabytes }} MiB free.

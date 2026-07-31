@@ -1,0 +1,98 @@
+---
+- name: Validate ClickHouse settings
+  ansible.builtin.assert:
+    that:
+      - clickhouse_password | default("") | length >= 20
+      - "'\\n' not in clickhouse_password"
+      - "'\\r' not in clickhouse_password"
+      - clickhouse_database is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - clickhouse_username | length > 0
+      - clickhouse_native_port | int > 0
+      - clickhouse_native_port | int <= 65535
+      - clickhouse_http_port | int > 0
+      - clickhouse_http_port | int <= 65535
+      - clickhouse_native_port | int != clickhouse_http_port | int
+    fail_msg: ClickHouse credentials and identifiers must be supplied through protected variables.
+  no_log: true
+
+- name: Ensure ClickHouse directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - "{{ deploy_root }}/clickhouse"
+    - "{{ deploy_root }}/clickhouse/data"
+    - "{{ deploy_root }}/clickhouse/log"
+
+- name: Render ClickHouse compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/clickhouse/docker-compose.yml"
+    mode: "0600"
+  register: clickhouse_compose
+  no_log: true
+
+- name: Validate ClickHouse compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/clickhouse/docker-compose.yml config --quiet
+  changed_when: false
+  no_log: true
+
+- name: Pull ClickHouse image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/clickhouse/docker-compose.yml pull
+  register: clickhouse_pull
+  changed_when: >-
+    'Pulled' in (clickhouse_pull.stdout ~ clickhouse_pull.stderr)
+    or 'Downloaded' in (clickhouse_pull.stdout ~ clickhouse_pull.stderr)
+
+- name: Start ClickHouse container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/clickhouse/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (['--force-recreate'] if (clickhouse_compose.changed | default(false)) else [])
+      }}
+  register: clickhouse_start
+  changed_when: >-
+    'Created' in (clickhouse_start.stdout ~ clickhouse_start.stderr)
+    or 'Started' in (clickhouse_start.stdout ~ clickhouse_start.stderr)
+    or 'Recreated' in (clickhouse_start.stdout ~ clickhouse_start.stderr)
+
+- name: Wait for ClickHouse native port
+  ansible.builtin.wait_for:
+    host: >-
+      {{
+        '127.0.0.1'
+        if clickhouse_bind_host in ['0.0.0.0', '::']
+        else clickhouse_bind_host
+      }}
+    port: "{{ clickhouse_native_port }}"
+    timeout: 180
+
+- name: Verify ClickHouse query
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - alpha-clickhouse
+      - sh
+      - -ec
+      - >-
+        exec clickhouse-client
+        --user "$CLICKHOUSE_USER"
+        --password "$CLICKHOUSE_PASSWORD"
+        --query 'SELECT 1'
+  register: clickhouse_query
+  changed_when: false
+  failed_when: clickhouse_query.stdout | trim != '1'
+  no_log: true

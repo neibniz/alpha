@@ -1,0 +1,354 @@
+syntax = "v1"
+
+info (
+	title:   "User API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	UpdateUserNotifyRequest {
+		EnableBalanceNotify   *bool `json:"enable_balance_notify"`
+		EnableLoginNotify     *bool `json:"enable_login_notify"`
+		EnableSubscribeNotify *bool `json:"enable_subscribe_notify"`
+		EnableTradeNotify     *bool `json:"enable_trade_notify"`
+	}
+	UpdateUserPasswordRequest {
+		CurrentPassword string `json:"current_password" validate:"required,max=128"`
+		Password        string `json:"password" validate:"required,min=12,max=72"`
+	}
+	QueryUserSubscribeListResponse {
+		List  []PublicUserSubscribe `json:"list"`
+		Total int64                 `json:"total"`
+	}
+	QueryUserSubscribeTrafficSeriesRequest {
+		UserSubscribeId int64  `form:"user_subscribe_id" validate:"required"`
+		Period          string `form:"period" validate:"omitempty,oneof=5m 15m 1h 24h 7d 30d"`
+	}
+	PublicUserSubscribe {
+		Id                 int64                      `json:"id"`
+		Subscribe          PublicUserSubscribeProduct `json:"subscribe"`
+		ProductName        string                     `json:"product_name"`
+		ExpireTime         int64                      `json:"expire_time"`
+		ResetTime          int64                      `json:"reset_time"`
+		Traffic            int64                      `json:"traffic"`
+		Download           int64                      `json:"download"`
+		Upload             int64                      `json:"upload"`
+		UsedTraffic        int64                      `json:"used_traffic"`
+		RemainingTraffic   int64                      `json:"remaining_traffic"`
+		Token              string                     `json:"token"`
+		Status             uint8                      `json:"status"`
+		EffectiveStatus    uint8                      `json:"effective_status"`
+		StatusReason       string                     `json:"status_reason"`
+		CanRenew           bool                       `json:"can_renew"`
+		RenewalReason      string                     `json:"renewal_reason,omitempty"`
+		CanResetTraffic    bool                       `json:"can_reset_traffic"`
+		ResetTrafficReason string                     `json:"reset_traffic_reason,omitempty"`
+		Short              string                     `json:"short"`
+	}
+	PublicUserSubscribeProduct {
+		Id                 int64               `json:"id"`
+		Name               string              `json:"name"`
+		UnitPrice          int64               `json:"unit_price"`
+		UnitTime           string              `json:"unit_time"`
+		Discount           []SubscribeDiscount `json:"discount"`
+		Replacement        int64               `json:"replacement"`
+		Traffic            int64               `json:"traffic"`
+		SpeedLimit         int64               `json:"speed_limit"`
+		DeviceLimit        int64               `json:"device_limit"`
+		AllowRenewal       bool                `json:"allow_renewal"`
+		AllowResetTraffic  bool                `json:"allow_reset_traffic"`
+		AllowDeduction     bool                `json:"allow_deduction"`
+		ShowOriginalPrice  bool                `json:"show_original_price"`
+	}
+	QueryUserSubscribePresetListRequest {
+		UserSubscribeId int64 `form:"user_subscribe_id" validate:"required"`
+	}
+	QueryUserSubscribePresetListResponse {
+		List []UserSubscribePreset `json:"list"`
+	}
+	CreateUserSubscribePresetRequest {
+		UserSubscribeId int64                     `json:"user_subscribe_id" validate:"required"`
+		Name            string                    `json:"name" validate:"required,max=100"`
+		Items           []UserSubscribePresetItem `json:"items" validate:"required"`
+		IsDefault       bool                      `json:"is_default"`
+	}
+	CreateUserSubscribePresetResponse {
+		Preset UserSubscribePreset `json:"preset"`
+	}
+	UpdateUserSubscribePresetRequest {
+		Id      int64                     `json:"id" validate:"required"`
+		Name    string                    `json:"name" validate:"required,max=100"`
+		Items   []UserSubscribePresetItem `json:"items" validate:"required"`
+		Enabled   *bool                     `json:"enabled,omitempty"`
+		IsDefault *bool                     `json:"is_default,omitempty"`
+	}
+	DeleteUserSubscribePresetRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	QueryUserBalanceLogListResponse {
+		List  []BalanceLog `json:"list"`
+		Total int64        `json:"total"`
+	}
+	QueryUserBalanceLogListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	QueryUserWalletLogListResponse {
+		List  []WalletLog `json:"list"`
+		Total int64       `json:"total"`
+	}
+	QueryUserWalletLogListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	QueryUserCommissionLogListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	QueryUserCommissionLogListResponse {
+		List  []CommissionLog `json:"list"`
+		Total int64           `json:"total"`
+	}
+	BindTelegramResponse {
+		Url       string `json:"url"`
+		ExpiredAt int64  `json:"expired_at"`
+	}
+	PreUnsubscribeRequest {
+		Id int64 `json:"id"`
+	}
+	PreUnsubscribeResponse {
+		DeductionAmount int64 `json:"deduction_amount"`
+	}
+	UnsubscribeRequest {
+		Id int64 `json:"id"`
+	}
+	BindOAuthRequest {
+		Method   string `json:"method"`
+		Redirect string `json:"redirect"`
+	}
+	BindOAuthResponse {
+		Redirect string `json:"redirect"`
+	}
+	OAuthCallbackPayload {
+		Code         string `json:"code,omitempty"`
+		State        string `json:"state,omitempty"`
+		TgAuthResult string `json:"tgAuthResult,omitempty"`
+	}
+	BindOAuthCallbackRequest {
+		Method   string               `json:"method"`
+		Callback OAuthCallbackPayload `json:"callback"`
+	}
+	GetOAuthMethodsResponse {
+		Methods []UserAuthMethod `json:"methods"`
+	}
+	UnbindOAuthRequest {
+		Method string `json:"method"`
+	}
+	GetLoginLogRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	GetLoginLogResponse {
+		List  []UserLoginLog `json:"list"`
+		Total int64          `json:"total"`
+	}
+	GetSubscribeLogRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	GetSubscribeLogResponse {
+		List  []UserSubscribeLog `json:"list"`
+		Total int64              `json:"total"`
+	}
+	UpdateBindEmailRequest {
+		Email string `json:"email" validate:"required"`
+	}
+	VerifyEmailRequest {
+		Email string `json:"email" validate:"required"`
+		Code  string `json:"code" validate:"required"`
+	}
+	GetDeviceListResponse {
+		List  []UserDevice `json:"list"`
+		Total int64        `json:"total"`
+	}
+	GetDeviceListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	UnbindDeviceRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	UpdateUserSubscribeNoteRequest {
+		UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
+		Note            string `json:"note" validate:"max=500"`
+	}
+	UpdateUserRulesRequest {
+		Rules []string `json:"rules" validate:"required"`
+	}
+	CommissionWithdrawRequest {
+		Amount  int64  `json:"amount"`
+		Content string `json:"content"`
+	}
+	WithdrawalLog {
+		Id        int64  `json:"id"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		Content   string `json:"content"`
+		Status    uint8  `json:"status"`
+		Reason    string `json:"reason,omitempty"`
+		CreatedAt int64  `json:"created_at"`
+		UpdatedAt int64  `json:"updated_at"`
+	}
+	QueryWithdrawalLogListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	QueryWithdrawalLogListResponse {
+		List  []WithdrawalLog `json:"list"`
+		Total int64           `json:"total"`
+	}
+)
+
+@server (
+	prefix:     v1/public/user
+	group:      public/user
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Query User Info"
+	@handler QueryUserInfo
+	get /info returns (User)
+
+	@doc "Update User Notify"
+	@handler UpdateUserNotify
+	put /notify (UpdateUserNotifyRequest)
+
+	@doc "Update User Password"
+	@handler UpdateUserPassword
+	put /password (UpdateUserPasswordRequest)
+
+	@doc "Query User Subscribe"
+	@handler QueryUserSubscribe
+	get /subscribe returns (QueryUserSubscribeListResponse)
+
+	@doc "Query current user subscription traffic time series"
+	@handler QueryUserSubscribeTrafficSeries
+	get /subscribe_traffic (QueryUserSubscribeTrafficSeriesRequest) returns (TrafficSeriesResponse)
+
+	@doc "Query User Subscribe Presets"
+	@handler QueryUserSubscribePresetList
+	get /subscribe_preset/list (QueryUserSubscribePresetListRequest) returns (QueryUserSubscribePresetListResponse)
+
+	@doc "Create User Subscribe Preset"
+	@handler CreateUserSubscribePreset
+	post /subscribe_preset (CreateUserSubscribePresetRequest) returns (CreateUserSubscribePresetResponse)
+
+	@doc "Update User Subscribe Preset"
+	@handler UpdateUserSubscribePreset
+	put /subscribe_preset (UpdateUserSubscribePresetRequest) returns (CreateUserSubscribePresetResponse)
+
+	@doc "Delete User Subscribe Preset"
+	@handler DeleteUserSubscribePreset
+	delete /subscribe_preset (DeleteUserSubscribePresetRequest)
+
+	@doc "Pre Unsubscribe"
+	@handler PreUnsubscribe
+	post /unsubscribe/pre (PreUnsubscribeRequest) returns (PreUnsubscribeResponse)
+
+	@doc "Unsubscribe"
+	@handler Unsubscribe
+	post /unsubscribe (UnsubscribeRequest)
+
+	@doc "Query User Balance Log"
+	@handler QueryUserBalanceLog
+	get /balance_log (QueryUserBalanceLogListRequest) returns (QueryUserBalanceLogListResponse)
+
+	@doc "Query unified user wallet activity"
+	@handler QueryUserWalletLog
+	get /wallet_log (QueryUserWalletLogListRequest) returns (QueryUserWalletLogListResponse)
+
+	@doc "Query User Affiliate Count"
+	@handler QueryUserAffiliate
+	get /affiliate/count returns (QueryUserAffiliateCountResponse)
+
+	@doc "Query User Affiliate List"
+	@handler QueryUserAffiliateList
+	get /affiliate/list (QueryUserAffiliateListRequest) returns (QueryUserAffiliateListResponse)
+
+	@doc "Bind Telegram"
+	@handler BindTelegram
+	get /bind_telegram returns (BindTelegramResponse)
+
+	@doc "Unbind Telegram"
+	@handler UnbindTelegram
+	post /unbind_telegram
+
+	@doc "Query User Commission Log"
+	@handler QueryUserCommissionLog
+	get /commission_log (QueryUserCommissionLogListRequest) returns (QueryUserCommissionLogListResponse)
+
+	@doc "Bind OAuth"
+	@handler BindOAuth
+	post /bind_oauth (BindOAuthRequest) returns (BindOAuthResponse)
+
+	@doc "Bind OAuth Callback"
+	@handler BindOAuthCallback
+	post /bind_oauth/callback (BindOAuthCallbackRequest)
+
+	@doc "Get OAuth Methods"
+	@handler GetOAuthMethods
+	get /oauth_methods returns (GetOAuthMethodsResponse)
+
+	@doc "Unbind OAuth"
+	@handler UnbindOAuth
+	post /unbind_oauth (UnbindOAuthRequest)
+
+	@doc "Reset User Subscribe Token"
+	@handler ResetUserSubscribeToken
+	put /subscribe_token (ResetUserSubscribeTokenRequest)
+
+	@doc "Get Login Log"
+	@handler GetLoginLog
+	get /login_log (GetLoginLogRequest) returns (GetLoginLogResponse)
+
+	@doc "Get Subscribe Log"
+	@handler GetSubscribeLog
+	get /subscribe_log (GetSubscribeLogRequest) returns (GetSubscribeLogResponse)
+
+	@doc "Verify Email"
+	@handler VerifyEmail
+	post /verify_email (VerifyEmailRequest)
+
+	@doc "Update Bind Email"
+	@handler UpdateBindEmail
+	put /bind_email (UpdateBindEmailRequest)
+
+	@doc "Get Device List"
+	@handler GetDeviceList
+	get /devices (GetDeviceListRequest) returns (GetDeviceListResponse)
+
+	@doc "Unbind Device"
+	@handler UnbindDevice
+	put /unbind_device (UnbindDeviceRequest)
+
+	@doc "Update User Subscribe Note"
+	@handler UpdateUserSubscribeNote
+	put /subscribe_note (UpdateUserSubscribeNoteRequest)
+
+	@doc "Update User Rules"
+	@handler UpdateUserRules
+	put /rules (UpdateUserRulesRequest)
+
+	@doc "Commission Withdraw"
+	@handler CommissionWithdraw
+	post /commission_withdraw (CommissionWithdrawRequest) returns (WithdrawalLog)
+
+	@doc "Query Withdrawal Log"
+	@handler QueryWithdrawalLog
+	get /withdrawal_log (QueryWithdrawalLogListRequest) returns (QueryWithdrawalLogListResponse)
+}

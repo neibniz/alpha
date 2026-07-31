@@ -1,0 +1,25 @@
+---
+# Credentials and the privacy keyring belong in vault.yml or protected extra vars.
+server_domain: api.euler.icu
+server_image: ghcr.io/neibniz/alpha-server:latest
+server_bind_host: 127.0.0.1
+server_container_port: 27001
+server_uid: "65532"
+server_gid: "65532"
+
+server_log_level: info
+server_log_max_size: 2048
+server_log_keep_days: 180
+server_log_rotation: size
+
+server_allowed_origins:
+  - "https://{{ user_domain }}"
+  - "https://{{ admin_domain }}"
+server_trusted_proxies:
+  - 127.0.0.1
+  - ::1
+server_jwt_access_expire: 3600
+server_admin_email: admin@example.com
+
+server_privacy_enabled: true
+server_privacy_key_file: /run/secrets/alpha_privacy_keyring

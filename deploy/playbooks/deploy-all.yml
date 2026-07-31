@@ -1,0 +1,5 @@
+- name: Deploy Alpha core services
+  ansible.builtin.import_playbook: deploy-server.yml
+
+- name: Deploy Alpha web applications
+  ansible.builtin.import_playbook: deploy-frontend.yml

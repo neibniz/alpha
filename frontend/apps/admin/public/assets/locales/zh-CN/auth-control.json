@@ -1,0 +1,148 @@
+{
+  "communicationDescription": "配置验证邮件的发送服务与模板。",
+  "oauthDescription": "当前仅支持 GitHub 第三方登录。",
+  "pageDescription": "管理邮件服务和用户可用的登录方式。",
+  "title": "认证控制",
+  "workspace": "访问控制",
+  "apple": {
+    "clientId": "服务 ID",
+    "clientIdDescription": "Apple 服务 ID，可从 Apple 开发者门户获取",
+    "clientSecret": "私钥",
+    "clientSecretDescription": "用于 Apple 身份验证的私钥内容（.p8 文件）",
+    "description": "使用 Apple 账户验证用户身份",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用 Apple ID 登录",
+    "keyId": "密钥 ID",
+    "keyIdDescription": "Apple 开发者门户中的私钥 ID",
+    "redirectUri": "重定向 URL",
+    "redirectUriDescription": "Apple 认证成功后重定向 URL 的 API 地址，不要以 / 结尾",
+    "teamId": "团队 ID",
+    "teamIdDescription": "Apple 开发者团队 ID",
+    "title": "Apple 登录"
+  },
+  "common": {
+    "cancel": "取消",
+    "save": "保存",
+    "saveFailed": "保存失败",
+    "saveSuccess": "保存成功"
+  },
+  "communicationMethods": "通讯方式",
+  "email": {
+    "basicSettings": "基本设置",
+    "description": "配置邮箱认证和模板",
+    "emailSuffixWhitelist": "邮箱后缀白名单",
+    "emailSuffixWhitelistDescription": "只允许来自白名单域名的邮箱",
+    "emailVerification": "邮箱验证",
+    "emailVerificationDescription": "新用户需要邮箱验证",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用邮箱登录",
+    "expirationEmailTemplate": "到期邮件模板",
+    "expirationTemplate": "到期模板",
+    "inputPlaceholder": "请输入",
+    "maintenanceEmailTemplate": "维护邮件模板",
+    "maintenanceTemplate": "维护模板",
+    "senderAddress": "发件人地址",
+    "senderAddressDescription": "显示在发件人字段中的邮箱地址",
+    "sendFailure": "邮件发送失败",
+    "sendSuccess": "邮件发送成功",
+    "sendTestEmail": "发送测试邮件",
+    "sendTestEmailDescription": "发送测试邮件以验证您的 SMTP 配置",
+    "smtpAccount": "SMTP 账户",
+    "smtpAccountDescription": "SMTP 认证用户名",
+    "smtpEncryptionMethod": "SSL/TLS 加密",
+    "smtpEncryptionMethodDescription": "为 SMTP 连接启用 SSL/TLS 加密",
+    "smtpPassword": "SMTP 密码",
+    "smtpPasswordDescription": "SMTP 认证密码",
+    "smtpServerAddress": "SMTP 服务器地址",
+    "smtpServerAddressDescription": "SMTP 服务器主机名",
+    "smtpServerPort": "SMTP 服务器端口",
+    "smtpServerPortDescription": "SMTP 服务器端口（通常为 25、465 或 587）",
+    "smtpSettings": "SMTP 设置",
+    "templateVariables": {
+      "code": {
+        "description": "验证码"
+      },
+      "expire": {
+        "description": "验证码过期时间"
+      },
+      "expireDate": {
+        "description": "订阅到期日期"
+      },
+      "maintenanceDate": {
+        "description": "维护日期"
+      },
+      "maintenanceTime": {
+        "description": "维护时间"
+      },
+      "siteLogo": {
+        "description": "网站 Logo URL"
+      },
+      "siteName": {
+        "description": "网站名称"
+      },
+      "title": "模板变量",
+      "type": {
+        "conditionalSyntax": "使用条件语法显示不同内容",
+        "description": "邮件类型（1：注册，2：重置密码）"
+      }
+    },
+    "title": "邮箱设置",
+    "trafficExceedEmailTemplate": "流量超额邮件模板",
+    "trafficTemplate": "流量模板",
+    "verifyEmailTemplate": "验证邮件模板",
+    "verifyTemplate": "验证模板",
+    "whitelistSuffixes": "白名单后缀",
+    "whitelistSuffixesDescription": "每行一个域名后缀",
+    "whitelistSuffixesPlaceholder": "gmail.com, outlook.com"
+  },
+  "facebook": {
+    "clientId": "应用 ID",
+    "clientIdDescription": "Facebook 应用 ID，可从 Facebook 开发者门户获取",
+    "clientSecret": "应用密钥",
+    "clientSecretDescription": "Facebook 应用密钥，可从 Facebook 开发者门户获取",
+    "description": "使用 Facebook 账户验证用户身份",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用 Facebook 账户登录",
+    "title": "Facebook 登录"
+  },
+  "github": {
+    "callbackUrl": "授权回调地址",
+    "callbackUrlDescription": "填写用户端前端根地址，并在 GitHub OAuth 应用中配置相同地址",
+    "callbackUrlInvalid": "请输入用户端前端根地址，不要包含路径、查询参数或片段",
+    "callbackUrlRequired": "请输入授权回调地址",
+    "clientId": "客户端 ID",
+    "clientIdDescription": "GitHub OAuth 应用客户端 ID，可从 GitHub 开发者设置获取",
+    "clientIdRequired": "请输入客户端 ID",
+    "clientSecret": "客户端密钥",
+    "clientSecretConfiguredDescription": "留空以保留当前已配置的客户端密钥",
+    "clientSecretDescription": "GitHub OAuth 应用客户端密钥，可从 GitHub 开发者设置获取",
+    "clientSecretPlaceholder": "输入客户端密钥",
+    "clientSecretRequired": "请输入客户端密钥",
+    "description": "使用 GitHub 账户验证用户身份",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用 GitHub 账户登录",
+    "title": "GitHub OAuth"
+  },
+  "google": {
+    "clientId": "客户端 ID",
+    "clientIdDescription": "Google OAuth 客户端 ID，可从 Google Cloud 控制台获取",
+    "clientSecret": "客户端密钥",
+    "clientSecretDescription": "Google OAuth 客户端密钥，可从 Google Cloud 控制台获取",
+    "description": "使用 Google 账户验证用户身份",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用 Google 账户登录",
+    "title": "Google 登录"
+  },
+  "oauthMethods": "OAuth 登录",
+  "socialAuthMethods": "社交账号认证方式",
+  "telegram": {
+    "clientId": "机器人 ID",
+    "clientIdDescription": "Telegram 机器人 ID，可从 @BotFather 获取",
+    "clientSecret": "机器人令牌",
+    "clientSecretDescription": "Telegram 机器人令牌，可从 @BotFather 获取",
+    "description": "使用 Telegram 账户验证用户身份",
+    "enable": "启用",
+    "enableDescription": "启用后，用户可以使用 Telegram 账户登录",
+    "title": "Telegram 登录"
+  }
+}

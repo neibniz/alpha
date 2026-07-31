@@ -1,0 +1,54 @@
+services:
+  server:
+    image: "{{ server_image }}"
+    container_name: alpha-server
+    restart: unless-stopped
+    init: true
+    user: "{{ server_uid }}:{{ server_gid }}"
+    read_only: true
+    network_mode: host
+    environment:
+      ALPHA_GEOIP_ENABLED: {{ server_geoip_enabled | bool | lower | quote }}
+      ALPHA_GEOIP_DATABASE_PATH: {{ server_geoip_database_path | quote }}
+      ALPHA_JWT_ACCESS_SECRET_FILE: /run/secrets/jwt-access-secret
+      ALPHA_POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      ALPHA_REDIS_PASSWORD_FILE: /run/secrets/redis-password
+      ALPHA_NODE_SECRET_FILE: /run/secrets/node-secret
+      ALPHA_NODE_DEPLOY_SECRET_FILE: /run/secrets/node-deploy-secret
+      ALPHA_FORWARDER_BOOTSTRAP_SECRET_FILE: /run/secrets/forwarder-bootstrap-secret
+      ALPHA_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
+{% if clickhouse_enabled | default(false) | bool %}
+      ALPHA_CLICKHOUSE_PASSWORD_FILE: /run/secrets/clickhouse-password
+{% endif %}
+    volumes:
+      - {{ deploy_root }}/server/config/alpha.yaml:/app/etc/alpha.yaml:ro
+      - {{ deploy_root }}/server/secrets/jwt-access-secret:/run/secrets/jwt-access-secret:ro
+      - {{ deploy_root }}/server/secrets/postgres-password:/run/secrets/postgres-password:ro
+      - {{ deploy_root }}/server/secrets/redis-password:/run/secrets/redis-password:ro
+      - {{ deploy_root }}/server/secrets/node-secret:/run/secrets/node-secret:ro
+      - {{ deploy_root }}/server/secrets/node-deploy-secret:/run/secrets/node-deploy-secret:ro
+      - {{ deploy_root }}/server/secrets/forwarder-bootstrap-secret:/run/secrets/forwarder-bootstrap-secret:ro
+      - {{ deploy_root }}/server/secrets/admin-password:/run/secrets/admin-password:ro
+{% if clickhouse_enabled | default(false) | bool %}
+      - {{ deploy_root }}/server/secrets/clickhouse-password:/run/secrets/clickhouse-password:ro
+{% endif %}
+{% if server_privacy_enabled | bool %}
+      - {{ deploy_root }}/server/secrets/privacy-keyring.json:{{ server_privacy_key_file }}:ro
+{% endif %}
+      - {{ deploy_root }}/server/log:/app/log
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    command: ["run", "--config", "etc/alpha.yaml"]
+    mem_limit: {{ server_memory_limit }}
+    cpus: {{ server_cpu_limit }}
+    pids_limit: {{ server_pids_limit }}
+    stop_grace_period: 20s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

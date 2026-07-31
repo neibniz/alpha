@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package alpha.agent.v1;
+
+option go_package = "github.com/neibniz/alpha/protocol/gen/agent/v1;agentv1";
+
+message UserTraffic {
+  int64 user_subscribe_id = 1;
+  int64 upload_bytes = 2;
+  int64 download_bytes = 3;
+}
+
+message TrafficReport {
+  string report_id = 1;
+  int64 sampled_at_ms = 2;
+  int64 interval_seconds = 3;
+  int64 sequence = 4;
+  repeated UserTraffic traffic = 5;
+}
+
+message PushTrafficReportsRequest {
+  string protocol = 1;
+  repeated TrafficReport reports = 2;
+}
+
+message TrafficStatisticsTask {
+  int64 server_id = 1;
+  string protocol = 2;
+  repeated TrafficReport reports = 3;
+}
+
+message AccessEvent {
+  string event_id = 1;
+  int64 timestamp_ms = 2;
+  int64 user_subscribe_id = 3;
+  string source_ip = 4;
+  uint32 source_port = 5;
+  string destination_host = 6;
+  string destination_ip = 7;
+  uint32 destination_port = 8;
+  string network = 9;
+  string status = 10;
+  string outbound_tag = 11;
+  string reason = 12;
+  uint32 parser_version = 13;
+}
+
+message PushAccessEventsRequest {
+  string protocol = 1;
+  repeated AccessEvent events = 2;
+}
+
+message IPLimitDecision {
+  string event_id = 1;
+  int64 user_subscribe_id = 2;
+  string source_network = 3;
+  bool blocked = 4;
+  int64 expires_at_ms = 5;
+  int64 active = 6;
+  int64 limit = 7;
+}
+
+message PushAccessEventsResponse {
+  uint32 accepted = 1;
+  uint32 rejected = 2;
+  repeated IPLimitDecision ip_limit_decisions = 3;
+}
+
+message PushOnlineUsersRequest {
+  string protocol = 1;
+  string mode = 2;
+  string instance_id = 3;
+  int64 sequence = 4;
+  repeated int64 active = 5;
+  repeated int64 inactive = 6;
+  int64 ttl_seconds = 7;
+}
+
+message ErrorResponse {
+  uint32 code = 1;
+  string message = 2;
+}

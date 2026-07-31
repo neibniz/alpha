@@ -1,0 +1,45 @@
+{
+  "name": "alpha-user-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "build:cloudflare": "node ../../node_modules/@opennextjs/cloudflare/dist/cli/index.js build",
+    "deploy:cloudflare": "node ../../node_modules/@opennextjs/cloudflare/dist/cli/index.js build && node ../../node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy -- --keep-vars",
+    "preview:cloudflare": "node ../../node_modules/@opennextjs/cloudflare/dist/cli/index.js build && node ../../node_modules/@opennextjs/cloudflare/dist/cli/index.js preview",
+    "cf:typegen": "node ../../node_modules/wrangler/bin/wrangler.js types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "start": "next start",
+    "lint": "biome lint src",
+    "check": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@gsap/react": "2.1.2",
+    "@opennextjs/cloudflare": "^1.20.2",
+    "@stripe/react-stripe-js": "^5.4.0",
+    "@stripe/stripe-js": "^8.5.2",
+    "@tanstack/react-query": "^5.90.10",
+    "@workspace/ui": "workspace:*",
+    "gsap": "3.15.0",
+    "i18next": "^25.6.3",
+    "lucide-react": "^0.554.0",
+    "next": "16.2.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-i18next": "^16.3.5",
+    "qrcode.react": "^4.2.0",
+    "recharts": "2.15.4",
+    "sonner": "^2.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^20.19.9",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@workspace/typescript-config": "workspace:*",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.116.0"
+  }
+}

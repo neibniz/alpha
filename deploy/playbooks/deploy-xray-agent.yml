@@ -1,0 +1,120 @@
+- name: Resolve xray-agent deployment targets from server API
+  hosts: localhost
+  gather_facts: false
+  tags: [xray_agent]
+  tasks:
+    - name: Build inventory host map by address
+      ansible.builtin.set_fact:
+        xray_agent_inventory_by_address: >-
+          {{
+            (xray_agent_inventory_by_address | default({}))
+            | combine({ (hostvars[item].ansible_host | default(item) | string): item })
+          }}
+      loop: "{{ groups['all'] | default([]) }}"
+      when: item != "localhost"
+
+    - name: Ensure xray-agent deployment token is configured
+      ansible.builtin.fail:
+        msg: "xray_agent_deploy_token is required to query /v2/server/deploy/servers."
+      when: xray_agent_deploy_token | default("") | length == 0
+
+    - name: Query deploy server list
+      ansible.builtin.uri:
+        url: "{{ xray_agent_deploy_server_list_url | default((xray_agent_server_base_url | default(frontend_api_base_url)) ~ '/v2/server/deploy/servers') }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ xray_agent_deploy_token }}"
+        return_content: true
+      register: xray_agent_deploy_servers_response
+      no_log: true
+
+    - name: Normalize deploy server list
+      ansible.builtin.set_fact:
+        xray_agent_api_servers: "{{ xray_agent_deploy_servers_response.json.data.list | default(xray_agent_deploy_servers_response.json.list | default([])) }}"
+      no_log: true
+
+    - name: Stop when deploy server list is empty
+      ansible.builtin.fail:
+        msg: "No servers were returned from /v2/server/deploy/servers."
+      when: xray_agent_api_servers | length == 0
+
+    - name: Report API servers missing from inventory
+      ansible.builtin.debug:
+        msg: "Skip xray-agent deploy for {{ xray_agent_api_address }}: not found in Semaphore/Ansible inventory."
+      loop: "{{ xray_agent_api_servers }}"
+      vars:
+        xray_agent_api_address: "{{ item.address | default('') | string | trim }}"
+      when:
+        - xray_agent_api_address | length > 0
+        - xray_agent_api_address not in (xray_agent_inventory_by_address | default({}))
+
+    - name: Stop when matched xray-agent server has no server id
+      ansible.builtin.fail:
+        msg: "Server {{ xray_agent_api_address }} matched inventory, but API response has no id. xray-agent requires server.server_id."
+      loop: "{{ xray_agent_api_servers }}"
+      vars:
+        xray_agent_api_address: "{{ item.address | default('') | string | trim }}"
+      when:
+        - xray_agent_api_address in (xray_agent_inventory_by_address | default({}))
+        - item.id is not defined
+
+    - name: Stop when matched xray-agent server has no bound token
+      ansible.builtin.fail:
+        msg: "Server {{ xray_agent_api_address }} matched inventory, but API response has no bound token."
+      loop: "{{ xray_agent_api_servers }}"
+      vars:
+        xray_agent_api_address: "{{ item.address | default('') | string | trim }}"
+      when:
+        - xray_agent_api_address in (xray_agent_inventory_by_address | default({}))
+        - item.token | default('') | length < 32
+      no_log: true
+
+    - name: Track matched xray-agent inventory hosts
+      ansible.builtin.set_fact:
+        xray_agent_matched_hosts: "{{ (xray_agent_matched_hosts | default([])) + [xray_agent_inventory_by_address[xray_agent_api_address]] }}"
+      loop: "{{ xray_agent_api_servers }}"
+      vars:
+        xray_agent_api_address: "{{ item.address | default('') | string | trim }}"
+      when:
+        - xray_agent_api_address in (xray_agent_inventory_by_address | default({}))
+        - item.id is defined
+
+    - name: Register xray-agent deployment hosts
+      ansible.builtin.add_host:
+        name: "{{ xray_agent_inventory_by_address[xray_agent_api_address] }}"
+        ansible_host: "{{ hostvars[xray_agent_inventory_by_address[xray_agent_api_address]].ansible_host | default(xray_agent_api_address) }}"
+        ansible_user: >-
+          {{
+            hostvars[xray_agent_inventory_by_address[xray_agent_api_address]].ansible_user
+            | default(xray_agent_ansible_user | default('root'))
+          }}
+        ansible_port: "{{ hostvars[xray_agent_inventory_by_address[xray_agent_api_address]].ansible_port | default(omit) }}"
+        ansible_ssh_private_key_file: "{{ hostvars[xray_agent_inventory_by_address[xray_agent_api_address]].ansible_ssh_private_key_file | default(omit) }}"
+        groups: xray_agent_deploy_targets
+        xray_agent_server_id: "{{ item.id }}"
+        xray_agent_server_name: "{{ item.name | default('') }}"
+        xray_agent_token: "{{ item.token }}"
+      loop: "{{ xray_agent_api_servers }}"
+      vars:
+        xray_agent_api_address: "{{ item.address | default('') | string | trim }}"
+      when:
+        - item.id is defined
+        - item.token | default('') | length >= 32
+        - xray_agent_api_address in (xray_agent_inventory_by_address | default({}))
+      no_log: true
+
+    - name: Stop when no API server matches inventory
+      ansible.builtin.fail:
+        msg: "No xray-agent deployment targets matched inventory. Add the returned server addresses to inventories/prod/hosts.yml first."
+      when: xray_agent_matched_hosts | default([]) | length == 0
+
+- name: Deploy xray-agent
+  hosts: xray_agent_deploy_targets
+  become: true
+  tags: [xray_agent]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: xray_agent

@@ -1,0 +1,29 @@
+services:
+  xray-agent:
+    image: "{{ xray_agent_image }}"
+    container_name: alpha-xray-agent
+    restart: unless-stopped
+    init: true
+    read_only: true
+    network_mode: host
+    volumes:
+      - {{ deploy_root }}/xray-agent/config/xray-agent.yaml:/etc/alpha/xray-agent.yaml:ro
+      - {{ deploy_root }}/xray-agent/data:/var/lib/alpha/xray-agent
+      - {{ deploy_root }}/xray-agent/log:/var/log/alpha/xray-agent
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    mem_limit: {{ xray_agent_memory_limit | default("1g") }}
+    cpus: {{ xray_agent_cpu_limit | default(2.0) }}
+    pids_limit: {{ xray_agent_pids_limit | default(500) }}
+    stop_grace_period: 30s
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

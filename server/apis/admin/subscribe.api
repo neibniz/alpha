@@ -1,0 +1,211 @@
+syntax = "v1"
+
+info (
+	title:   "Subscribe API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	GetSubscribeDetailsRequest {
+		Id int64 `form:"id" validate:"required"`
+	}
+	CreateSubscribeGroupRequest {
+		Name        string `json:"name" validate:"required"`
+		Description string `json:"description"`
+	}
+	UpdateSubscribeGroupRequest {
+		Id          int64  `json:"id" validate:"required"`
+		Name        string `json:"name" validate:"required"`
+		Description string `json:"description"`
+	}
+	GetSubscribeGroupListResponse {
+		List  []SubscribeGroup `json:"list"`
+		Total int64            `json:"total"`
+	}
+	DeleteSubscribeGroupRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	BatchDeleteSubscribeGroupRequest {
+		Ids []int64 `json:"ids" validate:"required"`
+	}
+	CreateSubscribeRequest {
+		Name              string              `json:"name" validate:"required"`
+		Language          string              `json:"language"`
+		Description       string              `json:"description"`
+		UnitPrice         int64               `json:"unit_price"`
+		UnitTime          string              `json:"unit_time"`
+		Discount          []SubscribeDiscount `json:"discount"`
+		Replacement       int64               `json:"replacement"`
+		Inventory         int64               `json:"inventory"`
+		Traffic           int64               `json:"traffic"`
+		SpeedLimit        int64               `json:"speed_limit"`
+		DeviceLimit       int64               `json:"device_limit"`
+		Quota             int64               `json:"quota"`
+		Nodes             []int64             `json:"nodes"`
+		NodeTags          []string            `json:"node_tags"`
+		Show              *bool               `json:"show"`
+		UserVisible       *bool               `json:"user_visible"`
+		Sell              *bool               `json:"sell"`
+		DeductionRatio    int64               `json:"deduction_ratio"`
+		AllowDeduction    *bool               `json:"allow_deduction"`
+		AllowRenewal      *bool               `json:"allow_renewal"`
+		AllowResetTraffic *bool               `json:"allow_reset_traffic"`
+		ResetCycle        int64               `json:"reset_cycle"`
+		RenewalReset      *bool               `json:"renewal_reset"`
+		ShowOriginalPrice bool                `json:"show_original_price"`
+		DisplayTemplate   string              `json:"display_template" validate:"omitempty,oneof=standard popular premium compact"`
+		Badge             string              `json:"badge" validate:"omitempty,max=64"`
+		MinQuantity       int64               `json:"min_quantity" validate:"omitempty,gte=1,lte=1000"`
+		MaxQuantity       int64               `json:"max_quantity" validate:"omitempty,gte=0,lte=1000"`
+		SaleStartsAt      int64               `json:"sale_starts_at" validate:"omitempty,gte=0"`
+		SaleEndsAt        int64               `json:"sale_ends_at" validate:"omitempty,gte=0"`
+	}
+	UpdateSubscribeRequest {
+		Id                int64               `json:"id" validate:"required"`
+		Name              string              `json:"name" validate:"required"`
+		Language          string              `json:"language"`
+		Description       string              `json:"description"`
+		UnitPrice         int64               `json:"unit_price"`
+		UnitTime          string              `json:"unit_time"`
+		Discount          []SubscribeDiscount `json:"discount"`
+		Replacement       int64               `json:"replacement"`
+		Inventory         int64               `json:"inventory"`
+		Traffic           int64               `json:"traffic"`
+		SpeedLimit        int64               `json:"speed_limit"`
+		DeviceLimit       int64               `json:"device_limit"`
+		Quota             int64               `json:"quota"`
+		Nodes             []int64             `json:"nodes"`
+		NodeTags          []string            `json:"node_tags"`
+		Show              *bool               `json:"show"`
+		UserVisible       *bool               `json:"user_visible"`
+		Sell              *bool               `json:"sell"`
+		Sort              int64               `json:"sort"`
+		DeductionRatio    int64               `json:"deduction_ratio"`
+		AllowDeduction    *bool               `json:"allow_deduction"`
+		AllowRenewal      *bool               `json:"allow_renewal"`
+		AllowResetTraffic *bool               `json:"allow_reset_traffic"`
+		ResetCycle        int64               `json:"reset_cycle"`
+		RenewalReset      *bool               `json:"renewal_reset"`
+		ShowOriginalPrice bool                `json:"show_original_price"`
+		DisplayTemplate   string              `json:"display_template" validate:"omitempty,oneof=standard popular premium compact"`
+		Badge             string              `json:"badge" validate:"omitempty,max=64"`
+		MinQuantity       int64               `json:"min_quantity" validate:"omitempty,gte=1,lte=1000"`
+		MaxQuantity       int64               `json:"max_quantity" validate:"omitempty,gte=0,lte=1000"`
+		SaleStartsAt      int64               `json:"sale_starts_at" validate:"omitempty,gte=0"`
+		SaleEndsAt        int64               `json:"sale_ends_at" validate:"omitempty,gte=0"`
+	}
+	SubscribeSortRequest {
+		Sort []SortItem `json:"sort"`
+	}
+	GetSubscribeListRequest {
+		Page     int64  `form:"page" validate:"required"`
+		Size     int64  `form:"size" validate:"required"`
+		Language string `form:"language,omitempty"`
+		Search   string `form:"search,omitempty"`
+	}
+	SubscribeItem {
+		Id              int64  `json:"id"`
+		Name            string `json:"name"`
+		Language        string `json:"language"`
+		UnitPrice       int64  `json:"unit_price"`
+		UnitTime        string `json:"unit_time"`
+		Replacement     int64  `json:"replacement"`
+		Inventory       int64  `json:"inventory"`
+		Traffic         int64  `json:"traffic"`
+		SpeedLimit      int64  `json:"speed_limit"`
+		DeviceLimit     int64  `json:"device_limit"`
+		Quota           int64  `json:"quota"`
+		Show            bool   `json:"show"`
+		UserVisible     bool   `json:"user_visible"`
+		Sell            bool   `json:"sell"`
+		AllowRenewal    bool   `json:"allow_renewal"`
+		ResetCycle      int64  `json:"reset_cycle"`
+		DisplayTemplate string `json:"display_template"`
+		Badge           string `json:"badge"`
+		MinQuantity     int64  `json:"min_quantity"`
+		MaxQuantity     int64  `json:"max_quantity"`
+		SaleStartsAt    int64  `json:"sale_starts_at"`
+		SaleEndsAt      int64  `json:"sale_ends_at"`
+		Sort            int64  `json:"sort"`
+		CreatedAt       int64  `json:"created_at"`
+		UpdatedAt       int64  `json:"updated_at"`
+		Sold            int64  `json:"sold"`
+	}
+	GetSubscribeListResponse {
+		List  []SubscribeItem `json:"list"`
+		Total int64           `json:"total"`
+	}
+	DeleteSubscribeRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	BatchDeleteSubscribeRequest {
+		Ids []int64 `json:"ids" validate:"required"`
+	}
+	ResetAllSubscribeTokenResponse {
+		Success bool `json:"success"`
+	}
+)
+
+@server (
+	prefix:     v1/admin/subscribe
+	group:      admin/subscribe
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Create subscribe group"
+	@handler CreateSubscribeGroup
+	post /group (CreateSubscribeGroupRequest)
+
+	@doc "Update subscribe group"
+	@handler UpdateSubscribeGroup
+	put /group (UpdateSubscribeGroupRequest)
+
+	@doc "Get subscribe group list"
+	@handler GetSubscribeGroupList
+	get /group/list returns (GetSubscribeGroupListResponse)
+
+	@doc "Delete subscribe group"
+	@handler DeleteSubscribeGroup
+	delete /group (DeleteSubscribeGroupRequest)
+
+	@doc "Batch delete subscribe group"
+	@handler BatchDeleteSubscribeGroup
+	delete /group/batch (BatchDeleteSubscribeGroupRequest)
+
+	@doc "Create subscribe"
+	@handler CreateSubscribe
+	post / (CreateSubscribeRequest)
+
+	@doc "Update subscribe"
+	@handler UpdateSubscribe
+	put / (UpdateSubscribeRequest)
+
+	@doc "Get subscribe list"
+	@handler GetSubscribeList
+	get /list (GetSubscribeListRequest) returns (GetSubscribeListResponse)
+
+	@doc "Delete subscribe"
+	@handler DeleteSubscribe
+	delete / (DeleteSubscribeRequest)
+
+	@doc "Batch delete subscribe"
+	@handler BatchDeleteSubscribe
+	delete /batch (BatchDeleteSubscribeRequest)
+
+	@doc "Get subscribe details"
+	@handler GetSubscribeDetails
+	get /details (GetSubscribeDetailsRequest) returns (Subscribe)
+
+	@doc "Subscribe sort"
+	@handler SubscribeSort
+	post /sort (SubscribeSortRequest)
+
+	@doc "Reset all subscribe tokens"
+	@handler ResetAllSubscribeToken
+	post /reset_all_token returns (ResetAllSubscribeTokenResponse)
+}

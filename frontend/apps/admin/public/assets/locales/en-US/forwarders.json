@@ -1,0 +1,8 @@
+{
+  "title": "Forwarder processes",
+  "description": "Inspect registered forwarding instances, applied routes, and TCP connection lifecycles.",
+  "search": "Search name, host, or IP",
+  "overview": "Overview",
+  "routes": "Forward table",
+  "connections": "Connection logs"
+}

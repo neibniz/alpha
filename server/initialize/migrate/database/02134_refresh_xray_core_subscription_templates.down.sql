@@ -1,0 +1,2 @@
+-- 02134_refresh_xray_core_subscription_templates.down.sql
+-- Keep administrator-visible subscription templates intact on rollback.

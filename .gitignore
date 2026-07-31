@@ -1,0 +1,14 @@
+.DS_Store
+.idea/
+.vscode/
+.playwright-cli/
+.tmp/
+design-qa.md
+design-qa-reports/
+**/.vitepress/cache/
+**/design/qa/
+deploy/.ansible/
+deploy/.venv/
+deploy/inventories/**/vault.yml
+deploy/lan-docker/.env
+frontend/apps/*/design/

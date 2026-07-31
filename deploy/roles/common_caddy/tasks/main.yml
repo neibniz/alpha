@@ -1,0 +1,115 @@
+---
+- name: Validate shared Caddy settings
+  ansible.builtin.assert:
+    that:
+      - common_caddy_image | length > 0
+      - caddy_email is match('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,63}$')
+      - common_caddy_http_port | int > 0
+      - common_caddy_http_port | int <= 65535
+      - common_caddy_https_port | int > 0
+      - common_caddy_https_port | int <= 65535
+      - common_caddy_http_port | int != common_caddy_https_port | int
+      - common_caddy_pids_limit | int > 0
+    fail_msg: Caddy requires a valid image, email, distinct ports, and resource limits.
+
+- name: Ensure Caddy directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ deploy_root }}/caddy"
+    - "{{ deploy_root }}/caddy/sites"
+    - "{{ deploy_root }}/caddy/data"
+    - "{{ deploy_root }}/caddy/config"
+    - "{{ deploy_root }}/frontend"
+
+- name: Keep Caddy import valid before any sites are deployed
+  ansible.builtin.copy:
+    content: "\n"
+    dest: "{{ deploy_root }}/caddy/sites/00-empty.caddy"
+    mode: "0644"
+
+- name: Render shared Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ deploy_root }}/caddy/Caddyfile"
+    mode: "0644"
+  register: common_caddy_config
+
+- name: Render shared Caddy compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/caddy/docker-compose.yml"
+    mode: "0644"
+  register: common_caddy_compose
+
+- name: Validate shared Caddy compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/caddy/docker-compose.yml config --quiet
+  changed_when: false
+
+- name: Remove legacy Caddy container
+  ansible.builtin.command:
+    argv: [docker, rm, -f, m200-caddy]
+  register: common_caddy_legacy_remove
+  changed_when: common_caddy_legacy_remove.rc == 0
+  failed_when: false
+
+- name: Validate rendered Caddy configuration before activation
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --network
+      - none
+      - -v
+      - "{{ deploy_root }}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
+      - -v
+      - "{{ deploy_root }}/caddy/sites:/etc/caddy/sites:ro"
+      - "{{ common_caddy_image }}"
+      - caddy
+      - validate
+      - --config
+      - /etc/caddy/Caddyfile
+  changed_when: false
+
+- name: Start shared Caddy container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/caddy/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (
+          ['--force-recreate']
+          if (
+            (common_caddy_config.changed | default(false))
+            or (common_caddy_compose.changed | default(false))
+          )
+          else []
+        )
+      }}
+  register: common_caddy_start
+  changed_when: >-
+    'Created' in (common_caddy_start.stdout ~ common_caddy_start.stderr)
+    or 'Started' in (common_caddy_start.stdout ~ common_caddy_start.stderr)
+    or 'Recreated' in (common_caddy_start.stdout ~ common_caddy_start.stderr)
+
+- name: Validate active Caddy configuration
+  ansible.builtin.command:
+    argv: [docker, exec, alpha-caddy, caddy, validate, --config, /etc/caddy/Caddyfile]
+  changed_when: false
+
+- name: Wait for shared Caddy HTTP port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ common_caddy_http_port }}"
+    timeout: 60

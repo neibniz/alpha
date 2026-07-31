@@ -1,0 +1,35 @@
+name: Question
+description: Ask for help with development or deployment.
+title: "[Question] "
+labels:
+  - question
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Server
+        - Admin frontend
+        - User frontend
+        - Xray agent
+        - Forwared
+        - Deploy
+        - Documentation
+        - Multiple components
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Include what you are trying to accomplish and where you are blocked.
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What you tried
+      description: Include relevant commands or configuration with secrets removed.
+    validations:
+      required: true

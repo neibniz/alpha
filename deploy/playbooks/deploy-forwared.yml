@@ -1,0 +1,103 @@
+- name: Resolve forwared deployment targets
+  hosts: localhost
+  gather_facts: false
+  tags: [forwared]
+  vars:
+    forwared_target_items: >-
+      {{
+        forwared_targets
+        if (forwared_targets is defined and forwared_targets is sequence and forwared_targets is not string)
+        else ((forwared_targets | default('')) | split(','))
+      }}
+  tasks:
+    - name: Normalize selected forwared targets
+      ansible.builtin.set_fact:
+        forwared_normalized_targets: "{{ forwared_target_items | map('regex_replace', '^\\s+|\\s+$', '') | reject('equalto', '') | list }}"
+
+    - name: Ensure forwared targets are configured
+      ansible.builtin.fail:
+        msg: "forwared_targets is required. Pass inventory hostnames or IPs from Semaphore extra vars."
+      when: forwared_normalized_targets | length == 0
+
+    - name: Build forwared inventory maps
+      ansible.builtin.set_fact:
+        forwared_inventory_by_name: "{{ (forwared_inventory_by_name | default({})) | combine({(item | string): item}) }}"
+        forwared_inventory_by_ip: >-
+          {{
+            (forwared_inventory_by_ip | default({}))
+            | combine({ (hostvars[item].ansible_host | default(item) | string): item })
+          }}
+      loop: "{{ groups['all'] | default([]) }}"
+      when: item != "localhost"
+
+    - name: Report selected forwared targets missing from inventory
+      ansible.builtin.debug:
+        msg: "Skip forwared deploy for {{ forwared_target_value }}: not found in Semaphore/Ansible inventory."
+      loop: "{{ forwared_normalized_targets }}"
+      vars:
+        forwared_target_value: "{{ item }}"
+        forwared_inventory_host: >-
+          {{
+            (forwared_inventory_by_name | default({})).get(
+              forwared_target_value,
+              (forwared_inventory_by_ip | default({})).get(forwared_target_value, '')
+            )
+          }}
+      when:
+        - forwared_target_value | length > 0
+        - forwared_inventory_host | length == 0
+
+    - name: Track matched forwared inventory hosts
+      ansible.builtin.set_fact:
+        forwared_matched_hosts: "{{ (forwared_matched_hosts | default([])) + [forwared_inventory_host] }}"
+      loop: "{{ forwared_normalized_targets }}"
+      vars:
+        forwared_target_value: "{{ item }}"
+        forwared_inventory_host: >-
+          {{
+            (forwared_inventory_by_name | default({})).get(
+              forwared_target_value,
+              (forwared_inventory_by_ip | default({})).get(forwared_target_value, '')
+            )
+          }}
+      when:
+        - forwared_target_value | length > 0
+        - forwared_inventory_host | length > 0
+
+    - name: Register selected forwared deployment hosts
+      ansible.builtin.add_host:
+        name: "{{ forwared_inventory_host }}"
+        ansible_host: "{{ hostvars[forwared_inventory_host].ansible_host | default(forwared_inventory_host) }}"
+        ansible_user: "{{ hostvars[forwared_inventory_host].ansible_user | default(forwared_ansible_user | default('root')) }}"
+        ansible_port: "{{ hostvars[forwared_inventory_host].ansible_port | default(omit) }}"
+        ansible_ssh_private_key_file: "{{ hostvars[forwared_inventory_host].ansible_ssh_private_key_file | default(omit) }}"
+        groups: forwared_deploy_targets
+      loop: "{{ forwared_normalized_targets }}"
+      vars:
+        forwared_target_value: "{{ item }}"
+        forwared_inventory_host: >-
+          {{
+            (forwared_inventory_by_name | default({})).get(
+              forwared_target_value,
+              (forwared_inventory_by_ip | default({})).get(forwared_target_value, '')
+            )
+          }}
+      when:
+        - forwared_target_value | length > 0
+        - forwared_inventory_host | length > 0
+
+    - name: Stop when no selected forwared target matches inventory
+      ansible.builtin.fail:
+        msg: "No forwared deployment targets matched inventory. Use inventory hostnames or ansible_host IPs."
+      when: forwared_matched_hosts | default([]) | length == 0
+
+- name: Deploy forwared
+  hosts: forwared_deploy_targets
+  become: true
+  tags: [forwared]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: forwared

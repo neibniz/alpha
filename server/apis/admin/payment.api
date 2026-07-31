@@ -1,0 +1,87 @@
+syntax = "v1"
+
+info (
+	title:   "payment API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	CreatePaymentMethodRequest {
+		Name        string          `json:"name" validate:"required"`
+		Platform    string          `json:"platform" validate:"required"`
+		Description string          `json:"description"`
+		Icon        *string         `json:"icon,omitempty"`
+		Domain      *string         `json:"domain,omitempty"`
+		Config      json.RawMessage `json:"config" validate:"required"`
+		FeeMode     uint            `json:"fee_mode"`
+		FeePercent  int64           `json:"fee_percent,omitempty"`
+		FeeAmount   int64           `json:"fee_amount,omitempty"`
+		Enable      *bool           `json:"enable" validate:"required"`
+	}
+	UpdatePaymentMethodRequest {
+		Id          int64           `json:"id" validate:"required"`
+		Name        *string         `json:"name,omitempty"`
+		Platform    *string         `json:"platform,omitempty"`
+		Description *string         `json:"description,omitempty"`
+		Icon        *string         `json:"icon,omitempty"`
+		Domain      *string         `json:"domain,omitempty"`
+		Config      json.RawMessage `json:"config,omitempty"`
+		FeeMode     *uint           `json:"fee_mode,omitempty"`
+		FeePercent  *int64          `json:"fee_percent,omitempty"`
+		FeeAmount   *int64          `json:"fee_amount,omitempty"`
+		Enable      *bool           `json:"enable,omitempty"`
+	}
+	DeletePaymentMethodRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	GetPaymentMethodRequest {
+		Id int64 `form:"id" validate:"required"`
+	}
+	GetPaymentMethodListRequest {
+		Page     int    `form:"page"`
+		Size     int    `form:"size"`
+		Platform string `form:"platform,omitempty"`
+		Search   string `form:"search,omitempty"`
+		Enable   *bool  `form:"enable,omitempty"`
+	}
+	GetPaymentMethodListResponse {
+		Total int64                   `json:"total"`
+		List  []PaymentMethodListItem `json:"list"`
+	}
+)
+
+@server (
+	prefix:     v1/admin/payment
+	group:      admin/payment
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Create Payment Method"
+	@handler CreatePaymentMethod
+	post / (CreatePaymentMethodRequest) returns (PaymentConfig)
+
+	@doc "Update Payment Method"
+	@handler UpdatePaymentMethod
+	put / (UpdatePaymentMethodRequest) returns (PaymentConfig)
+
+	@doc "Delete Payment Method"
+	@handler DeletePaymentMethod
+	delete / (DeletePaymentMethodRequest)
+
+	@doc "Get Payment Method"
+	@handler GetPaymentMethod
+	get /detail (GetPaymentMethodRequest) returns (PaymentConfig)
+
+	@doc "Get Payment Method List"
+	@handler GetPaymentMethodList
+	get /list (GetPaymentMethodListRequest) returns (GetPaymentMethodListResponse)
+
+	@doc "Get supported payment platform"
+	@handler GetPaymentPlatform
+	get /platform returns (PlatformResponse)
+}

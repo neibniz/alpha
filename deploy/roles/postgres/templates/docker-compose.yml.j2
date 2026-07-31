@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: "{{ postgres_image }}"
+    container_name: alpha-postgres
+    restart: unless-stopped
+    ports:
+      - "{{ postgres_bind_host }}:{{ postgres_port }}:5432"
+    environment:
+      POSTGRES_USER: {{ postgres_username | to_json }}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_DB: {{ postgres_dbname | to_json }}
+      TZ: {{ timezone | to_json }}
+{% if postgres_replication_enabled_effective | default(false) | bool %}
+      PGPASSFILE: /run/secrets/postgres-replication.pgpass
+{% endif %}
+    command:
+      - postgres
+      - -c
+      - "listen_addresses={{ postgres_listen_addresses }}"
+{% if postgres_replication_enabled_effective | default(false) | bool %}
+      - -c
+      - "wal_level={{ postgres_wal_level }}"
+      - -c
+      - "max_wal_senders={{ postgres_max_wal_senders }}"
+      - -c
+      - "max_replication_slots={{ postgres_max_replication_slots }}"
+      - -c
+      - "wal_keep_size={{ postgres_wal_keep_size }}"
+      - -c
+      - "hot_standby={{ postgres_hot_standby }}"
+{% endif %}
+    volumes:
+      - {{ deploy_root }}/postgres/data:/var/lib/postgresql/data
+      - {{ deploy_root }}/postgres/postgres-password:/run/secrets/postgres-password:ro
+{% if postgres_replication_enabled_effective | default(false) | bool %}
+      - {{ deploy_root }}/postgres/postgres-replication-password:/run/secrets/postgres-replication-password:ro
+      - {{ deploy_root }}/postgres/postgres-replication.pgpass:/run/secrets/postgres-replication.pgpass:ro
+{% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U '$${POSTGRES_USER}' -d '$${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

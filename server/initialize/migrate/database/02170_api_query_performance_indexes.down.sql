@@ -1,0 +1,16 @@
+DROP INDEX IF EXISTS "idx_coupon_subscribe_gin";
+DROP INDEX IF EXISTS "idx_document_tags_gin";
+DROP INDEX IF EXISTS "idx_nodes_tags_gin";
+DROP INDEX IF EXISTS "idx_subscribe_node_tags_gin";
+DROP INDEX IF EXISTS "idx_subscribe_nodes_gin";
+DROP INDEX IF EXISTS "idx_task_type_created_at";
+DROP INDEX IF EXISTS "idx_task_type_status_created_at";
+DROP INDEX IF EXISTS "idx_user_device_user_id_id";
+DROP INDEX IF EXISTS "idx_user_subscribe_quota_filter";
+DROP INDEX IF EXISTS "idx_user_subscribe_status_id";
+DROP INDEX IF EXISTS "idx_user_auth_methods_user_type";
+DROP INDEX IF EXISTS "idx_subscribe_access_user_created_ip";
+DROP INDEX IF EXISTS "idx_traffic_log_subscribe_timestamp_id";
+DROP INDEX IF EXISTS "idx_system_logs_object_created_ip";
+DROP INDEX IF EXISTS "idx_system_logs_type_object_id_id";
+DROP INDEX IF EXISTS "idx_user_referer_id_id";

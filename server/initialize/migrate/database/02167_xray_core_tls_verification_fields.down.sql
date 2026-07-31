@@ -1,0 +1,3 @@
+-- 02167_xray_core_tls_verification_fields.down.sql
+-- No-op: reverting would reintroduce the deprecated Xray-core allowInsecure
+-- field.

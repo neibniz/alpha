@@ -1,0 +1,463 @@
+---
+- name: Validate frontend deployment settings
+  ansible.builtin.assert:
+    that:
+      - deploy_root is match('^/data(?:/|$)')
+      - frontend_app_name is match('^[a-z][a-z0-9-]*$')
+      - frontend_domain is match('^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$')
+      - frontend_deployment_mode in ['package', 'image']
+      - frontend_deployment_mode != 'image' or frontend_container_image | length > 0
+      - frontend_port | int > 0
+      - frontend_port | int <= 65535
+      - frontend_keep_releases | int >= 2
+      - frontend_release_version | default('latest') is match('^[A-Za-z0-9._/-]+$')
+      - frontend_container_upstream_url is match('^https?://[^\\s]+$')
+      - >-
+        frontend_package_checksum | default('') | length == 0
+        or (
+          frontend_package_checksum
+          is match('^sha256:[A-Fa-f0-9]{64}$')
+        )
+    fail_msg: Frontend deployment must use /data and valid package or image settings.
+
+- name: Resolve frontend deployment facts
+  ansible.builtin.set_fact:
+    frontend_package_update_enabled: >-
+      {{
+        frontend_deployment_mode == 'package'
+        and (frontend_package_enabled | default(true) | bool)
+      }}
+    frontend_effective_image: "{{ frontend_container_image }}"
+
+- name: Ensure frontend directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ deploy_root }}/frontend"
+    - "{{ deploy_root }}/frontend/{{ frontend_app_name }}"
+    - "{{ deploy_root }}/frontend/{{ frontend_app_name }}/releases"
+
+- name: Set frontend release asset URL
+  ansible.builtin.set_fact:
+    frontend_release_asset_url: >-
+      {{ frontend_release_base_url }}/{{
+      'latest/download' if (frontend_release_version | default('latest')) == 'latest'
+      else 'download/' ~ (frontend_release_version | replace('/', '%2F'))
+      }}/alpha-{{ frontend_app_name }}-web.tar.gz
+  when:
+    - frontend_package_update_enabled | bool
+    - frontend_package_src | default("") | length == 0
+
+- name: Download frontend release package
+  ansible.builtin.get_url:
+    url: "{{ frontend_release_asset_url }}"
+    dest: "{{ deploy_root }}/frontend/alpha-{{ frontend_app_name }}-web.tar.gz"
+    mode: "0644"
+    force: "{{ (frontend_release_version | default('latest')) == 'latest' }}"
+    checksum: >-
+      {{
+        frontend_package_checksum
+        if frontend_package_checksum | default('') | length > 0
+        else 'sha256:' ~ frontend_release_asset_url ~ '.sha256'
+      }}
+  when:
+    - frontend_package_update_enabled | bool
+    - frontend_package_src | default("") | length == 0
+
+- name: Upload local frontend release package
+  ansible.builtin.copy:
+    src: "{{ frontend_package_src }}"
+    dest: "{{ deploy_root }}/frontend/alpha-{{ frontend_app_name }}-web.tar.gz"
+    mode: "0644"
+  when:
+    - frontend_package_update_enabled | bool
+    - frontend_package_src | default("") | length > 0
+
+- name: Inspect frontend release package
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/frontend/alpha-{{ frontend_app_name }}-web.tar.gz"
+    checksum_algorithm: sha256
+  register: frontend_package_archive
+  when: frontend_package_update_enabled | bool
+
+- name: Verify configured frontend package checksum
+  ansible.builtin.assert:
+    that:
+      - frontend_package_checksum | lower == 'sha256:' ~ frontend_package_archive.stat.checksum
+    fail_msg: The admin frontend package does not match frontend_package_checksum.
+  when:
+    - frontend_package_update_enabled | bool
+    - frontend_package_checksum | default('') | length > 0
+
+- name: Resolve versioned frontend release path
+  ansible.builtin.set_fact:
+    frontend_release_dir: >-
+      {{ deploy_root }}/frontend/{{ frontend_app_name }}/releases/{{
+      (frontend_release_version | default('local')) | regex_replace('[^A-Za-z0-9_.-]', '-')
+      }}-{{ frontend_package_archive.stat.checksum[:12] }}
+  when: frontend_package_update_enabled | bool
+
+- name: Inspect versioned frontend release marker
+  ansible.builtin.stat:
+    path: "{{ frontend_release_dir }}/.alpha-release-complete"
+  register: frontend_release_marker
+  when: frontend_package_update_enabled | bool
+
+- name: Inspect versioned frontend entrypoint
+  ansible.builtin.stat:
+    path: "{{ frontend_release_dir }}/index.html"
+  register: frontend_release_index_before
+  when: frontend_package_update_enabled | bool
+
+- name: Remove incomplete frontend release
+  ansible.builtin.file:
+    path: "{{ frontend_release_dir }}"
+    state: absent
+  when:
+    - frontend_package_update_enabled | bool
+    - >-
+      not (frontend_release_marker.stat.exists | default(false))
+      or not (frontend_release_index_before.stat.isreg | default(false))
+
+- name: Create versioned frontend release
+  ansible.builtin.file:
+    path: "{{ frontend_release_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - frontend_package_update_enabled | bool
+    - >-
+      not (frontend_release_marker.stat.exists | default(false))
+      or not (frontend_release_index_before.stat.isreg | default(false))
+
+- name: Extract frontend release package
+  ansible.builtin.unarchive:
+    src: "{{ deploy_root }}/frontend/alpha-{{ frontend_app_name }}-web.tar.gz"
+    dest: "{{ frontend_release_dir }}"
+    remote_src: true
+  when:
+    - frontend_package_update_enabled | bool
+    - >-
+      not (frontend_release_marker.stat.exists | default(false))
+      or not (frontend_release_index_before.stat.isreg | default(false))
+
+- name: Verify extracted frontend package
+  ansible.builtin.stat:
+    path: "{{ frontend_release_dir }}/index.html"
+  register: frontend_extracted_index
+  when: frontend_package_update_enabled | bool
+
+- name: Stop when extracted frontend package is invalid
+  ansible.builtin.fail:
+    msg: The admin frontend package is missing index.html.
+  when:
+    - frontend_package_update_enabled | bool
+    - not (frontend_extracted_index.stat.isreg | default(false))
+
+- name: Mark frontend release as complete
+  ansible.builtin.file:
+    path: "{{ frontend_release_dir }}/.alpha-release-complete"
+    state: touch
+    mode: "0644"
+  when:
+    - frontend_package_update_enabled | bool
+    - >-
+      not (frontend_release_marker.stat.exists | default(false))
+      or not (frontend_release_index_before.stat.isreg | default(false))
+
+- name: Inspect current frontend release
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/frontend/{{ frontend_app_name }}/current"
+    follow: false
+  register: frontend_current_link
+  when: frontend_deployment_mode == 'package'
+
+- name: Require current frontend path to be a symlink
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (frontend_current_link.stat.exists | default(false))
+        or (frontend_current_link.stat.islnk | default(false))
+    fail_msg: >-
+      {{ deploy_root }}/frontend/{{ frontend_app_name }}/current must be a symlink.
+      Move the legacy directory aside before deploying.
+  when: frontend_deployment_mode == 'package'
+
+- name: Resolve frontend runtime content path
+  ansible.builtin.set_fact:
+    frontend_runtime_root: >-
+      {{
+        frontend_release_dir
+        if (frontend_package_update_enabled | bool)
+        else (
+          deploy_root ~ '/frontend/' ~ frontend_app_name ~ '/current'
+          if frontend_deployment_mode == 'package'
+          else deploy_root ~ '/frontend/' ~ frontend_app_name
+        )
+      }}
+
+- name: Check existing frontend package
+  ansible.builtin.stat:
+    path: "{{ frontend_runtime_root }}/index.html"
+  register: frontend_existing_package
+  when: frontend_deployment_mode == 'package'
+
+- name: Stop when frontend package is missing
+  ansible.builtin.fail:
+    msg: >-
+      A valid frontend package is required at {{ frontend_runtime_root }}.
+      Run once with frontend_package_enabled=true.
+  when:
+    - frontend_deployment_mode == 'package'
+    - not (frontend_existing_package.stat.exists | default(false))
+
+- name: Render runtime frontend config
+  ansible.builtin.template:
+    src: config.js.j2
+    dest: "{{ frontend_runtime_root }}/config.js"
+    mode: "0644"
+  register: frontend_runtime_config
+
+- name: Check frontend branding favicon directory
+  ansible.builtin.stat:
+    path: "{{ frontend_branding_favicon_src | default(playbook_dir ~ '/../assets/branding/' ~ frontend_app_name ~ '/favicon') }}"
+  delegate_to: localhost
+  become: false
+  register: frontend_branding_favicon_dir
+  when: frontend_deployment_mode == 'package'
+
+- name: Copy frontend branding favicon files
+  ansible.builtin.copy:
+    src: "{{ frontend_branding_favicon_src | default(playbook_dir ~ '/../assets/branding/' ~ frontend_app_name ~ '/favicon') }}/"
+    dest: "{{ frontend_runtime_root }}/"
+    mode: "0644"
+  when:
+    - frontend_deployment_mode == 'package'
+    - frontend_branding_favicon_dir.stat.isdir | default(false)
+
+- name: Switch current frontend release
+  ansible.builtin.file:
+    src: "releases/{{ frontend_release_dir | basename }}"
+    dest: "{{ deploy_root }}/frontend/{{ frontend_app_name }}/current"
+    state: link
+    force: true
+  when: frontend_package_update_enabled | bool
+
+- name: Remove stale frontend container in package mode
+  ansible.builtin.command:
+    argv: [docker, rm, -f, alpha-admin-web]
+  register: frontend_package_container_remove
+  changed_when: frontend_package_container_remove.rc == 0
+  failed_when: false
+  when: frontend_deployment_mode == 'package'
+
+- name: Render frontend container compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+    mode: "0644"
+  when: frontend_deployment_mode == 'image'
+  register: frontend_compose
+
+- name: Validate frontend container compose file
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+      - config
+      - --quiet
+  changed_when: false
+  when: frontend_deployment_mode == 'image'
+
+- name: Inspect running frontend image
+  ansible.builtin.command:
+    argv: [docker, inspect, alpha-admin-web, --format, "{{ '{{.Image}}' }}"]
+  register: frontend_existing_image
+  changed_when: false
+  failed_when: false
+  when: frontend_deployment_mode == 'image'
+
+- name: Pull frontend container image
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+      - pull
+  register: frontend_container_pull
+  changed_when: >-
+    'Pulled' in (frontend_container_pull.stdout ~ frontend_container_pull.stderr)
+    or 'Downloaded' in (frontend_container_pull.stdout ~ frontend_container_pull.stderr)
+  when: frontend_deployment_mode == 'image'
+
+- name: Activate and verify frontend container image
+  when: frontend_deployment_mode == 'image'
+  block:
+    - name: Start frontend container
+      ansible.builtin.command:
+        argv: >-
+          {{
+            [
+              'docker',
+              'compose',
+              '-f',
+              deploy_root ~ '/frontend/' ~ frontend_app_name ~ '/docker-compose.yml',
+              'up',
+              '-d',
+              '--remove-orphans'
+            ]
+            + (
+              ['--force-recreate']
+              if (
+                (frontend_runtime_config.changed | default(false))
+                or (frontend_compose.changed | default(false))
+              )
+              else []
+            )
+          }}
+      register: frontend_container_start
+      changed_when: >-
+        'Created' in (frontend_container_start.stdout ~ frontend_container_start.stderr)
+        or 'Started' in (frontend_container_start.stdout ~ frontend_container_start.stderr)
+        or 'Recreated' in (frontend_container_start.stdout ~ frontend_container_start.stderr)
+
+    - name: Wait for frontend container port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ frontend_port }}"
+        timeout: 120
+
+    - name: Verify frontend container health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ frontend_port }}/healthz"
+        status_code: 200
+        return_content: false
+      register: frontend_container_health
+      retries: 20
+      delay: 3
+      until: frontend_container_health.status == 200
+  rescue:
+    - name: Preserve previous frontend image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - image
+          - tag
+          - "{{ frontend_existing_image.stdout }}"
+          - alpha-frontend-admin:ansible-rollback
+      when:
+        - frontend_existing_image.rc | default(1) == 0
+        - frontend_existing_image.stdout | default('') | length > 0
+      changed_when: true
+
+    - name: Select previous frontend image
+      ansible.builtin.set_fact:
+        frontend_effective_image: alpha-frontend-admin:ansible-rollback
+      when:
+        - frontend_existing_image.rc | default(1) == 0
+        - frontend_existing_image.stdout | default('') | length > 0
+
+    - name: Render previous frontend image
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+        mode: "0644"
+      when:
+        - frontend_existing_image.rc | default(1) == 0
+        - frontend_existing_image.stdout | default('') | length > 0
+
+    - name: Restart previous frontend image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - -f
+          - "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+          - up
+          - -d
+          - --force-recreate
+      when:
+        - frontend_existing_image.rc | default(1) == 0
+        - frontend_existing_image.stdout | default('') | length > 0
+      changed_when: true
+
+    - name: Stop failed first frontend image deployment
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - -f
+          - "{{ deploy_root }}/frontend/{{ frontend_app_name }}/docker-compose.yml"
+          - down
+      when: frontend_existing_image.rc | default(1) != 0
+      changed_when: true
+
+    - name: Stop after failed frontend container health check
+      ansible.builtin.fail:
+        msg: >-
+          The new frontend image failed its health check. The previous image
+          was restored when one was available.
+
+- name: Find legacy frontend Caddy site files
+  ansible.builtin.find:
+    paths: "{{ deploy_root }}/caddy/sites"
+    patterns: "frontend-{{ frontend_app_name }}-*.caddy"
+    file_type: file
+    recurse: false
+  register: frontend_legacy_caddy_sites
+
+- name: Remove legacy frontend Caddy site files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ frontend_legacy_caddy_sites.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Render frontend Caddy site
+  ansible.builtin.template:
+    src: frontend.caddy.j2
+    dest: "{{ deploy_root }}/caddy/sites/frontend-{{ frontend_app_name }}.caddy"
+    mode: "0644"
+
+- name: Validate Caddy after frontend site change
+  ansible.builtin.command:
+    argv: [docker, exec, alpha-caddy, caddy, validate, --config, /etc/caddy/Caddyfile]
+  changed_when: false
+
+- name: Reload Caddy after frontend site change
+  ansible.builtin.command:
+    argv: [docker, exec, alpha-caddy, caddy, reload, --config, /etc/caddy/Caddyfile]
+  changed_when: false
+
+- name: Find frontend releases
+  ansible.builtin.find:
+    paths: "{{ deploy_root }}/frontend/{{ frontend_app_name }}/releases"
+    file_type: directory
+    recurse: false
+  register: frontend_releases
+  when: frontend_deployment_mode == 'package'
+
+- name: Remove stale frontend releases
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: >-
+    {{
+      frontend_releases.files
+      | default([])
+      | sort(attribute='mtime', reverse=true)
+    }}
+  loop_control:
+    index_var: frontend_release_index
+    label: "{{ item.path }}"
+  when:
+    - frontend_deployment_mode == 'package'
+    - frontend_package_update_enabled | bool
+    - frontend_release_index >= frontend_keep_releases | int
+    - item.path != (frontend_release_dir | default(''))

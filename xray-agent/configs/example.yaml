@@ -1,0 +1,27 @@
+server:
+  base_url: "http://127.0.0.1:27001"
+  server_id: 1
+  token: "alpha-node-v1_replace-with-derived-node-token"
+
+log:
+  agent_path: "/var/log/alpha/xray-agent/agent.log"
+  xray_error_path: "/var/log/alpha/xray-agent/xray-error.log"
+  xray_access_path: "/var/log/alpha/xray-agent/xray-access.log"
+  xray_level: "warning"
+
+report:
+  status_interval: "5s"
+  traffic_interval: "5s"
+  traffic:
+    batch_size: 12
+    flush_interval: "5s"
+    max_spool_bytes: 67108864
+    spool_path: "/var/lib/alpha/xray-agent/traffic-spool.jsonl"
+    state_path: "/var/lib/alpha/xray-agent/traffic-state.json"
+  access:
+    enabled: true
+    batch_size: 1000
+    flush_interval: "5s"
+    poll_interval: "1s"
+    max_batch_bytes: 1048576
+    max_spool_bytes: 268435456

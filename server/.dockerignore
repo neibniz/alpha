@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+.DS_Store
+*.log
+*.log.*
+/build
+/cache
+/generate
+/node_modules
+/etc/alpha.yaml
+*.crt
+*.key
+*.p8

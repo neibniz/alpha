@@ -1,0 +1,148 @@
+{
+  "communicationDescription": "Configure verification email delivery and templates.",
+  "oauthDescription": "GitHub is currently the only supported third-party sign-in provider.",
+  "pageDescription": "Manage email delivery and the sign-in methods available to users.",
+  "title": "Authentication",
+  "workspace": "Access control",
+  "apple": {
+    "clientId": "Service ID",
+    "clientIdDescription": "Apple Service ID, available from Apple Developer Portal",
+    "clientSecret": "Private Key",
+    "clientSecretDescription": "Private key content (.p8 file) for authenticating with Apple",
+    "description": "Authenticate users with Apple accounts",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with their Apple ID",
+    "keyId": "Key ID",
+    "keyIdDescription": "Your private key ID from Apple Developer Portal",
+    "redirectUri": "Redirect URL",
+    "redirectUriDescription": "API address for redirect URL after successful Apple authentication. Do not end with /",
+    "teamId": "Team ID",
+    "teamIdDescription": "Apple Developer Team ID",
+    "title": "Apple Sign-In"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveFailed": "Save failed",
+    "saveSuccess": "Saved successfully"
+  },
+  "communicationMethods": "Communication Methods",
+  "email": {
+    "basicSettings": "Basic Settings",
+    "description": "Configure email authentication and templates",
+    "emailSuffixWhitelist": "Email Suffix Whitelist",
+    "emailSuffixWhitelistDescription": "Only allow emails from whitelisted domains",
+    "emailVerification": "Email Verification",
+    "emailVerificationDescription": "Require email verification for new users",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with email",
+    "expirationEmailTemplate": "Expiration Email Template",
+    "expirationTemplate": "Expiration Template",
+    "inputPlaceholder": "Please enter",
+    "maintenanceEmailTemplate": "Maintenance Email Template",
+    "maintenanceTemplate": "Maintenance Template",
+    "senderAddress": "Sender Address",
+    "senderAddressDescription": "The email address that appears in the From field",
+    "sendFailure": "Email send failed",
+    "sendSuccess": "Email sent successfully",
+    "sendTestEmail": "Send Test Email",
+    "sendTestEmailDescription": "Send a test email to verify your SMTP configuration",
+    "smtpAccount": "SMTP Account",
+    "smtpAccountDescription": "The SMTP authentication username",
+    "smtpEncryptionMethod": "SSL/TLS Encryption",
+    "smtpEncryptionMethodDescription": "Enable SSL/TLS encryption for SMTP connection",
+    "smtpPassword": "SMTP Password",
+    "smtpPasswordDescription": "The SMTP authentication password",
+    "smtpServerAddress": "SMTP Server Address",
+    "smtpServerAddressDescription": "The SMTP server hostname",
+    "smtpServerPort": "SMTP Server Port",
+    "smtpServerPortDescription": "The SMTP server port (usually 25, 465, or 587)",
+    "smtpSettings": "SMTP Settings",
+    "templateVariables": {
+      "code": {
+        "description": "Verification code"
+      },
+      "expire": {
+        "description": "Code expiration time"
+      },
+      "expireDate": {
+        "description": "Subscription expiration date"
+      },
+      "maintenanceDate": {
+        "description": "Maintenance date"
+      },
+      "maintenanceTime": {
+        "description": "Maintenance time"
+      },
+      "siteLogo": {
+        "description": "Site logo URL"
+      },
+      "siteName": {
+        "description": "Site name"
+      },
+      "title": "Template Variables",
+      "type": {
+        "conditionalSyntax": "Use conditional syntax to display different content",
+        "description": "Email type (1: Register, 2: Reset Password)"
+      }
+    },
+    "title": "Email Settings",
+    "trafficExceedEmailTemplate": "Traffic Exceed Email Template",
+    "trafficTemplate": "Traffic Template",
+    "verifyEmailTemplate": "Verify Email Template",
+    "verifyTemplate": "Verify Template",
+    "whitelistSuffixes": "Whitelist Suffixes",
+    "whitelistSuffixesDescription": "One domain suffix per line",
+    "whitelistSuffixesPlaceholder": "gmail.com, outlook.com"
+  },
+  "facebook": {
+    "clientId": "App ID",
+    "clientIdDescription": "Facebook App ID, available from Facebook Developer Portal",
+    "clientSecret": "App Secret",
+    "clientSecretDescription": "Facebook App Secret, available from Facebook Developer Portal",
+    "description": "Authenticate users with Facebook accounts",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with their Facebook account",
+    "title": "Facebook Sign-In"
+  },
+  "github": {
+    "callbackUrl": "Authorization callback URL",
+    "callbackUrlDescription": "Use the user frontend origin root and enter the same URL in the GitHub OAuth App",
+    "callbackUrlInvalid": "Use the user frontend origin root, without a path, query, or fragment",
+    "callbackUrlRequired": "Authorization callback URL is required",
+    "clientId": "Client ID",
+    "clientIdDescription": "GitHub OAuth App Client ID, available from GitHub Developer Settings",
+    "clientIdRequired": "Client ID is required",
+    "clientSecret": "Client Secret",
+    "clientSecretConfiguredDescription": "Leave blank to keep the configured Client Secret",
+    "clientSecretDescription": "GitHub OAuth App Client Secret, available from GitHub Developer Settings",
+    "clientSecretPlaceholder": "Enter the Client Secret",
+    "clientSecretRequired": "Client Secret is required",
+    "description": "Authenticate users with GitHub accounts",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with their GitHub account",
+    "title": "GitHub OAuth"
+  },
+  "google": {
+    "clientId": "Client ID",
+    "clientIdDescription": "Google OAuth Client ID, available from Google Cloud Console",
+    "clientSecret": "Client Secret",
+    "clientSecretDescription": "Google OAuth Client Secret, available from Google Cloud Console",
+    "description": "Authenticate users with Google accounts",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with their Google account",
+    "title": "Google Sign-In"
+  },
+  "oauthMethods": "OAuth Sign-In",
+  "socialAuthMethods": "Social Authentication Methods",
+  "telegram": {
+    "clientId": "Bot ID",
+    "clientIdDescription": "Telegram Bot ID, available from @BotFather",
+    "clientSecret": "Bot Token",
+    "clientSecretDescription": "Telegram Bot Token, available from @BotFather",
+    "description": "Authenticate users with Telegram accounts",
+    "enable": "Enable",
+    "enableDescription": "When enabled, users can sign in with their Telegram account",
+    "title": "Telegram Sign-In"
+  }
+}

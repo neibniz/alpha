@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "nameRequired": "Please enter a name",
+    "inboundRequired": "Please select an inbound",
+    "portRange": "Port must be between 1 and 65535",
+    "protocolRequired": "Please select a protocol",
+    "serverAddrRequired": "Please enter an entry address",
+    "serverRequired": "Please select a server"
+  },
+  "form": {
+    "validation": {
+      "nameRequired": "Client name is required",
+      "userAgentRequiredSuffix": "is required"
+    }
+  },
+  "tos": "tos"
+}

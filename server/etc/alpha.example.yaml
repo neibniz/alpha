@@ -1,0 +1,46 @@
+# Defaults already provide Host 0.0.0.0, Port 8080, production mode,
+# standard request limits, log settings, connection pools and retention periods.
+
+HTTP:
+  AllowedOrigins:
+    - "https://user.example.com"
+    - "https://admin.example.com"
+  TrustedProxies:
+    - "127.0.0.1"
+    - "::1"
+
+Postgres:
+  Addr: "postgres:5432"
+  Username: "alpha"
+  Dbname: "alpha"
+
+Redis:
+  Host: "redis:6379"
+
+ClickHouse:
+  Enabled: false
+  # Addr, Database and Username may be omitted when the built-in defaults apply.
+
+GeoIP:
+  Enable: false
+  # The container image enables its bundled database through ALPHA_GEOIP_*.
+  # Standalone deployments can enable GeoIP after supplying DatabasePath.
+
+Privacy:
+  Enabled: false
+  # Set KeyFile when encryption is enabled.
+
+Administrator:
+  Email: "admin@alpha.local"
+
+# Keep sensitive values out of this file by using direct environment variables
+# or their NAME_FILE variants:
+#   ALPHA_JWT_ACCESS_SECRET
+#   ALPHA_POSTGRES_PASSWORD
+#   ALPHA_REDIS_PASSWORD
+#   ALPHA_CLICKHOUSE_PASSWORD
+#   ALPHA_NODE_SECRET
+#   ALPHA_NODE_DEPLOY_SECRET
+#   ALPHA_ADMIN_PASSWORD
+#
+# Existing YAML fields remain supported for backward compatibility.

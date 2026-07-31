@@ -1,0 +1,2 @@
+-- 02135_refresh_subscription_protocol_fields.down.sql
+-- Keep administrator-visible subscription templates intact on rollback.

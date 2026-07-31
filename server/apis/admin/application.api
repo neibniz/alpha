@@ -1,0 +1,121 @@
+syntax = "v1"
+
+info (
+	title:   "Application API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	SubscribeApplication {
+		Id                int64        `json:"id"`
+		Name              string       `json:"name"`
+		Description       string       `json:"description,omitempty"`
+		Icon              string       `json:"icon,omitempty"`
+		Scheme            string       `json:"scheme,omitempty"`
+		UserAgent         string       `json:"user_agent"`
+		Enabled           bool         `json:"enabled"`
+		IsDefault         bool         `json:"is_default"`
+		SubscribeTemplate string       `json:"template,omitempty"`
+		OutputFormat      string       `json:"output_format"`
+		DownloadLink      DownloadLink `json:"download_link"`
+		CreatedAt         int64        `json:"created_at"`
+		UpdatedAt         int64        `json:"updated_at"`
+	}
+	SubscribeApplicationListItem {
+		Id           int64        `json:"id"`
+		Name         string       `json:"name"`
+		Description  string       `json:"description,omitempty"`
+		Icon         string       `json:"icon,omitempty"`
+		Scheme       string       `json:"scheme,omitempty"`
+		UserAgent    string       `json:"user_agent"`
+		Enabled      bool         `json:"enabled"`
+		IsDefault    bool         `json:"is_default"`
+		OutputFormat string       `json:"output_format"`
+		DownloadLink DownloadLink `json:"download_link"`
+		CreatedAt    int64        `json:"created_at"`
+		UpdatedAt    int64        `json:"updated_at"`
+	}
+	GetSubscribeApplicationRequest {
+		Id int64 `form:"id" validate:"required"`
+	}
+	GetSubscribeApplicationListResponse {
+		Total int64                          `json:"total"`
+		List  []SubscribeApplicationListItem `json:"list"`
+	}
+	CreateSubscribeApplicationRequest {
+		Name              string       `json:"name" validate:"required,max=255"`
+		Description       string       `json:"description,omitempty" validate:"omitempty,max=255"`
+		Icon              string       `json:"icon,omitempty"`
+		Scheme            string       `json:"scheme,omitempty"`
+		UserAgent         string       `json:"user_agent" validate:"required,max=255"`
+		Enabled           *bool        `json:"enabled"`
+		IsDefault         bool         `json:"is_default"`
+		SubscribeTemplate string       `json:"template" validate:"required"`
+		OutputFormat      string       `json:"output_format" validate:"required,oneof=base64 yaml json conf plain"`
+		DownloadLink      DownloadLink `json:"download_link"`
+	}
+	UpdateSubscribeApplicationRequest {
+		Id                int64        `json:"id" validate:"required"`
+		Name              *string      `json:"name,omitempty" validate:"omitempty,max=255"`
+		Description       *string      `json:"description,omitempty" validate:"omitempty,max=255"`
+		Icon              *string      `json:"icon,omitempty"`
+		Scheme            *string      `json:"scheme,omitempty"`
+		UserAgent         *string      `json:"user_agent,omitempty" validate:"omitempty,max=255"`
+		Enabled           *bool        `json:"enabled"`
+		IsDefault         *bool        `json:"is_default,omitempty"`
+		SubscribeTemplate *string      `json:"template,omitempty"`
+		OutputFormat      *string      `json:"output_format,omitempty" validate:"omitempty,oneof=base64 yaml json conf plain"`
+		DownloadLink      *DownloadLink `json:"download_link,omitempty"`
+	}
+	DeleteSubscribeApplicationRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	GetSubscribeApplicationListRequest {
+		Page    int    `form:"page"`
+		Size    int    `form:"size"`
+		Search  string `form:"search,omitempty" validate:"omitempty,max=255"`
+		Enabled *bool  `form:"enabled,omitempty"`
+	}
+	PreviewSubscribeTemplateRequest {
+		Id int64 `form:"id"`
+	}
+	PreviewSubscribeTemplateResponse {
+		Template string `json:"template"` // 预览的模板内容
+	}
+)
+
+@server (
+	prefix:     v1/admin/application
+	group:      admin/application
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Create subscribe application"
+	@handler CreateSubscribeApplication
+	post / (CreateSubscribeApplicationRequest) returns (SubscribeApplication)
+
+	@doc "Update subscribe application"
+	@handler UpdateSubscribeApplication
+	put /subscribe_application (UpdateSubscribeApplicationRequest) returns (SubscribeApplication)
+
+	@doc "Get subscribe application"
+	@handler GetSubscribeApplication
+	get /subscribe_application (GetSubscribeApplicationRequest) returns (SubscribeApplication)
+
+	@doc "Get subscribe application list"
+	@handler GetSubscribeApplicationList
+	get /subscribe_application_list (GetSubscribeApplicationListRequest) returns (GetSubscribeApplicationListResponse)
+
+	@doc "Delete subscribe application"
+	@handler DeleteSubscribeApplication
+	delete /subscribe_application (DeleteSubscribeApplicationRequest)
+
+	@doc "Preview Template"
+	@handler PreviewSubscribeTemplate
+	get /preview (PreviewSubscribeTemplateRequest) returns (PreviewSubscribeTemplateResponse)
+}

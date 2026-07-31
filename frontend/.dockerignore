@@ -1,0 +1,16 @@
+.git
+.github
+.husky
+.turbo
+.vercel
+.wrangler
+.open-next
+**/.DS_Store
+**/.env
+**/.env.*
+**/coverage
+**/design
+**/dist
+**/node_modules
+**/.next
+release

@@ -1,0 +1,214 @@
+---
+- name: Validate forwared runtime settings
+  ansible.builtin.assert:
+    that:
+      - forwared_control_token | default("") | length >= 32
+      - "'\\n' not in (forwared_control_token | default(''))"
+      - "'\\r' not in (forwared_control_token | default(''))"
+      - forwared_image | length > 0
+      - forwared_status_interval | int > 0
+      - forwared_event_batch_size | int > 0
+      - forwared_event_flush_interval | int > 0
+      - forwared_max_spool_bytes | int >= 1048576
+      - forwared_pids_limit | default(300) | int > 0
+      - >-
+        forwared_geoip_url | default("") | length == 0
+        or (
+          forwared_geoip_checksum
+          | default("")
+          is match('^sha256:[A-Fa-f0-9]{64}$')
+        )
+    fail_msg: >-
+      Forwared requires valid credentials, batching limits, an image, and a checksum
+      whenever the GeoIP database is downloaded.
+  no_log: true
+
+- name: Ensure forwared directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ deploy_root }}/forwared"
+
+- name: Ensure forwared runtime directories are private and writable
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+    owner: "10001"
+    group: "10001"
+  loop:
+    - "{{ deploy_root }}/forwared/config"
+    - "{{ deploy_root }}/forwared/log"
+    - "{{ deploy_root }}/forwared/state"
+
+- name: Resolve forwared GeoIP source
+  ansible.builtin.set_fact:
+    forwared_geoip_source_effective: >-
+      {{
+        forwared_geoip_src
+        if forwared_geoip_src | default("") | length > 0
+        else playbook_dir ~ '/../assets/geoip/IP2LOCATION-LITE-DB3.BIN'
+      }}
+
+- name: Check forwared GeoIP database on controller
+  ansible.builtin.stat:
+    path: "{{ forwared_geoip_source_effective }}"
+  delegate_to: localhost
+  become: false
+  register: forwared_controller_geoip_database
+  when: forwared_geoip_url | default("") | length == 0
+
+- name: Require a deterministic forwared GeoIP source
+  ansible.builtin.assert:
+    that:
+      - forwared_controller_geoip_database.stat.exists
+      - forwared_controller_geoip_database.stat.isreg
+    fail_msg: >-
+      The configured forwared GeoIP source does not exist on the Ansible controller:
+      {{ forwared_geoip_source_effective }}
+  when: forwared_geoip_url | default("") | length == 0
+
+- name: Download forwared GeoIP database
+  ansible.builtin.get_url:
+    url: "{{ forwared_geoip_url }}"
+    dest: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+    checksum: "{{ forwared_geoip_checksum }}"
+    mode: "0644"
+    owner: "10001"
+    group: "10001"
+  when: forwared_geoip_url | default("") | length > 0
+  register: forwared_geoip_download
+
+- name: Copy forwared GeoIP database from controller
+  ansible.builtin.copy:
+    src: "{{ forwared_geoip_source_effective }}"
+    dest: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+    mode: "0644"
+    owner: "10001"
+    group: "10001"
+  when: forwared_geoip_url | default("") | length == 0
+  register: forwared_geoip_copy
+
+- name: Verify forwared GeoIP database exists
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+  register: forwared_geoip_database_after
+
+- name: Stop when forwared GeoIP database is missing
+  ansible.builtin.fail:
+    msg: >-
+      IP2LOCATION-LITE-DB3.BIN is required. Put it at
+      assets/geoip/IP2LOCATION-LITE-DB3.BIN, set forwared_geoip_url or
+      forwared_geoip_src.
+  when:
+    - not forwared_geoip_database_after.stat.exists
+      or not forwared_geoip_database_after.stat.isreg
+      or forwared_geoip_database_after.stat.size < 1048576
+
+- name: Render forwared config
+  ansible.builtin.template:
+    src: forwared.yaml.j2
+    dest: "{{ deploy_root }}/forwared/config/forwared.yaml"
+    mode: "0600"
+    owner: "10001"
+    group: "10001"
+  register: forwared_config
+  no_log: true
+
+- name: Render forwared compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/forwared/docker-compose.yml"
+    mode: "0644"
+  register: forwared_compose
+
+- name: Validate forwared compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/forwared/docker-compose.yml config --quiet
+  changed_when: false
+
+- name: Pull forwared image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/forwared/docker-compose.yml pull
+  async: 1800
+  poll: 0
+  register: forwared_pull_job
+
+- name: Wait for forwared image pull
+  ansible.builtin.async_status:
+    jid: "{{ forwared_pull_job.ansible_job_id }}"
+  register: forwared_pull_result
+  until: forwared_pull_result.finished
+  retries: 360
+  delay: 5
+  changed_when: false
+
+- name: Remove legacy forwared container
+  ansible.builtin.command:
+    argv: [docker, rm, -f, m200-forwared]
+  register: forwared_legacy_remove
+  changed_when: forwared_legacy_remove.rc == 0
+  failed_when: false
+
+- name: Start forwared container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/forwared/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (
+          ['--force-recreate']
+          if (
+            (forwared_geoip_download.changed | default(false))
+            or (forwared_geoip_copy.changed | default(false))
+            or (forwared_config.changed | default(false))
+            or (forwared_compose.changed | default(false))
+          )
+          else []
+        )
+      }}
+  register: forwared_start
+  changed_when: >-
+    'Created' in (forwared_start.stdout ~ forwared_start.stderr)
+    or 'Started' in (forwared_start.stdout ~ forwared_start.stderr)
+    or 'Recreated' in (forwared_start.stdout ~ forwared_start.stderr)
+
+- name: Verify forwared container is running
+  ansible.builtin.command:
+    argv: [docker, inspect, alpha-forwared, --format, "{{ '{{.State.Running}} {{.RestartCount}}' }}"]
+  register: forwared_running
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: (forwared_running.stdout | trim).split()[0] == 'true'
+
+- name: Observe forwared startup stability
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Verify forwared remains stable
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - alpha-forwared
+      - --format
+      - "{{ '{{.State.Running}} {{.State.Restarting}} {{.RestartCount}}' }}"
+  register: forwared_stable
+  changed_when: false
+  failed_when: >-
+    (forwared_stable.stdout | trim).split()[0] != 'true'
+    or (forwared_stable.stdout | trim).split()[1] != 'false'
+    or (
+      (forwared_stable.stdout | trim).split()[2] | int
+      != (forwared_running.stdout | trim).split()[1] | int
+    )

@@ -1,0 +1,8 @@
+ALTER TABLE "subscribe"
+    ADD COLUMN IF NOT EXISTS "user_visible" BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS "allow_renewal" BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS "allow_reset_traffic" BOOLEAN NOT NULL DEFAULT TRUE;
+
+UPDATE "subscribe"
+SET "user_visible" = COALESCE("show", FALSE)
+WHERE "user_visible" = FALSE;

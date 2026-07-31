@@ -1,0 +1,2 @@
+-- 02168_clash_xhttp_whitespace.down.sql
+-- No-op: keeping the cleaner Clash XHTTP YAML formatting is safe.

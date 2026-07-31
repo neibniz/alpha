@@ -1,0 +1,28 @@
+services:
+  forwared:
+    image: "{{ forwared_image }}"
+    container_name: alpha-forwared
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    network_mode: host
+    volumes:
+      - {{ deploy_root }}/forwared/config:/app/config:ro
+      - {{ deploy_root }}/forwared/log:/app/log
+      - {{ deploy_root }}/forwared/state:/app/state
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    mem_limit: {{ forwared_memory_limit | default("512m") }}
+    cpus: {{ forwared_cpu_limit | default(1.0) }}
+    pids_limit: {{ forwared_pids_limit | default(300) }}
+    stop_grace_period: 30s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

@@ -1,0 +1,3 @@
+-- 02169_subscription_vless_flow_guards.down.sql
+-- No-op: keeping VLESS flow guards avoids emitting invalid empty/none flow
+-- values to clients.

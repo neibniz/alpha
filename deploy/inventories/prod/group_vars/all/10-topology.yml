@@ -1,0 +1,8 @@
+---
+# Values may be inventory hostnames or groups declared in hosts.yml.
+postgres_target: postgres
+redis_target: redis
+clickhouse_target: clickhouse
+server_target: server
+user_frontend_target: frontend
+admin_frontend_target: frontend

@@ -1,0 +1,159 @@
+---
+- name: Wait for Postgres primary from replica
+  ansible.builtin.wait_for:
+    host: "{{ postgres_primary_host_effective }}"
+    port: "{{ postgres_port }}"
+    timeout: 300
+
+- name: Check replica Postgres data version
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/postgres/data/PG_VERSION"
+  register: postgres_replica_pg_version
+
+- name: Check replica standby marker
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/postgres/data/standby.signal"
+  register: postgres_replica_standby_signal
+
+- name: Stop when replica data directory is not a standby
+  ansible.builtin.fail:
+    msg: >-
+      {{ deploy_root }}/postgres/data already contains a standalone Postgres data directory.
+      Set postgres_replication_recreate_replica=true only after taking a backup if this host should
+      be rebuilt as a replica.
+  when:
+    - postgres_replica_pg_version.stat.exists
+    - not postgres_replica_standby_signal.stat.exists
+    - not (postgres_replication_recreate_replica | bool)
+
+- name: Stop existing Postgres replica container before bootstrap
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/postgres/docker-compose.yml down
+  failed_when: false
+  register: postgres_replica_stop
+  changed_when: postgres_replica_stop.rc == 0
+  when:
+    - (postgres_replication_recreate_replica | bool) or (not postgres_replica_pg_version.stat.exists)
+
+- name: Remove replica data directory before bootstrap
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/postgres/data"
+    state: absent
+  when:
+    - (postgres_replication_recreate_replica | bool) or (not postgres_replica_pg_version.stat.exists)
+
+- name: Recreate replica data directory
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/postgres/data"
+    state: directory
+    owner: "{{ postgres_container_uid }}"
+    group: "{{ postgres_container_gid }}"
+    mode: "0700"
+  when:
+    - (postgres_replication_recreate_replica | bool) or (not postgres_replica_pg_version.stat.exists)
+
+- name: Bootstrap Postgres replica from primary
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --network
+      - host
+      - -e
+      - PGPASSFILE=/run/secrets/postgres-replication.pgpass
+      - -e
+      - PGSSLMODE={{ postgres_replication_sslmode }}
+      - -e
+      - PRIMARY_HOST={{ postgres_primary_host_effective }}
+      - -e
+      - PRIMARY_PORT={{ postgres_port }}
+      - -e
+      - REPLICATION_USER={{ postgres_replication_user }}
+      - -e
+      - SLOT_NAME={{ postgres_replication_slot_name_effective }}
+      - -v
+      - "{{ deploy_root }}/postgres/data:/var/lib/postgresql/data"
+      - -v
+      - "{{ deploy_root }}/postgres/postgres-replication.pgpass:/run/secrets/postgres-replication.pgpass:ro"
+      - "{{ postgres_image }}"
+      - bash
+      - -ec
+      - |
+        rm -rf /var/lib/postgresql/data/*
+        pg_basebackup \
+          -h "$PRIMARY_HOST" \
+          -p "$PRIMARY_PORT" \
+          -U "$REPLICATION_USER" \
+          -D /var/lib/postgresql/data \
+          -Fp \
+          -Xs \
+          -P \
+          -R{% if postgres_replication_use_slots | bool %} \
+          -S "$SLOT_NAME"{% endif %}
+        chown -R postgres:postgres /var/lib/postgresql/data
+  register: postgres_basebackup_result
+  until: postgres_basebackup_result.rc == 0
+  retries: 30
+  delay: 10
+  no_log: true
+  changed_when: true
+  when:
+    - (postgres_replication_recreate_replica | bool) or (not postgres_replica_pg_version.stat.exists)
+
+- name: Start Postgres replica container
+  block:
+    - name: Remove legacy Postgres replica container
+      ansible.builtin.command:
+        argv: [docker, rm, -f, m200-postgres]
+      register: postgres_legacy_replica_remove
+      changed_when: postgres_legacy_replica_remove.rc == 0
+      failed_when: false
+
+    - name: Start managed Postgres replica container
+      ansible.builtin.command:
+        argv: >-
+          {{
+            [
+              'docker',
+              'compose',
+              '-f',
+              deploy_root ~ '/postgres/docker-compose.yml',
+              'up',
+              '-d',
+              '--remove-orphans'
+            ]
+            + (['--force-recreate'] if (postgres_force_recreate | bool) else [])
+          }}
+      register: postgres_replica_start
+      changed_when: >-
+        'Created' in (postgres_replica_start.stdout ~ postgres_replica_start.stderr)
+        or 'Started' in (postgres_replica_start.stdout ~ postgres_replica_start.stderr)
+        or 'Recreated' in (postgres_replica_start.stdout ~ postgres_replica_start.stderr)
+
+- name: Wait for Postgres replica port
+  ansible.builtin.wait_for:
+    host: "{{ '127.0.0.1' if postgres_bind_host in ['0.0.0.0', '::'] else postgres_bind_host }}"
+    port: "{{ postgres_port }}"
+    timeout: 60
+
+- name: Verify Postgres replica recovery mode
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - alpha-postgres
+      - sh
+      - -ec
+      - >-
+        PGPASSWORD=$(cat /run/secrets/postgres-password);
+        export PGPASSWORD;
+        exec psql
+        --username "{{ postgres_username }}"
+        --dbname "{{ postgres_dbname }}"
+        -tAc 'SELECT pg_is_in_recovery();'
+  register: postgres_replica_recovery
+  changed_when: false
+  until: postgres_replica_recovery.stdout | trim == 't'
+  retries: 12
+  delay: 5

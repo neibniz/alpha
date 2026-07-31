@@ -1,0 +1,33 @@
+server:
+  base_url: {{ xray_agent_server_base_url | default(frontend_api_base_url) | quote }}
+  server_id: {{ xray_agent_server_id }}
+  token: {{ xray_agent_token | quote }}
+
+agent:
+  pull_interval: {{ xray_agent_pull_interval | default("30s") | quote }}
+
+report:
+  status_interval: {{ xray_agent_status_interval | default("5s") | quote }}
+  traffic_interval: {{ xray_agent_traffic_interval | default("5s") | quote }}
+  interface_name: {{ xray_agent_interface_name | default("") | quote }}
+  traffic:
+    batch_size: {{ xray_agent_traffic_batch_size | default(12) }}
+    flush_interval: {{ xray_agent_traffic_flush_interval | default("5s") | quote }}
+    max_spool_bytes: {{ xray_agent_traffic_max_spool_bytes | default(67108864) }}
+    spool_path: /var/lib/alpha/xray-agent/traffic-spool.jsonl
+    state_path: /var/lib/alpha/xray-agent/traffic-state.json
+  access:
+    enabled: {{ xray_agent_access_enabled | default(true) | lower }}
+    batch_size: {{ xray_agent_access_batch_size | default(1000) }}
+    flush_interval: {{ xray_agent_access_flush_interval | default("5s") | quote }}
+    poll_interval: {{ xray_agent_access_poll_interval | default("1s") | quote }}
+    max_batch_bytes: {{ xray_agent_access_max_batch_bytes | default(1048576) }}
+    max_spool_bytes: {{ xray_agent_access_max_spool_bytes | default(268435456) }}
+    spool_path: /var/lib/alpha/xray-agent/access-spool.jsonl
+    state_path: /var/lib/alpha/xray-agent/access-state.json
+
+log:
+  agent_path: /var/log/alpha/xray-agent/agent.log
+  xray_error_path: /var/log/alpha/xray-agent/xray-error.log
+  xray_access_path: /var/log/alpha/xray-agent/xray-access.log
+  xray_level: {{ xray_agent_log_level | default("warning") | quote }}

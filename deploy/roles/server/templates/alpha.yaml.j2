@@ -1,0 +1,81 @@
+Host: {{ server_bind_host | quote }}
+Port: {{ server_container_port }}
+
+HTTP:
+  AllowedOrigins:
+{% for origin in server_allowed_origins %}
+    - {{ origin | quote }}
+{% endfor %}
+  TrustedProxies:
+{% for proxy in server_trusted_proxies %}
+    - {{ proxy | quote }}
+{% endfor %}
+
+Logger:
+  Mode: file
+  Path: /app/log
+  Level: {{ server_log_level | quote }}
+  MaxSize: {{ server_log_max_size }}
+  KeepDays: {{ server_log_keep_days }}
+  Rotation: {{ server_log_rotation | quote }}
+
+JwtAuth:
+  AccessExpire: {{ server_jwt_access_expire }}
+
+Postgres:
+  Addr: {{ postgres_addr | quote }}
+  Username: {{ postgres_username | quote }}
+  Dbname: {{ postgres_dbname | quote }}
+{% if (postgres_config | default("sslmode=disable&TimeZone=Asia/Shanghai")) != "sslmode=disable&TimeZone=Asia/Shanghai" %}
+  Config: {{ postgres_config | quote }}
+{% endif %}
+{% if (postgres_max_open_conns | default(10) | int) != 10 %}
+  MaxOpenConns: {{ postgres_max_open_conns }}
+{% endif %}
+
+Redis:
+  Host: {{ redis_host | quote }}
+{% if (redis_db | default(0) | int) != 0 %}
+  DB: {{ redis_db }}
+{% endif %}
+
+GeoIP:
+  Enable: {{ server_geoip_enabled | bool | lower }}
+  DatabasePath: {{ server_geoip_database_path | quote }}
+
+{% if clickhouse_enabled | default(false) | bool %}
+ClickHouse:
+  Enabled: true
+  Addr: {{ clickhouse_addr | quote }}
+  Database: {{ clickhouse_database | quote }}
+  Username: {{ clickhouse_username | quote }}
+{% if (clickhouse_access_retention_days | default(90) | int) != 90 %}
+  AccessRetentionDays: {{ clickhouse_access_retention_days }}
+{% endif %}
+{% if (clickhouse_traffic_raw_retention_hours | default(72) | int) != 72 %}
+  TrafficRawRetentionHours: {{ clickhouse_traffic_raw_retention_hours }}
+{% endif %}
+{% if (clickhouse_traffic_retention_days | default(90) | int) != 90 %}
+  TrafficRetentionDays: {{ clickhouse_traffic_retention_days }}
+{% endif %}
+{% if (clickhouse_traffic_hourly_retention_days | default(730) | int) != 730 %}
+  TrafficHourlyRetentionDays: {{ clickhouse_traffic_hourly_retention_days }}
+{% endif %}
+{% if (clickhouse_forwarder_retention_days | default(90) | int) != 90 %}
+  ForwarderRetentionDays: {{ clickhouse_forwarder_retention_days }}
+{% endif %}
+
+{% endif %}
+Forwarder:
+  StatusInterval: {{ server_forwarder_status_interval | default(5) }}
+  StatusTTL: {{ server_forwarder_status_ttl | default(30) }}
+  EventBatchLimit: {{ server_forwarder_event_batch_limit | default(1000) }}
+
+Privacy:
+  Enabled: {{ server_privacy_enabled | bool | lower }}
+{% if server_privacy_enabled | bool %}
+  KeyFile: {{ server_privacy_key_file | quote }}
+{% endif %}
+
+Administrator:
+  Email: {{ server_admin_email | quote }}

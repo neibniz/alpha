@@ -1,0 +1,452 @@
+---
+- name: Validate Next frontend deployment settings
+  ansible.builtin.assert:
+    that:
+      - deploy_root is match('^/data(?:/|$)')
+      - frontend_domain is match('^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$')
+      - frontend_next_port | int > 0
+      - frontend_next_port | int <= 65535
+      - frontend_next_auth_cookie_max_age | int >= 300
+      - frontend_next_keep_releases | int >= 2
+      - frontend_next_deployment_mode in ['package', 'image']
+      - >-
+        frontend_next_deployment_mode != 'image'
+        or frontend_next_container_image | length > 0
+      - frontend_release_version | default('latest') is match('^[A-Za-z0-9._/-]+$')
+      - frontend_next_upstream_url is match('^https?://[^\\s]+$')
+      - frontend_next_subscribe_proxy_path is match('^/[A-Za-z0-9._~%/-]*$')
+      - frontend_next_subscribe_proxy_upstream is match('^(?:[A-Za-z0-9.-]+|\\[[0-9A-Fa-f:]+\\]):[0-9]{1,5}$')
+      - >-
+        frontend_next_package_checksum | default('') | length == 0
+        or (
+          frontend_next_package_checksum
+          is match('^sha256:[A-Fa-f0-9]{64}$')
+        )
+    fail_msg: Next frontend deployment must use /data and valid runtime settings.
+
+- name: Resolve Next frontend package update flag
+  ansible.builtin.set_fact:
+    frontend_next_package_update_enabled: >-
+      {{
+        frontend_next_deployment_mode == 'package'
+        and (frontend_package_enabled | default(true) | bool)
+      }}
+    frontend_next_previous_release: ""
+    frontend_next_effective_image: >-
+      {{
+        frontend_next_container_image
+        if frontend_next_deployment_mode == 'image'
+        else frontend_next_image
+      }}
+
+- name: Ensure Next frontend directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ deploy_root }}/frontend"
+    - "{{ deploy_root }}/frontend/user-next"
+    - "{{ deploy_root }}/frontend/user-next/releases"
+
+- name: Resolve Next frontend release asset URL
+  ansible.builtin.set_fact:
+    frontend_next_release_asset_url: >-
+      {{ frontend_release_base_url }}/{{
+      'latest/download' if (frontend_release_version | default('latest')) == 'latest'
+      else 'download/' ~ (frontend_release_version | replace('/', '%2F'))
+      }}/alpha-user-next.tar.gz
+  when:
+    - frontend_next_package_update_enabled | bool
+    - frontend_next_package_src | default("") | length == 0
+
+- name: Download Next frontend release package
+  ansible.builtin.get_url:
+    url: "{{ frontend_next_release_asset_url }}"
+    dest: "{{ deploy_root }}/frontend/alpha-user-next.tar.gz"
+    mode: "0644"
+    force: "{{ (frontend_release_version | default('latest')) == 'latest' }}"
+    checksum: >-
+      {{ frontend_next_package_checksum
+         if frontend_next_package_checksum | default('') | length > 0
+         else 'sha256:' ~ frontend_next_release_asset_url ~ '.sha256' }}
+  when:
+    - frontend_next_package_update_enabled | bool
+    - frontend_next_package_src | default("") | length == 0
+
+- name: Upload local Next frontend release package
+  ansible.builtin.copy:
+    src: "{{ frontend_next_package_src }}"
+    dest: "{{ deploy_root }}/frontend/alpha-user-next.tar.gz"
+    mode: "0644"
+  when:
+    - frontend_next_package_update_enabled | bool
+    - frontend_next_package_src | default("") | length > 0
+
+- name: Inspect Next frontend release package
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/frontend/alpha-user-next.tar.gz"
+    checksum_algorithm: sha256
+  register: frontend_next_package_archive
+  when: frontend_next_package_update_enabled | bool
+
+- name: Verify configured Next frontend package checksum
+  ansible.builtin.assert:
+    that:
+      - >-
+        frontend_next_package_checksum | lower
+        == 'sha256:' ~ frontend_next_package_archive.stat.checksum
+    fail_msg: The user frontend package does not match frontend_next_package_checksum.
+  when:
+    - frontend_next_package_update_enabled | bool
+    - frontend_next_package_checksum | default('') | length > 0
+
+- name: Set Next frontend release directory
+  ansible.builtin.set_fact:
+    frontend_next_release_dir: >-
+      {{ deploy_root }}/frontend/user-next/releases/{{
+      (frontend_release_version | default('local')) | regex_replace('[^A-Za-z0-9_.-]', '-')
+      }}-{{ frontend_next_package_archive.stat.checksum[:12] }}
+  when: frontend_next_package_update_enabled | bool
+
+- name: Inspect versioned Next frontend release marker
+  ansible.builtin.stat:
+    path: "{{ frontend_next_release_dir }}/.alpha-release-complete"
+  register: frontend_next_release_marker
+  when: frontend_next_package_update_enabled | bool
+
+- name: Inspect versioned Next frontend entrypoint
+  ansible.builtin.stat:
+    path: "{{ frontend_next_release_dir }}/apps/user-next/server.js"
+  register: frontend_next_release_entrypoint_before
+  when: frontend_next_package_update_enabled | bool
+
+- name: Remove incomplete Next frontend release
+  ansible.builtin.file:
+    path: "{{ frontend_next_release_dir }}"
+    state: absent
+  when:
+    - frontend_next_package_update_enabled | bool
+    - >-
+      not (frontend_next_release_marker.stat.exists | default(false))
+      or not (frontend_next_release_entrypoint_before.stat.isreg | default(false))
+
+- name: Create Next frontend release directory
+  ansible.builtin.file:
+    path: "{{ frontend_next_release_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - frontend_next_package_update_enabled | bool
+    - >-
+      not (frontend_next_release_marker.stat.exists | default(false))
+      or not (frontend_next_release_entrypoint_before.stat.isreg | default(false))
+
+- name: Extract Next frontend release package
+  ansible.builtin.unarchive:
+    src: "{{ deploy_root }}/frontend/alpha-user-next.tar.gz"
+    dest: "{{ frontend_next_release_dir }}"
+    remote_src: true
+  when:
+    - frontend_next_package_update_enabled | bool
+    - >-
+      not (frontend_next_release_marker.stat.exists | default(false))
+      or not (frontend_next_release_entrypoint_before.stat.isreg | default(false))
+
+- name: Verify Next standalone entrypoint
+  ansible.builtin.stat:
+    path: >-
+      {{
+        frontend_next_release_dir ~ '/apps/user-next/server.js'
+        if (frontend_next_package_update_enabled | bool)
+        else deploy_root ~ '/frontend/user-next/current/apps/user-next/server.js'
+      }}
+  register: frontend_next_entrypoint
+  when: frontend_next_deployment_mode == 'package'
+
+- name: Stop when Next standalone entrypoint is missing
+  ansible.builtin.fail:
+    msg: The user frontend package is missing apps/user-next/server.js.
+  when:
+    - frontend_next_deployment_mode == 'package'
+    - not (frontend_next_entrypoint.stat.exists | default(false))
+
+- name: Mark Next frontend release as complete
+  ansible.builtin.file:
+    path: "{{ frontend_next_release_dir }}/.alpha-release-complete"
+    state: touch
+    mode: "0644"
+  when:
+    - frontend_next_package_update_enabled | bool
+    - >-
+      not (frontend_next_release_marker.stat.exists | default(false))
+      or not (frontend_next_release_entrypoint_before.stat.isreg | default(false))
+
+- name: Inspect current Next frontend release
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/frontend/user-next/current"
+    follow: false
+  register: frontend_next_current_link
+  when: frontend_next_deployment_mode == 'package'
+
+- name: Remember previous Next frontend release
+  ansible.builtin.set_fact:
+    frontend_next_previous_release: >-
+      {{ frontend_next_current_link.stat.lnk_source | default('') }}
+  when: frontend_next_deployment_mode == 'package'
+
+- name: Require the current Next frontend path to be a symlink
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (frontend_next_current_link.stat.exists | default(false))
+        or (frontend_next_current_link.stat.islnk | default(false))
+    fail_msg: >-
+      {{ deploy_root }}/frontend/user-next/current must be a symlink. Move the legacy
+      directory aside before deploying.
+  when: frontend_next_deployment_mode == 'package'
+
+- name: Render Next frontend compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/frontend/user-next/docker-compose.yml"
+    mode: "0644"
+  register: frontend_next_compose
+
+- name: Inspect running Next frontend image
+  ansible.builtin.command:
+    argv: [docker, inspect, alpha-user-next, --format, "{{ '{{.Image}}' }}"]
+  register: frontend_next_existing_image
+  changed_when: false
+  failed_when: false
+  when: frontend_next_deployment_mode == 'image'
+
+- name: Validate Next frontend compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml config --quiet
+  changed_when: false
+
+- name: Pull Next frontend runtime image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml pull
+  register: frontend_next_pull
+  changed_when: >-
+    'Pulled' in (frontend_next_pull.stdout ~ frontend_next_pull.stderr)
+    or 'Downloaded' in (frontend_next_pull.stdout ~ frontend_next_pull.stderr)
+
+- name: Activate and verify Next frontend release
+  block:
+    - name: Switch current Next frontend release
+      ansible.builtin.file:
+        src: "{{ frontend_next_release_dir }}"
+        dest: "{{ deploy_root }}/frontend/user-next/current"
+        state: link
+        force: true
+      when: frontend_next_package_update_enabled | bool
+      register: frontend_next_release_switch
+
+    - name: Start Next frontend container
+      ansible.builtin.command:
+        argv: >-
+          {{
+            [
+              'docker',
+              'compose',
+              '-f',
+              deploy_root ~ '/frontend/user-next/docker-compose.yml',
+              'up',
+              '-d',
+              '--remove-orphans'
+            ]
+            + (
+              ['--force-recreate']
+              if (
+                (frontend_next_release_switch.changed | default(false))
+                or (frontend_next_compose.changed | default(false))
+              )
+              else []
+            )
+          }}
+      register: frontend_next_start
+      changed_when: >-
+        'Created' in (frontend_next_start.stdout ~ frontend_next_start.stderr)
+        or 'Started' in (frontend_next_start.stdout ~ frontend_next_start.stderr)
+        or 'Recreated' in (frontend_next_start.stdout ~ frontend_next_start.stderr)
+
+    - name: Wait for Next frontend port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ frontend_next_port }}"
+        timeout: 120
+
+    - name: Verify Next frontend health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ frontend_next_port }}/login"
+        status_code: 200
+        return_content: false
+      register: frontend_next_health
+      retries: 20
+      delay: 3
+      until: frontend_next_health.status == 200
+  rescue:
+    - name: Preserve previous Next frontend image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - image
+          - tag
+          - "{{ frontend_next_existing_image.stdout }}"
+          - alpha-frontend-user:ansible-rollback
+      when:
+        - frontend_next_deployment_mode == 'image'
+        - frontend_next_existing_image.rc | default(1) == 0
+        - frontend_next_existing_image.stdout | default('') | length > 0
+      changed_when: true
+
+    - name: Select previous Next frontend image
+      ansible.builtin.set_fact:
+        frontend_next_effective_image: alpha-frontend-user:ansible-rollback
+      when:
+        - frontend_next_deployment_mode == 'image'
+        - frontend_next_existing_image.rc | default(1) == 0
+        - frontend_next_existing_image.stdout | default('') | length > 0
+
+    - name: Render previous Next frontend image
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ deploy_root }}/frontend/user-next/docker-compose.yml"
+        mode: "0644"
+      when:
+        - frontend_next_deployment_mode == 'image'
+        - frontend_next_existing_image.rc | default(1) == 0
+        - frontend_next_existing_image.stdout | default('') | length > 0
+
+    - name: Restart previous Next frontend image
+      ansible.builtin.command:
+        cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml up -d --force-recreate
+      when:
+        - frontend_next_deployment_mode == 'image'
+        - frontend_next_existing_image.rc | default(1) == 0
+        - frontend_next_existing_image.stdout | default('') | length > 0
+      changed_when: true
+
+    - name: Stop failed first Next frontend image deployment
+      ansible.builtin.command:
+        cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml down
+      when:
+        - frontend_next_deployment_mode == 'image'
+        - frontend_next_existing_image.rc | default(1) != 0
+      changed_when: true
+
+    - name: Restore previous Next frontend release
+      ansible.builtin.file:
+        src: "{{ frontend_next_previous_release }}"
+        dest: "{{ deploy_root }}/frontend/user-next/current"
+        state: link
+        force: true
+      when:
+        - frontend_next_deployment_mode == 'package'
+        - frontend_next_package_update_enabled | bool
+        - frontend_next_previous_release | default('') | length > 0
+
+    - name: Restart previous Next frontend release
+      ansible.builtin.command:
+        cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml up -d --force-recreate
+      when:
+        - frontend_next_deployment_mode == 'package'
+        - frontend_next_package_update_enabled | bool
+        - frontend_next_previous_release | default('') | length > 0
+      changed_when: true
+
+    - name: Stop failed first Next frontend deployment
+      ansible.builtin.command:
+        cmd: docker compose -f {{ deploy_root }}/frontend/user-next/docker-compose.yml down
+      when:
+        - frontend_next_deployment_mode == 'package'
+        - frontend_next_package_update_enabled | bool
+        - frontend_next_previous_release | default('') | length == 0
+      changed_when: true
+
+    - name: Remove failed first-deployment link
+      ansible.builtin.file:
+        path: "{{ deploy_root }}/frontend/user-next/current"
+        state: absent
+      when:
+        - frontend_next_deployment_mode == 'package'
+        - frontend_next_package_update_enabled | bool
+        - frontend_next_previous_release | default('') | length == 0
+
+    - name: Remove failed Next frontend release
+      ansible.builtin.file:
+        path: "{{ frontend_next_release_dir }}"
+        state: absent
+      when:
+        - frontend_next_package_update_enabled | bool
+        - >-
+          (frontend_next_previous_release | default(''))
+          != (frontend_next_release_dir | default(''))
+
+    - name: Stop after failed Next frontend health check
+      ansible.builtin.fail:
+        msg: >-
+          The new user frontend failed its health check. The previous release
+          was restored when one was available.
+
+- name: Find legacy Next frontend Caddy site files
+  ansible.builtin.find:
+    paths: "{{ deploy_root }}/caddy/sites"
+    patterns: frontend-user-*.caddy
+    file_type: file
+    recurse: false
+  register: frontend_next_legacy_caddy_sites
+
+- name: Remove legacy Next frontend Caddy site files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ frontend_next_legacy_caddy_sites.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Render Next frontend Caddy site
+  ansible.builtin.template:
+    src: frontend.caddy.j2
+    dest: "{{ deploy_root }}/caddy/sites/frontend-user.caddy"
+    mode: "0644"
+
+- name: Validate Caddy after Next frontend site change
+  ansible.builtin.command:
+    argv: [docker, exec, alpha-caddy, caddy, validate, --config, /etc/caddy/Caddyfile]
+  changed_when: false
+
+- name: Reload Caddy after healthy Next frontend rollout
+  ansible.builtin.command:
+    cmd: docker exec alpha-caddy caddy reload --config /etc/caddy/Caddyfile
+  changed_when: false
+
+- name: Find Next frontend releases
+  ansible.builtin.find:
+    paths: "{{ deploy_root }}/frontend/user-next/releases"
+    file_type: directory
+    recurse: false
+  register: frontend_next_releases
+  when: frontend_next_deployment_mode == 'package'
+
+- name: Remove stale Next frontend releases
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: >-
+    {{
+      frontend_next_releases.files
+      | default([])
+      | sort(attribute='mtime', reverse=true)
+    }}
+  loop_control:
+    index_var: frontend_next_release_index
+    label: "{{ item.path }}"
+  when:
+    - frontend_next_deployment_mode == 'package'
+    - frontend_next_package_update_enabled | bool
+    - frontend_next_release_index >= frontend_next_keep_releases | int
+    - item.path != (frontend_next_release_dir | default(''))

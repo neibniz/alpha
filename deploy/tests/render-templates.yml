@@ -1,0 +1,162 @@
+---
+- name: Render deployment templates for validation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ansible_remote_tmp: /tmp/alpha-ansible
+    validation_output_dir: "{{ playbook_dir }}/../.ansible/rendered"
+    deploy_root: /data/alpha
+    timezone: Asia/Shanghai
+
+    common_caddy_image: caddy:2.11.4-alpine
+    common_caddy_http_port: 80
+    common_caddy_https_port: 443
+    common_caddy_memory_limit: 256m
+    common_caddy_cpu_limit: 1.0
+    common_caddy_pids_limit: 200
+
+    postgres_image: postgres:validation
+    postgres_replication_enabled_effective: false
+    redis_image: redis:validation
+    redis_password: validation-redis-password
+    redis_container_uid: "999"
+    redis_container_gid: "1000"
+    redis_memory_limit: 1g
+    redis_cpu_limit: 1.0
+    redis_pids_limit: 200
+    clickhouse_image: clickhouse:validation
+    clickhouse_password: validation-clickhouse-password
+
+    server_image: alpha-server:validation
+    server_bind_host: 127.0.0.1
+    server_uid: "65532"
+    server_gid: "65532"
+    server_geoip_enabled: true
+    server_geoip_database_path: /usr/share/alpha/geoip/dbip-city-lite.mmdb
+    server_privacy_enabled: true
+    server_privacy_key_file: /run/secrets/alpha_privacy_keyring
+    server_memory_limit: 2g
+    server_cpu_limit: 2.0
+    server_pids_limit: 300
+
+    frontend_app_name: admin
+    frontend_domain: admin.example.com
+    frontend_deployment_mode: image
+    frontend_effective_image: alpha-frontend-admin:validation
+    frontend_runtime_root: /data/alpha/frontend/admin
+    frontend_port: 3001
+    frontend_container_upstream_url: http://127.0.0.1:8080
+
+    frontend_next_effective_image: alpha-frontend-user:validation
+    frontend_next_deployment_mode: package
+    frontend_next_port: 3000
+    frontend_next_upstream_url: http://127.0.0.1:8080
+    frontend_next_api_prefix: /api
+    frontend_next_trust_proxy_headers: true
+    frontend_next_subscribe_proxy_path: /v1/subscribe/config
+
+    xray_agent_image: alpha-xray-agent:validation
+    xray_agent_server_id: 1
+    xray_agent_token: validation-bound-node-token-at-least-32-characters
+
+    forwared_image: alpha-forwared:validation
+    forwared_control_token: validation-forwarder-token-at-least-32-characters
+
+  tasks:
+    - name: Reset rendered template directory
+      ansible.builtin.file:
+        path: "{{ validation_output_dir }}"
+        state: absent
+
+    - name: Create rendered template directory
+      ansible.builtin.file:
+        path: "{{ validation_output_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Create rendered Caddy site directory
+      ansible.builtin.file:
+        path: "{{ validation_output_dir }}/sites"
+        state: directory
+        mode: "0700"
+
+    - name: Render Compose templates
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ validation_output_dir }}/{{ item.dest }}"
+        mode: "0600"
+      loop:
+        - src: "{{ playbook_dir }}/../roles/common_caddy/templates/docker-compose.yml.j2"
+          dest: caddy.compose.yml
+        - src: "{{ playbook_dir }}/../roles/postgres/templates/docker-compose.yml.j2"
+          dest: postgres.compose.yml
+        - src: "{{ playbook_dir }}/../roles/redis/templates/docker-compose.yml.j2"
+          dest: redis.compose.yml
+        - src: "{{ playbook_dir }}/../roles/clickhouse/templates/docker-compose.yml.j2"
+          dest: clickhouse.compose.yml
+        - src: "{{ playbook_dir }}/../roles/server/templates/docker-compose.yml.j2"
+          dest: server.compose.yml
+        - src: "{{ playbook_dir }}/../roles/frontend/templates/docker-compose.yml.j2"
+          dest: admin.compose.yml
+        - src: "{{ playbook_dir }}/../roles/frontend_next/templates/docker-compose.yml.j2"
+          dest: user.compose.yml
+        - src: "{{ playbook_dir }}/../roles/xray_agent/templates/docker-compose.yml.j2"
+          dest: xray-agent.compose.yml
+        - src: "{{ playbook_dir }}/../roles/forwared/templates/docker-compose.yml.j2"
+          dest: forwared.compose.yml
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: Render service configuration templates
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ validation_output_dir }}/{{ item.dest }}"
+        mode: "0600"
+      loop:
+        - src: "{{ playbook_dir }}/../roles/server/templates/alpha.yaml.j2"
+          dest: alpha.yaml
+        - src: "{{ playbook_dir }}/../roles/xray_agent/templates/xray-agent.yaml.j2"
+          dest: xray-agent.yaml
+        - src: "{{ playbook_dir }}/../roles/forwared/templates/forwared.yaml.j2"
+          dest: forwared.yaml
+      loop_control:
+        label: "{{ item.dest }}"
+      no_log: true
+
+    - name: Render shared Caddyfile
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/common_caddy/templates/Caddyfile.j2"
+        dest: "{{ validation_output_dir }}/Caddyfile"
+        mode: "0600"
+
+    - name: Render Server Caddy site
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/server/templates/server.caddy.j2"
+        dest: "{{ validation_output_dir }}/sites/server.caddy"
+        mode: "0600"
+
+    - name: Render Admin Caddy site
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/frontend/templates/frontend.caddy.j2"
+        dest: "{{ validation_output_dir }}/sites/frontend-admin.caddy"
+        mode: "0600"
+      vars:
+        frontend_domain: admin.example.com
+        frontend_deployment_mode: image
+
+    - name: Render User Caddy site
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/frontend_next/templates/frontend.caddy.j2"
+        dest: "{{ validation_output_dir }}/sites/frontend-user.caddy"
+        mode: "0600"
+      vars:
+        frontend_domain: user.example.com
+
+    - name: Render replication-enabled Postgres Compose template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/postgres/templates/docker-compose.yml.j2"
+        dest: "{{ validation_output_dir }}/postgres-replication.compose.yml"
+        mode: "0600"
+      vars:
+        postgres_replication_enabled_effective: true

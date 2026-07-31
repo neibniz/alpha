@@ -1,0 +1,46 @@
+- name: Deploy Postgres
+  hosts: "{{ postgres_target | default('postgres') }}"
+  become: true
+  tags: [postgres]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: postgres
+
+- name: Deploy Redis
+  hosts: "{{ redis_target | default('redis') }}"
+  become: true
+  tags: [redis]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: redis
+
+- name: Deploy ClickHouse
+  hosts: "{{ clickhouse_target | default('clickhouse') }}"
+  become: true
+  tags: [clickhouse]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: clickhouse
+      when: clickhouse_enabled | bool
+
+- name: Deploy Alpha server
+  hosts: "{{ server_target | default('server') }}"
+  become: true
+  tags: [server]
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: common_caddy
+      tags: [caddy]
+    - role: server

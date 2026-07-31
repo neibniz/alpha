@@ -1,0 +1,28 @@
+---
+# Deployment and control tokens belong in vault.yml or protected extra vars.
+xray_agent_image: ghcr.io/neibniz/alpha-xray-agent:latest
+xray_agent_server_base_url: "{{ frontend_api_base_url }}"
+xray_agent_log_level: warning
+xray_agent_traffic_interval: 5s
+xray_agent_traffic_batch_size: 12
+xray_agent_traffic_flush_interval: 5s
+xray_agent_traffic_max_spool_bytes: 67108864
+xray_agent_memory_limit: 1g
+xray_agent_cpu_limit: 2.0
+xray_agent_pids_limit: 500
+xray_agent_ansible_user: root
+
+forwared_image: ghcr.io/neibniz/alpha-forwared:latest
+forwared_server_base_url: "{{ frontend_api_base_url }}"
+forwared_targets: ""
+forwared_ansible_user: root
+forwared_geoip_url: ""
+forwared_geoip_src: ""
+forwared_geoip_checksum: ""
+forwared_status_interval: 5
+forwared_event_batch_size: 500
+forwared_event_flush_interval: 5
+forwared_max_spool_bytes: 67108864
+forwared_memory_limit: 512m
+forwared_cpu_limit: 1.0
+forwared_pids_limit: 300

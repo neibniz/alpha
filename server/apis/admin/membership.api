@@ -1,0 +1,26 @@
+syntax = "v1"
+
+info (
+	title:   "Membership API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+@server (
+	prefix:     v1/admin/membership
+	group:      admin/membership
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Get membership plan"
+	@handler QueryMembershipPlan
+	get /plan returns (MembershipPlan)
+
+	@doc "Update membership plan"
+	@handler UpdateMembershipPlan
+	put /plan (UpdateMembershipPlanRequest) returns (MembershipPlan)
+}

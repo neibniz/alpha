@@ -1,0 +1,36 @@
+- name: Deploy user frontend
+  hosts: "{{ user_frontend_target | default('frontend') }}"
+  become: true
+  tags: [user_frontend]
+  vars:
+    frontend_domain: "{{ user_domain }}"
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: common_caddy
+      tags: [caddy]
+    - role: frontend_next
+
+- name: Deploy admin frontend
+  hosts: "{{ admin_frontend_target | default('frontend') }}"
+  become: true
+  tags: [admin_frontend]
+  vars:
+    frontend_app_name: admin
+    frontend_domain: "{{ admin_domain }}"
+    frontend_deployment_mode: "{{ frontend_admin_deployment_mode | default('package') }}"
+    frontend_container_image: >-
+      {{
+        frontend_admin_container_image
+        | default('ghcr.io/neibniz/alpha-frontend-admin:1.4.2')
+      }}
+  roles:
+    - role: preflight
+      tags: [always]
+    - role: docker
+      tags: [docker]
+    - role: common_caddy
+      tags: [caddy]
+    - role: frontend

@@ -1,0 +1,22 @@
+syntax = "v1"
+
+info (
+	title:   "payment API"
+	desc:    "API for alpha"
+	author:  "Tension"
+	email:   "tension@alpha.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+@server (
+	prefix:     v1/public/payment
+	group:      public/payment
+	middleware: AuthMiddleware
+)
+service alpha {
+	@doc "Get available payment methods"
+	@handler GetAvailablePaymentMethods
+	get /methods returns (GetAvailablePaymentMethodsResponse)
+}

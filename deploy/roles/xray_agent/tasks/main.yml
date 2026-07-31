@@ -1,0 +1,130 @@
+---
+- name: Validate xray-agent runtime settings
+  ansible.builtin.assert:
+    that:
+      - xray_agent_server_id | default(0) | int > 0
+      - xray_agent_token | default("") | length >= 32
+      - "'\\n' not in (xray_agent_token | default(''))"
+      - "'\\r' not in (xray_agent_token | default(''))"
+      - xray_agent_image | length > 0
+      - xray_agent_pids_limit | default(500) | int > 0
+    fail_msg: Xray-agent requires a server id, bound token, image, and valid resource limits.
+  no_log: true
+
+- name: Ensure xray-agent deployment directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/xray-agent"
+    state: directory
+    mode: "0750"
+
+- name: Ensure xray-agent runtime directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ deploy_root }}/xray-agent/config"
+    - "{{ deploy_root }}/xray-agent/data"
+    - "{{ deploy_root }}/xray-agent/log"
+
+- name: Render xray-agent config
+  ansible.builtin.template:
+    src: xray-agent.yaml.j2
+    dest: "{{ deploy_root }}/xray-agent/config/xray-agent.yaml"
+    mode: "0600"
+  register: xray_agent_config
+  no_log: true
+
+- name: Render xray-agent compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/xray-agent/docker-compose.yml"
+    mode: "0644"
+  register: xray_agent_compose
+
+- name: Validate xray-agent compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/xray-agent/docker-compose.yml config --quiet
+  changed_when: false
+
+- name: Pull xray-agent image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/xray-agent/docker-compose.yml pull
+  async: 1800
+  poll: 0
+  register: xray_agent_pull_job
+
+- name: Wait for xray-agent image pull
+  ansible.builtin.async_status:
+    jid: "{{ xray_agent_pull_job.ansible_job_id }}"
+  register: xray_agent_pull_result
+  until: xray_agent_pull_result.finished
+  retries: 360
+  delay: 5
+  changed_when: false
+
+- name: Remove legacy xray-agent container
+  ansible.builtin.command:
+    argv: [docker, rm, -f, m200-xray-agent]
+  register: xray_agent_legacy_remove
+  changed_when: xray_agent_legacy_remove.rc == 0
+  failed_when: false
+
+- name: Start xray-agent container
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'docker',
+          'compose',
+          '-f',
+          deploy_root ~ '/xray-agent/docker-compose.yml',
+          'up',
+          '-d',
+          '--remove-orphans'
+        ]
+        + (
+          ['--force-recreate']
+          if (
+            (xray_agent_config.changed | default(false))
+            or (xray_agent_compose.changed | default(false))
+          )
+          else []
+        )
+      }}
+  register: xray_agent_start
+  changed_when: >-
+    'Created' in (xray_agent_start.stdout ~ xray_agent_start.stderr)
+    or 'Started' in (xray_agent_start.stdout ~ xray_agent_start.stderr)
+    or 'Recreated' in (xray_agent_start.stdout ~ xray_agent_start.stderr)
+
+- name: Verify xray-agent container is running
+  ansible.builtin.command:
+    argv: [docker, inspect, alpha-xray-agent, --format, "{{ '{{.State.Running}} {{.RestartCount}}' }}"]
+  register: xray_agent_running
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: (xray_agent_running.stdout | trim).split()[0] == 'true'
+
+- name: Observe xray-agent startup stability
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Verify xray-agent remains stable
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - alpha-xray-agent
+      - --format
+      - "{{ '{{.State.Running}} {{.State.Restarting}} {{.RestartCount}}' }}"
+  register: xray_agent_stable
+  changed_when: false
+  failed_when: >-
+    (xray_agent_stable.stdout | trim).split()[0] != 'true'
+    or (xray_agent_stable.stdout | trim).split()[1] != 'false'
+    or (
+      (xray_agent_stable.stdout | trim).split()[2] | int
+      != (xray_agent_running.stdout | trim).split()[1] | int
+    )

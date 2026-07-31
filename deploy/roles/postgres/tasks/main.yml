@@ -1,0 +1,191 @@
+---
+- name: Validate Postgres settings
+  ansible.builtin.assert:
+    that:
+      - postgres_password | default("") | length >= 20
+      - "'\\n' not in postgres_password"
+      - "'\\r' not in postgres_password"
+      - postgres_username is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - postgres_dbname is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - postgres_replication_user is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - postgres_replication_hba_method in ['scram-sha-256', 'md5', 'trust', 'cert']
+      - (postgres_container_uid | string) is match('^[0-9]+$')
+      - (postgres_container_gid | string) is match('^[0-9]+$')
+      - postgres_port | int > 0
+      - postgres_port | int <= 65535
+    fail_msg: Postgres credentials and identifiers must be supplied through protected variables.
+  no_log: true
+
+- name: Discover Postgres replication inventory
+  ansible.builtin.set_fact:
+    postgres_primary_hosts: "{{ groups.get(postgres_primary_group, []) }}"
+    postgres_replica_hosts: "{{ groups.get(postgres_replica_group, []) }}"
+
+- name: Set Postgres replication facts
+  ansible.builtin.set_fact:
+    postgres_replication_enabled_effective: "{{ postgres_replication_enabled | bool }}"
+    postgres_role_effective: >-
+      {{ postgres_role | default('replica' if inventory_hostname in postgres_replica_hosts else 'primary') }}
+
+- name: Validate Postgres replication topology
+  ansible.builtin.assert:
+    that:
+      - postgres_role_effective in ['primary', 'replica']
+      - (not (postgres_replication_enabled_effective | bool)) or (postgres_primary_hosts | length == 1)
+      - (not (postgres_replication_enabled_effective | bool)) or (postgres_replication_password | length >= 20)
+      - (not (postgres_replication_enabled_effective | bool)) or ('\n' not in postgres_replication_password)
+      - (not (postgres_replication_enabled_effective | bool)) or ('\r' not in postgres_replication_password)
+    fail_msg: >-
+      Postgres replication requires one host in {{ postgres_primary_group }} and a non-empty
+      postgres_replication_password.
+
+- name: Validate Postgres replication slot names
+  ansible.builtin.assert:
+    that:
+      - postgres_replica_slot_name is match('^[a-z0-9_]{1,63}$')
+    fail_msg: Replication slot names must contain only lowercase letters, numbers, and underscores.
+  loop: "{{ postgres_replica_hosts }}"
+  loop_control:
+    label: "{{ item }}"
+  vars:
+    postgres_replica_slot_name: >-
+      {{
+        hostvars[item].postgres_replication_slot_name
+        | default(
+          (
+            postgres_replication_slot_prefix ~ '_'
+            ~ (item | regex_replace('[^A-Za-z0-9_]', '_') | lower)
+          )[:63],
+          true
+        )
+      }}
+  when:
+    - postgres_replication_enabled_effective | bool
+    - postgres_replication_use_slots | bool
+
+- name: Skip Postgres replica hosts when replication is disabled
+  ansible.builtin.meta: end_host
+  when:
+    - not (postgres_replication_enabled_effective | bool)
+    - postgres_role_effective == 'replica'
+
+- name: Set Postgres primary connection facts
+  ansible.builtin.set_fact:
+    postgres_primary_inventory_hostname: >-
+      {{ postgres_primary_hosts[0]
+         if (postgres_primary_hosts | length > 0)
+         else inventory_hostname }}
+  when: postgres_replication_enabled_effective | bool
+
+- name: Set Postgres primary host and replica slot facts
+  ansible.builtin.set_fact:
+    postgres_primary_host_effective: >-
+      {{
+        postgres_primary_host
+        | default(
+          hostvars[postgres_primary_inventory_hostname].postgres_replication_host
+          | default(
+            hostvars[postgres_primary_inventory_hostname].ansible_host
+            | default(postgres_primary_inventory_hostname),
+            true
+          ),
+          true
+        )
+      }}
+    postgres_replication_slot_name_effective: >-
+      {{
+        (postgres_replication_slot_name
+         | default(
+           postgres_replication_slot_prefix ~ '_'
+           ~ (inventory_hostname | regex_replace('[^A-Za-z0-9_]', '_') | lower),
+           true
+         ))[:63]
+      }}
+  when: postgres_replication_enabled_effective | bool
+
+- name: Ensure Postgres deployment directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/postgres"
+    state: directory
+    mode: "0750"
+
+- name: Ensure Postgres data directory has strict permissions
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/postgres/data"
+    state: directory
+    owner: "{{ postgres_container_uid }}"
+    group: "{{ postgres_container_gid }}"
+    mode: "0700"
+
+- name: Render Postgres compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_root }}/postgres/docker-compose.yml"
+    mode: "0600"
+  register: postgres_compose
+  no_log: true
+
+- name: Install Postgres runtime secret
+  ansible.builtin.copy:
+    content: "{{ postgres_password }}\n"
+    dest: "{{ deploy_root }}/postgres/postgres-password"
+    mode: "0600"
+  register: postgres_runtime_secret
+  no_log: true
+
+- name: Install Postgres replication runtime secret
+  ansible.builtin.copy:
+    content: "{{ postgres_replication_password }}\n"
+    dest: "{{ deploy_root }}/postgres/postgres-replication-password"
+    mode: "0600"
+  when: postgres_replication_enabled_effective | bool
+  register: postgres_replication_runtime_secret
+  no_log: true
+
+- name: Install Postgres replication password file
+  ansible.builtin.copy:
+    content: |
+      *:*:*:{{ postgres_replication_user }}:{{ postgres_replication_password | replace('\\', '\\\\') | replace(':', '\\:') }}
+    dest: "{{ deploy_root }}/postgres/postgres-replication.pgpass"
+    owner: "{{ postgres_container_uid }}"
+    group: "{{ postgres_container_gid }}"
+    mode: "0600"
+  when: postgres_replication_enabled_effective | bool
+  register: postgres_replication_pgpass
+  no_log: true
+
+- name: Remove stale Postgres replication secrets
+  ansible.builtin.file:
+    path: "{{ deploy_root }}/postgres/{{ item }}"
+    state: absent
+  loop:
+    - postgres-replication-password
+    - postgres-replication.pgpass
+  when: not (postgres_replication_enabled_effective | bool)
+  register: postgres_stale_replication_secrets
+  no_log: true
+
+- name: Resolve whether Postgres must be recreated
+  ansible.builtin.set_fact:
+    postgres_force_recreate: >-
+      {{
+        (postgres_compose.changed | default(false))
+        or (postgres_runtime_secret.changed | default(false))
+        or (postgres_replication_runtime_secret.changed | default(false))
+        or (postgres_replication_pgpass.changed | default(false))
+        or (postgres_stale_replication_secrets.changed | default(false))
+      }}
+
+- name: Validate Postgres compose file
+  ansible.builtin.command:
+    cmd: docker compose -f {{ deploy_root }}/postgres/docker-compose.yml config --quiet
+  changed_when: false
+  no_log: true
+
+- name: Run Postgres primary tasks
+  ansible.builtin.include_tasks: primary.yml
+  when: postgres_role_effective == 'primary'
+
+- name: Bootstrap and start Postgres replica
+  ansible.builtin.include_tasks: replica.yml
+  when: postgres_role_effective == 'replica'

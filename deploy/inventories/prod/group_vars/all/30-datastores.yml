@@ -1,0 +1,51 @@
+---
+# Datastore passwords belong in vault.yml or protected extra vars.
+postgres_image: postgres:16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
+postgres_container_uid: "70"
+postgres_container_gid: "70"
+postgres_bind_host: 127.0.0.1
+postgres_host: 127.0.0.1
+postgres_port: 5432
+postgres_addr: "{{ postgres_host }}:{{ postgres_port }}"
+postgres_username: alpha
+postgres_dbname: alpha
+postgres_config: sslmode=disable&TimeZone=Asia/Shanghai
+postgres_max_open_conns: 100
+postgres_primary_group: postgres_primary
+postgres_replica_group: postgres_replicas
+postgres_replication_enabled: false
+postgres_replication_user: replicator
+postgres_replication_sslmode: disable
+postgres_replication_hba_method: scram-sha-256
+postgres_replication_allowed_cidrs: []
+postgres_replication_slot_prefix: alpha_replica
+postgres_replication_use_slots: true
+postgres_replication_recreate_replica: false
+postgres_listen_addresses: "*"
+postgres_wal_level: replica
+postgres_max_wal_senders: 10
+postgres_max_replication_slots: 10
+postgres_wal_keep_size: 1GB
+postgres_hot_standby: "on"
+
+redis_image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+redis_container_uid: "999"
+redis_container_gid: "1000"
+redis_bind_host: 127.0.0.1
+redis_port: 6379
+redis_host: "{{ redis_bind_host }}:{{ redis_port }}"
+redis_db: 0
+
+clickhouse_enabled: true
+clickhouse_image: clickhouse/clickhouse-server:26.3-alpine@sha256:de9b7b1fe8ed9aa13184a96872d08bc8cf7af35809e0ba2fe00dc6c8e624d2db
+clickhouse_host: 127.0.0.1
+clickhouse_bind_host: 127.0.0.1
+clickhouse_native_port: 9000
+clickhouse_http_port: 8123
+clickhouse_addr: "{{ clickhouse_host }}:{{ clickhouse_native_port }}"
+clickhouse_database: alpha_analytics
+clickhouse_username: alpha
+clickhouse_access_retention_days: 90
+clickhouse_traffic_raw_retention_hours: 72
+clickhouse_traffic_retention_days: 90
+clickhouse_traffic_hourly_retention_days: 730

@@ -1,0 +1,1 @@
+-- No-op: 02148 only re-applies idempotent columns and indexes that belong to 02147.

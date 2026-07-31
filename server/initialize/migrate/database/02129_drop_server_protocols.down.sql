@@ -1,0 +1,2 @@
+ALTER TABLE "servers"
+    ADD COLUMN IF NOT EXISTS "protocols" TEXT DEFAULT NULL;

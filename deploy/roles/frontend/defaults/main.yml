@@ -1,0 +1,11 @@
+---
+frontend_deployment_mode: package
+frontend_container_image: ghcr.io/neibniz/alpha-frontend-admin:1.4.2
+frontend_port: 3001
+frontend_container_upstream_url: "http://127.0.0.1:{{ server_container_port }}"
+frontend_package_src: ""
+frontend_package_checksum: ""
+frontend_keep_releases: 3
+frontend_subscribe_proxy_enabled: true
+frontend_subscribe_proxy_path: /v1/subscribe/config
+frontend_subscribe_proxy_upstream: "127.0.0.1:{{ server_container_port }}"

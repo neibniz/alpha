@@ -1,0 +1,102 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**/src/**/*",
+      "**/.vscode/**/*",
+      "**/vite.config.js",
+      "!**/src/routeTree.gen.ts",
+      "!**/src/styles.css",
+      "!**/dist/**/*",
+      "!**/release/**/*",
+      "!**/public/**/*",
+      "!**/docs/**/*"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off",
+        "useSortedAttributes": "off"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "a11y": {
+        "noSvgWithoutTitle": "off",
+        "useSemanticElements": "off",
+        "noRedundantRoles": "off",
+        "useAriaPropsForRole": "off",
+        "useFocusableInteractive": "off",
+        "useKeyWithClickEvents": "off",
+        "noNoninteractiveElementInteractions": "off",
+        "noStaticElementInteractions": "off"
+      },
+      "performance": {
+        "noNamespaceImport": "off",
+        "useTopLevelRegex": "off",
+        "noBarrelFile": "off",
+        "noSyncScripts": "off"
+      },
+      "suspicious": {
+        "noDoubleEquals": "off",
+        "noArrayIndexKey": "off",
+        "noDocumentCookie": "off",
+        "noExplicitAny": "off",
+        "useAwait": "off",
+        "noAlert": "off",
+        "noTemplateCurlyInString": "off",
+        "noShadow": "off"
+      },
+      "nursery": {
+        "useSortedClasses": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noExtraBooleanCast": "off",
+        "noForEach": "off",
+        "noBannedTypes": "off",
+        "useMaxParams": "off"
+      },
+      "style": {
+        "useFilenamingConvention": "off",
+        "noNestedTernary": "off",
+        "useBlockStatements": "off",
+        "useConsistentTypeDefinitions": "off",
+        "useDefaultSwitchClause": "off",
+        "noNegationElse": "off",
+        "noSubstr": "off",
+        "noNamespace": "off",
+        "noNonNullAssertion": "off",
+        "noIncrementDecrement": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off",
+        "noNestedComponentDefinitions": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off",
+        "noGlobalEval": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "extends": ["ultracite/core", "ultracite/react"]
+}

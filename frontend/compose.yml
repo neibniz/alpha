@@ -33,6 +33,7 @@ services:
       ALPHA_AUTH_COOKIE_SECURE: ${ALPHA_AUTH_COOKIE_SECURE:-false}
       ALPHA_PUBLIC_ORIGIN: ${ALPHA_PUBLIC_ORIGIN:-http://localhost:3000}
       ALPHA_TRUST_PROXY_HEADERS: ${ALPHA_TRUST_PROXY_HEADERS:-false}
+      ALPHA_CLIENT_IP_SOURCE: ${ALPHA_CLIENT_IP_SOURCE:-auto}
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:

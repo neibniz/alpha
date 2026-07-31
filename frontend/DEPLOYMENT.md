@@ -48,6 +48,7 @@ ALPHA_AUTH_COOKIE_MAX_AGE
 ALPHA_AUTH_COOKIE_SECURE
 ALPHA_PUBLIC_ORIGIN
 ALPHA_TRUST_PROXY_HEADERS
+ALPHA_CLIENT_IP_SOURCE
 ```
 
 Admin defaults to same-origin `/api` calls. Set `ALPHA_ADMIN_UPSTREAM` to the
@@ -79,6 +80,25 @@ accepted.
 The user application talks to the server only from its Next.js server runtime,
 so browser credentials remain on the user application's own origin.
 
+### Client IP Forwarding
+
+The User BFF overwrites `X-Alpha-Client-IP` with the address observed by its
+deployment edge before each Server request. Select that edge explicitly with
+`ALPHA_CLIENT_IP_SOURCE`:
+
+| Deployment | Value |
+| --- | --- |
+| Cloudflare Workers | `cloudflare` |
+| Vercel | `vercel` |
+| Caddy or NGINX container | `forwarded` |
+| Local development or automatic detection | `auto` |
+| Disable forwarding | `none` |
+
+No certificate or signing secret is required. Keep the Server listener behind
+the configured reverse proxy, and make that proxy overwrite standard forwarding
+headers instead of appending caller-provided values. Server request logs and all
+authentication audit records then use the same resolved address.
+
 ## Vercel
 
 Create two Vercel projects from the same repository.
@@ -101,6 +121,7 @@ Create two Vercel projects from the same repository.
 - Recommended variables:
   - `ALPHA_AUTH_COOKIE_SECURE=true`
   - `ALPHA_TRUST_PROXY_HEADERS=false`
+  - `ALPHA_CLIENT_IP_SOURCE=vercel`
   - `NEXT_PUBLIC_ALPHA_DEMO=false`
 
 For preview deployments without a fixed domain, omit `ALPHA_PUBLIC_ORIGIN` and
@@ -150,6 +171,7 @@ Create a Workers Builds project, not a static Pages project:
 - Recommended variables:
   - `ALPHA_AUTH_COOKIE_SECURE=true`
   - `ALPHA_TRUST_PROXY_HEADERS=false`
+  - `ALPHA_CLIENT_IP_SOURCE=cloudflare`
   - `NEXT_PUBLIC_ALPHA_DEMO=false`
 
 Configure the same non-public variables under both **Build Variables and

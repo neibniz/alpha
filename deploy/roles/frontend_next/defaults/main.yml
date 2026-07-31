@@ -11,6 +11,7 @@ frontend_next_auth_cookie_name: alpha_user_authorization
 frontend_next_auth_cookie_max_age: "{{ server_jwt_access_expire }}"
 frontend_next_auth_cookie_secure: true
 frontend_next_trust_proxy_headers: true
+frontend_next_client_ip_source: auto
 frontend_next_keep_releases: 3
 frontend_next_subscribe_proxy_enabled: true
 frontend_next_subscribe_proxy_path: /v1/subscribe/config

@@ -10,6 +10,8 @@
       - server_domain is match('^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$')
       - server_geoip_database_path is match('^/[A-Za-z0-9._/-]+$')
       - server_privacy_key_file is match('^/run/secrets/[A-Za-z0-9._-]+$')
+      - "'0.0.0.0/0' not in server_trusted_proxies"
+      - "'::/0' not in server_trusted_proxies"
       - server_pids_limit | int > 0
     fail_msg: Server ports, identity, domain, paths, and resource limits are invalid.
 

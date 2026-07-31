@@ -19,6 +19,7 @@ import {
   getWalletLogsWith,
 } from "@/lib/client-api";
 import { authCookieName } from "@/lib/runtime";
+import { attachEdgeClientIPHeader } from "@/lib/server/client-ip-header";
 import { upstreamRequestHeaders } from "@/lib/server/proxy-headers";
 import { buildUpstreamUrl } from "@/lib/server/upstream";
 
@@ -62,6 +63,7 @@ async function requestUpstream<T>(
 ) {
   let upstreamHeaders = new Headers(init?.headers);
   upstreamHeaders.set("Accept", "application/json");
+  const upstreamURL = buildUpstreamUrl(path);
 
   if (options.authenticated) {
     const [cookieStore, requestHeaders] = await Promise.all([
@@ -76,9 +78,10 @@ async function requestUpstream<T>(
       process.env.ALPHA_TRUST_PROXY_HEADERS === "true"
     );
     upstreamHeaders.set("Authorization", token);
+    attachEdgeClientIPHeader(upstreamHeaders, requestHeaders);
   }
 
-  const response = await fetch(buildUpstreamUrl(path), {
+  const response = await fetch(upstreamURL, {
     ...init,
     cache: options.authenticated ? "no-store" : "force-cache",
     headers: upstreamHeaders,

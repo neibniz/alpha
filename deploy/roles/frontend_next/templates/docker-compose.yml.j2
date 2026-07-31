@@ -25,6 +25,7 @@ services:
       ALPHA_AUTH_COOKIE_SECURE: {{ frontend_next_auth_cookie_secure | string | lower | to_json }}
       ALPHA_PUBLIC_ORIGIN: {{ ('https://' ~ frontend_domain) | to_json }}
       ALPHA_TRUST_PROXY_HEADERS: {{ frontend_next_trust_proxy_headers | bool | string | lower | to_json }}
+      ALPHA_CLIENT_IP_SOURCE: {{ frontend_next_client_ip_source | to_json }}
 {% if frontend_next_deployment_mode == 'package' %}
     volumes:
       - {{ deploy_root }}/frontend/user-next/current:/app:ro

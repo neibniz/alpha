@@ -6,13 +6,19 @@
 {% if frontend_app_name == "user" and (frontend_subscribe_proxy_enabled | bool) %}
 	@subscribe path {{ frontend_subscribe_proxy_path }}
 	handle @subscribe {
-		reverse_proxy {{ frontend_subscribe_proxy_upstream }}
+		reverse_proxy {{ frontend_subscribe_proxy_upstream }} {
+			header_up X-Forwarded-For {client_ip}
+			header_up X-Real-IP {client_ip}
+		}
 	}
 
 {% endif %}
 	handle {
 {% if frontend_deployment_mode == "image" %}
-		reverse_proxy 127.0.0.1:{{ frontend_port }}
+		reverse_proxy 127.0.0.1:{{ frontend_port }} {
+			header_up X-Forwarded-For {client_ip}
+			header_up X-Real-IP {client_ip}
+		}
 {% else %}
 		root * /srv/frontend/{{ frontend_app_name }}/current
 		header /runtime-config.js Cache-Control "no-store"

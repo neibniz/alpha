@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/privacy"
 	"github.com/neibniz/alpha/server/pkg/constant"
 
@@ -47,6 +48,10 @@ func requestAttributes(req *http.Request) []attribute.KeyValue {
 		remoteHost = req.RemoteAddr
 		remotePort = ""
 	}
+	clientAddress := clientip.FromRequest(req).String()
+	if clientAddress == "" {
+		clientAddress = remoteHost
+	}
 	requestURL := ""
 	requestScheme := ""
 	requestFragment := ""
@@ -74,7 +79,7 @@ func requestAttributes(req *http.Request) []attribute.KeyValue {
 		semconv.NetworkProtocolNameKey.String(strings.ToLower(protocolName)),
 		semconv.NetworkProtocolVersionKey.String(protocolVersion),
 
-		semconv.ClientAddressKey.String(privacy.MaskIP(remoteHost)),
+		semconv.ClientAddressKey.String(privacy.MaskIP(clientAddress)),
 		semconv.ClientPortKey.String(remotePort),
 	}
 }
@@ -105,9 +110,13 @@ func TraceMiddleware(_ *svc.ServiceContext) func(ctx *gin.Context) {
 		)
 		// context with request host
 		ctx = context.WithValue(ctx, constant.CtxKeyRequestHost, c.Request.Host)
-		ctx = context.WithValue(ctx, constant.CtxKeyClientIP, c.ClientIP())
 		// restructure context
 		c.Request = c.Request.WithContext(ctx)
+		client := clientip.FromRequest(c.Request)
+		span.SetAttributes(
+			attribute.String("alpha.client_ip.source", string(client.Source)),
+			attribute.Bool("alpha.client_ip.verified", client.Verified),
+		)
 
 		c.Next()
 

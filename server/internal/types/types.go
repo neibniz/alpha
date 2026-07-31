@@ -2199,7 +2199,7 @@ type ResetPasswordRequest struct {
 	Email      string `json:"email" validate:"required"`
 	Password   string `json:"password" validate:"required,min=12,max=72"`
 	Code       string `json:"code,optional"`
-	IP         string `header:"X-Original-Forwarded-For"`
+	IP         string
 	UserAgent  string `header:"User-Agent"`
 	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`
@@ -3210,7 +3210,7 @@ type UserLoginRequest struct {
 	Identifier string `json:"identifier"`
 	Email      string `json:"email" validate:"required"`
 	Password   string `json:"password" validate:"required,max=128"`
-	IP         string `header:"X-Original-Forwarded-For"`
+	IP         string
 	UserAgent  string `header:"User-Agent"`
 	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`
@@ -3222,7 +3222,7 @@ type UserRegisterRequest struct {
 	Password   string `json:"password" validate:"required,min=12,max=72"`
 	Invite     string `json:"invite,optional"`
 	Code       string `json:"code,optional"`
-	IP         string `header:"X-Original-Forwarded-For"`
+	IP         string
 	UserAgent  string `header:"User-Agent"`
 	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`

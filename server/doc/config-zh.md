@@ -32,6 +32,23 @@ Administrator:
 默认监听 `0.0.0.0:8080`，运行模式为生产模式，JWT 有效期为 7 天。仅在需要变更时
 增加 `Host`、`Port`、`Debug` 或 `JwtAuth.AccessExpire`。
 
+## 客户端 IP 解析
+
+Alpha 会在请求日志和业务处理之前统一解析一次客户端 IP。登录、注册、OAuth、密码
+重置、退出、订单审计、订阅访问和转发进程注册均使用同一个解析结果。
+
+- `TrustedProxies` 只能填写会直接连接 Server 的反向代理，禁止使用 `0.0.0.0/0` 或
+  `::/0`。
+- `X-Forwarded-For` 会从右向左跳过可信代理节点；该链不存在时再使用 `X-Real-IP`。
+- 部署在 Cloudflare、Vercel 或其他主机上的 User BFF 会将入口观察到的地址覆盖写入
+  `X-Alpha-Client-IP`，不会透传浏览器提交的同名值。
+- BFF 头不存在时会读取 Cloudflare 的 `CF-Connecting-IP`。应确保源站只能通过
+  Cloudflare 入口访问，避免调用方绕过入口直接提交该请求头。
+
+BFF 传递不需要证书或共享密钥。生产环境应让 Server 监听在反向代理之后的私有地址，
+且每层入口必须覆盖来源头。这里得到的是第一层入口观察到的公网地址，NAT 或 VPN 后的
+设备真实地址无法由 HTTP 服务获取。
+
 ## 可选组件
 
 启用 ClickHouse 访问日志和流量明细存储：

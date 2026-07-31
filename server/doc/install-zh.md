@@ -94,7 +94,8 @@ server {
     location / {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # 覆盖客户端自行提交的转发头。
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header REMOTE-HOST $remote_addr;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -117,15 +118,6 @@ server {
     }
 }
 ```
-如果使用cloudflare代理服务，需要获取到用户真实访问IP。请在Nginx配置文件中Http段落中加入:
-
-- 需要依赖：**ngx_http_realip_module**模块， 使用nginx -V命令查看nginx是否已经编译该模块，没有的话需要自己编译。
-
-
-```nginx
-    # cloudflare Start
-    set_real_ip_from 0.0.0.0/0;
-    real_ip_header  X-Forwarded-For;
-    real_ip_recursive on;
-    # cloudflare END
-```
+Cloudflare 作为公网入口时会写入 `CF-Connecting-IP`，NGINX 会将其转发给 Alpha。
+应保持源站位于 Cloudflare 之后，并将 `HTTP.TrustedProxies` 设置为直接连接 Alpha 的
+NGINX 地址，通常为 `127.0.0.1` 或 `::1`。

@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/logic/auth/oauth"
 	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/neibniz/alpha/server/internal/types"
@@ -20,7 +21,7 @@ func OAuthLoginGetTokenHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) 
 		}
 
 		l := oauth.NewOAuthLoginGetTokenLogic(c.Request.Context(), svcCtx)
-		resp, err := l.OAuthLoginGetToken(&req, c.ClientIP(), c.Request.UserAgent())
+		resp, err := l.OAuthLoginGetToken(&req, clientip.Address(c.Request), c.Request.UserAgent())
 		result.HttpResult(c, resp, err)
 	}
 }

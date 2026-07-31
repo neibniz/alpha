@@ -36,6 +36,9 @@
     server_geoip_database_path: /usr/share/alpha/geoip/dbip-city-lite.mmdb
     server_privacy_enabled: true
     server_privacy_key_file: /run/secrets/alpha_privacy_keyring
+    server_trusted_proxies:
+      - 127.0.0.1
+      - ::1
     server_memory_limit: 2g
     server_cpu_limit: 2.0
     server_pids_limit: 300
@@ -54,6 +57,7 @@
     frontend_next_upstream_url: http://127.0.0.1:8080
     frontend_next_api_prefix: /api
     frontend_next_trust_proxy_headers: true
+    frontend_next_client_ip_source: forwarded
     frontend_next_subscribe_proxy_path: /v1/subscribe/config
 
     xray_agent_image: alpha-xray-agent:validation

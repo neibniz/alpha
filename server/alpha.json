@@ -3336,12 +3336,6 @@
         },
         "parameters": [
           {
-            "name": "X-Original-Forwarded-For",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
             "description": "User login request",
             "in": "body",
@@ -3382,12 +3376,6 @@
         },
         "parameters": [
           {
-            "name": "X-Original-Forwarded-For",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
             "description": "User login response",
             "in": "body",
@@ -3427,12 +3415,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "X-Original-Forwarded-For",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "body",
             "description": "User login response",

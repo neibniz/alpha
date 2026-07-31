@@ -2,6 +2,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { authCookieName, authCookieSecure } from "@/lib/runtime";
+import { attachEdgeClientIPHeader } from "@/lib/server/client-ip-header";
 import { upstreamRequestHeaders } from "@/lib/server/proxy-headers";
 import { buildUpstreamPath } from "@/lib/upstream-url";
 
@@ -33,21 +34,20 @@ export async function proxySubscriptionRequest(
   request: NextRequest,
   upstreamPath = "/v1/subscribe/config"
 ) {
+  const upstreamURL = buildUpstreamUrl(upstreamPath, request.nextUrl.search);
   const headers = upstreamRequestHeaders(
     request.headers,
     { Accept: request.headers.get("accept") || "*/*" },
     trustProxyHeaders()
   );
+  attachEdgeClientIPHeader(headers, request.headers);
 
-  const upstreamResponse = await fetch(
-    buildUpstreamUrl(upstreamPath, request.nextUrl.search),
-    {
-      cache: "no-store",
-      headers,
-      method: "GET",
-      redirect: "manual",
-    }
-  );
+  const upstreamResponse = await fetch(upstreamURL, {
+    cache: "no-store",
+    headers,
+    method: "GET",
+    redirect: "manual",
+  });
   const responseHeaders = new Headers({
     "Cache-Control": "private, no-store",
     "Content-Type":
@@ -110,17 +110,20 @@ export async function postUpstreamJson<T>(
   path: string,
   body: unknown
 ) {
-  const response = await fetch(buildUpstreamUrl(path), {
+  const upstreamURL = buildUpstreamUrl(path);
+  const headers = upstreamRequestHeaders(
+    request.headers,
+    {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    trustProxyHeaders()
+  );
+  attachEdgeClientIPHeader(headers, request.headers);
+  const response = await fetch(upstreamURL, {
     body: JSON.stringify(body),
     cache: "no-store",
-    headers: upstreamRequestHeaders(
-      request.headers,
-      {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      trustProxyHeaders()
-    ),
+    headers,
     method: "POST",
   });
   const payload = (await response.json()) as T;
@@ -157,6 +160,13 @@ export async function proxyPublicRequest(
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("Content-Type", contentType);
   if (cookie) headers.set("Authorization", cookie);
+  const upstreamURL = buildUpstreamUrl(
+    `${pathSegments.map(encodeURIComponent).join("/")}${
+      request.nextUrl.pathname.endsWith("/") ? "/" : ""
+    }`,
+    request.nextUrl.search
+  );
+  attachEdgeClientIPHeader(headers, request.headers);
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const declaredLength = Number(request.headers.get("content-length") || 0);
@@ -176,21 +186,13 @@ export async function proxyPublicRequest(
       { status: 413 }
     );
   }
-  const upstreamResponse = await fetch(
-    buildUpstreamUrl(
-      `${pathSegments.map(encodeURIComponent).join("/")}${
-        request.nextUrl.pathname.endsWith("/") ? "/" : ""
-      }`,
-      request.nextUrl.search
-    ),
-    {
-      body: requestBody,
-      cache: "no-store",
-      headers,
-      method: request.method,
-      redirect: "manual",
-    }
-  );
+  const upstreamResponse = await fetch(upstreamURL, {
+    body: requestBody,
+    cache: "no-store",
+    headers,
+    method: request.method,
+    redirect: "manual",
+  });
 
   const responseHeaders = new Headers({
     "Cache-Control": "no-store",

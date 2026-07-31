@@ -10,17 +10,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/report"
 	"github.com/neibniz/alpha/server/pkg/logger"
 
 	"github.com/neibniz/alpha/server/pkg/proc"
 	"github.com/neibniz/alpha/server/pkg/trace"
 
+	"github.com/gin-gonic/gin"
 	"github.com/neibniz/alpha/server/initialize"
 	"github.com/neibniz/alpha/server/internal/handler"
 	"github.com/neibniz/alpha/server/internal/middleware"
 	"github.com/neibniz/alpha/server/internal/svc"
-	"github.com/gin-gonic/gin"
 )
 
 type Service struct {
@@ -49,16 +50,18 @@ func initServer(svc *svc.ServiceContext) *gin.Engine {
 	}
 	// init gin server
 	r := gin.New()
-	r.RemoteIPHeaders = []string{"X-Original-Forwarded-For", "X-Forwarded-For", "X-Real-IP"}
-	trustedProxies := svc.Config.HTTP.TrustedProxies
-	if len(trustedProxies) == 0 {
-		trustedProxies = []string{"127.0.0.1", "::1"}
+	r.ForwardedByClientIP = false
+	if err := r.SetTrustedProxies(nil); err != nil {
+		panic(fmt.Sprintf("disable Gin proxy parsing: %v", err))
 	}
-	if err := r.SetTrustedProxies(trustedProxies); err != nil {
-		panic(fmt.Sprintf("configure trusted proxies: %v", err))
+	clientIPResolver, err := clientip.NewResolver(clientip.Options{
+		TrustedProxies: svc.Config.HTTP.TrustedProxies,
+	})
+	if err != nil {
+		panic(fmt.Sprintf("configure client IP resolver: %v", err))
 	}
 	// use cors middleware
-	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware(svc), gin.RecoveryWithWriter(gin.DefaultErrorWriter))
+	r.Use(middleware.ClientIPMiddleware(clientIPResolver), middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware(svc), gin.RecoveryWithWriter(gin.DefaultErrorWriter))
 
 	// register handlers
 	handler.RegisterHandlers(r, svc)

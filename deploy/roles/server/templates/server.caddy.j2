@@ -1,6 +1,9 @@
 {{ server_domain }} {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:{{ server_container_port }}
+	reverse_proxy 127.0.0.1:{{ server_container_port }} {
+		header_up X-Forwarded-For {client_ip}
+		header_up X-Real-IP {client_ip}
+	}
 	header {
 		-Server
 		Strict-Transport-Security "max-age=31536000"

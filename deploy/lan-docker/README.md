@@ -17,6 +17,13 @@ PostgreSQL, Redis, and the single-node ClickHouse instance are only reachable on
 
 The admin frontend uses same-origin `/api` calls through Nginx. The user frontend is the Next.js standalone application: its server-only BFF keeps the access token in an HttpOnly cookie and talks to the Go service over the Compose network.
 
+The LAN bundle exposes Next.js directly on port `3000`. A direct Next.js listener does not receive
+the TCP peer address through the Web Request API, so authentication logs can contain the container
+peer unless an HTTP reverse proxy is placed in front of that port. When adding Caddy or NGINX, make
+it overwrite `X-Real-IP`/`X-Forwarded-For`; the BFF's default `auto` source will then forward the
+observed address to Server. The bundled Admin NGINX already overwrites caller-supplied forwarding
+metadata.
+
 Build the frontend release artifacts on the controller:
 
 ```sh

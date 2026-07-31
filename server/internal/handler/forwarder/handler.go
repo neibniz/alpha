@@ -12,7 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/analytics"
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/forwarderapi"
 	"github.com/neibniz/alpha/server/internal/forwarderauth"
 	"github.com/neibniz/alpha/server/internal/forwarderservice"
@@ -23,8 +26,6 @@ import (
 	"github.com/neibniz/alpha/server/pkg/logger"
 	"github.com/neibniz/alpha/server/pkg/result"
 	"github.com/neibniz/alpha/server/pkg/xerr"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 const (
@@ -60,7 +61,7 @@ func RegisterHandler(svcCtx *svc.ServiceContext) gin.HandlerFunc {
 			result.HttpResult(c, nil, xerr.NewErrCodeMsg(xerr.InvalidParams, "valid boot_id is required"))
 			return
 		}
-		publicIP, err := registrationPublicIP(req.PublicIP, c.ClientIP())
+		publicIP, err := registrationPublicIP(req.PublicIP, clientip.Address(c.Request))
 		if err != nil {
 			result.HttpResult(c, nil, xerr.NewErrCodeMsg(xerr.InvalidParams, "valid public_ip is required"))
 			return

@@ -9,14 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/privacy"
 	"github.com/neibniz/alpha/server/pkg/logger"
 
 	"github.com/neibniz/alpha/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/gin-gonic/gin"
+	"github.com/neibniz/alpha/server/internal/svc"
 )
 
 type responseBodyWriter struct {
@@ -120,7 +121,7 @@ func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			},
 			{
 				Key:   "ip",
-				Value: privacy.MaskIP(c.ClientIP()),
+				Value: privacy.MaskIP(clientip.Address(c.Request)),
 			},
 			{
 				Key:   "user-agent",

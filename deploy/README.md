@@ -192,7 +192,9 @@ Postgres, Redis, and ClickHouse publish only on their `*_bind_host` values. Thes
 containerized frontends use host networking while binding their listeners to `127.0.0.1`.
 Caddy reaches local services through loopback, which prevents bypassing HTTPS and keeps
 forwarded client IP handling aligned with the default trusted-proxy list. The User BFF trusts
-and forwards proxy metadata only in this loopback-only topology.
+the same-host Caddy headers and overwrites `X-Alpha-Client-IP` before calling Server. Login,
+registration, OAuth, subscription access, order audit, and request logs therefore share one
+resolved client address.
 
 Set all required secret variables from Semaphore secrets or Ansible Vault. The server role writes
 them as mode `0600` files under `/data/alpha/server/secrets` and injects only `*_FILE` environment
@@ -370,6 +372,20 @@ The user container is recreated with the new runtime environment. The admin app 
 If a frontend and Server are intentionally placed on different hosts, set the frontend upstream
 to the Server's private or HTTPS address. Keep the frontend listener behind its same-host Caddy
 instance; do not expose the Bun or Nginx port directly.
+
+Set the User BFF IP source for its entry platform:
+
+```yaml
+# Automatic detection works for Cloudflare, Vercel, Caddy, and NGINX.
+frontend_next_client_ip_source: auto
+
+# Explicit cloudflare, vercel, or forwarded modes remain available for diagnostics.
+```
+
+The Caddy site templates overwrite downstream `X-Forwarded-For` and `X-Real-IP` values with
+Caddy's direct client address. Cloudflare's `CF-Connecting-IP` and the User BFF's
+`X-Alpha-Client-IP` continue to Server unchanged; keep the origin behind those configured entry
+points rather than exposing the Server listener directly.
 
 ### User Subscription URL Proxy
 

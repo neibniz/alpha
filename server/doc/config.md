@@ -32,6 +32,26 @@ Administrator:
 The default listener is `0.0.0.0:8080`, production mode is enabled, and JWT access tokens expire
 after seven days. Add `Host`, `Port`, `Debug`, or `JwtAuth.AccessExpire` only when overriding them.
 
+## Client IP Resolution
+
+Alpha resolves the client IP once, before request logging and route handlers run. Login, register,
+OAuth, password reset, logout, order audit, subscription access, and forwarder registration all use
+that same value.
+
+- `TrustedProxies` lists only the reverse proxies that connect directly to Server. Never use
+  `0.0.0.0/0` or `::/0`.
+- `X-Forwarded-For` is evaluated from right to left across the trusted proxy chain; `X-Real-IP`
+  is used as a fallback when that chain is absent.
+- A User BFF running on Cloudflare, Vercel, or another host copies its observed address into
+  `X-Alpha-Client-IP`. The BFF always overwrites a caller-supplied value before contacting Server.
+- Cloudflare's `CF-Connecting-IP` is used when the BFF header is absent. Keep the origin behind
+  Cloudflare so callers cannot bypass the edge and submit that header directly.
+
+The BFF header intentionally requires no certificate or shared secret. Keep the Server listener
+private behind the configured proxy and make every edge overwrite its source header. The resulting
+address is the public address observed by the first edge; NATs and VPNs cannot reveal a device's
+underlying address.
+
 ## Optional Components
 
 Enable ClickHouse for access logs and traffic detail storage:

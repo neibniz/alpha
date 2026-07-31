@@ -108,7 +108,8 @@ server {
     location / {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # Overwrite caller-supplied forwarding metadata.
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header REMOTE-HOST $remote_addr;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -129,14 +130,7 @@ server {
 }
 ```
 
-If using Cloudflare as a proxy service, you need to retrieve the user's real IP address. Add the following to the http section of the NGINX configuration file:
-
-- Dependency: `ngx_http_realip_module`. Check if your NGINX build includes this module by running `nginx -V`. If not, you will need to recompile NGINX with this module.
-
-```nginx
-# Cloudflare Start
-set_real_ip_from 0.0.0.0/0;
-real_ip_header X-Forwarded-For;
-real_ip_recursive on;
-# Cloudflare End
-```
+When Cloudflare is the public entry, it supplies `CF-Connecting-IP` and NGINX
+passes it through to Alpha. Keep the origin behind Cloudflare and set
+`HTTP.TrustedProxies` to the NGINX address that directly connects to Alpha,
+normally `127.0.0.1` or `::1`.

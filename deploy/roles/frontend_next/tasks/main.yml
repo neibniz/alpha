@@ -7,6 +7,7 @@
       - frontend_next_port | int > 0
       - frontend_next_port | int <= 65535
       - frontend_next_auth_cookie_max_age | int >= 300
+      - frontend_next_client_ip_source in ['auto', 'cloudflare', 'forwarded', 'none', 'vercel']
       - frontend_next_keep_releases | int >= 2
       - frontend_next_deployment_mode in ['package', 'image']
       - >-

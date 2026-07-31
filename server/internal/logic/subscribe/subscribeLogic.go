@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/neibniz/alpha/server/adapter"
+	"github.com/neibniz/alpha/server/internal/clientip"
 	"github.com/neibniz/alpha/server/internal/model/client"
 	"github.com/neibniz/alpha/server/internal/model/log"
 	"github.com/neibniz/alpha/server/internal/model/node"
@@ -21,11 +22,11 @@ import (
 
 	"github.com/neibniz/alpha/server/internal/model/user"
 
+	"github.com/gin-gonic/gin"
 	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/neibniz/alpha/server/internal/types"
 	"github.com/neibniz/alpha/server/pkg/logger"
 	"github.com/neibniz/alpha/server/pkg/xerr"
-	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
 
@@ -219,7 +220,7 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 		TokenHash:       log.HashSubscribeToken(req.Token),
 		TokenPrefix:     log.TokenPrefix(req.Token),
 		UserAgent:       req.UA,
-		ClientIP:        l.ctx.ClientIP(),
+		ClientIP:        clientip.Address(l.ctx.Request),
 		Success:         true,
 	})
 	if err != nil {

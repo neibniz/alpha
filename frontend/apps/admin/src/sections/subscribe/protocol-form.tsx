@@ -76,6 +76,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 import { DiscardChangesDialog } from "../../components/discard-changes-dialog";
+import { createSubscribeClientFormValues } from "./client-form-data";
 import { subscribeSchema } from "./schema";
 import { TemplatePreview } from "./template-preview";
 
@@ -200,17 +201,6 @@ type ClientListFilters = {
   enabled?: string;
 };
 
-function emptyDownloadLink(): API.DownloadLink {
-  return {
-    windows: "",
-    mac: "",
-    linux: "",
-    ios: "",
-    android: "",
-    harmony: "",
-  };
-}
-
 function tabForClientErrors(
   errors: FieldErrors<ClientFormData>
 ): ClientFormTab {
@@ -310,24 +300,7 @@ export function ProtocolForm() {
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
     mode: "onChange",
-    defaultValues: {
-      name: "",
-      description: "",
-      icon: "",
-      user_agent: "",
-      enabled: true,
-      scheme: "",
-      template: "",
-      output_format: "",
-      download_link: {
-        windows: "",
-        mac: "",
-        linux: "",
-        ios: "",
-        android: "",
-        harmony: "",
-      },
-    },
+    defaultValues: createSubscribeClientFormValues(),
   });
 
   const request = async (
@@ -527,17 +500,7 @@ export function ProtocolForm() {
   const handleAdd = () => {
     setEditingClient(null);
     setActiveTab("basic");
-    form.reset({
-      name: "",
-      description: "",
-      icon: "",
-      user_agent: "",
-      enabled: true,
-      scheme: "",
-      template: "",
-      output_format: "",
-      download_link: emptyDownloadLink(),
-    });
+    form.reset(createSubscribeClientFormValues());
     setOpen(true);
   };
 
@@ -551,14 +514,7 @@ export function ProtocolForm() {
       }
       setEditingClient(detail);
       setActiveTab("basic");
-      form.reset({
-        ...detail,
-        template: detail.template || "",
-        download_link: {
-          ...emptyDownloadLink(),
-          ...(detail.download_link || {}),
-        },
-      });
+      form.reset(createSubscribeClientFormValues(detail));
       setOpen(true);
     } catch (error) {
       console.error("Failed to load client:", error);
@@ -1449,11 +1405,9 @@ export function ProtocolForm() {
               {t("actions.cancel", "Cancel")}
             </Button>
             <Button
-              disabled={
-                saving || !form.formState.isDirty || !form.formState.isValid
-              }
-              onClick={() => form.handleSubmit(onSubmit, handleInvalidSubmit)()}
-              type="button"
+              disabled={saving || !form.formState.isDirty}
+              form="subscribe-client-form"
+              type="submit"
             >
               {saving && (
                 <Icon className="mr-2 animate-spin" icon="mdi:loading" />

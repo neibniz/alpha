@@ -237,13 +237,13 @@ export const XRAY_FIELD_HELP: Record<string, XrayFieldHelpInfo> = {
     title: "REALITY Target",
     hint: "服务端必填，目标站点地址与端口。",
     warning: "这是服务端字段；缺失时容易被误当成客户端 REALITY 配置。",
-    example: "www.apple.com:443",
+    example: "www.ebay.com:443",
   }),
   reality_server_names: help("reality", {
     title: "REALITY Server Names",
     hint: "服务端允许的 SNI 列表。",
     detail: "客户端 serverName 必须匹配列表中的值。多个值用英文逗号分隔。",
-    example: "www.apple.com, apple.com",
+    example: "www.ebay.com, ebay.com",
   }),
   reality_private_key: help("reality", {
     title: "REALITY Private Key",

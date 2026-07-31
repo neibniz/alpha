@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildInboundConfig,
   buildStreamSettings,
+  buildOutboundConfig,
   configToFormValues,
   normalizeInboundProtocol,
   normalizeTransportNetwork,
@@ -291,5 +292,60 @@ describe("Xray template config compatibility", () => {
       authority: "edge.example.com",
       serviceName: "edge",
     });
+  });
+
+  it("normalizes gRPC Reality flow to none in stored templates", () => {
+    const inbound = buildInboundConfig({
+      protocol: "vless",
+      tag: "vless-reality-grpc",
+      port: 443,
+      vless_decryption: "none",
+      vless_clients_json:
+        '[{"id":"00000000-0000-0000-0000-000000000000","flow":"xtls-rprx-vision"}]',
+      fallbacks_json: "[]",
+      settings_json: "{}",
+      network: "grpc",
+      security: "reality",
+      reality_target: "www.ebay.com:443",
+      reality_private_key: "private-key",
+      reality_server_names: "www.ebay.com",
+      reality_short_ids: "0123456789abcdef",
+      service_name: "grpc",
+      grpc_authority: "www.ebay.com",
+      stream_extra_json: "{}",
+      sockopt_json: "{}",
+      finalmask_json: "{}",
+      sniffing: false,
+      advanced_json: "{}",
+    });
+    const outbound = buildOutboundConfig({
+      protocol: "vless",
+      tag: "vless-reality-grpc-out",
+      out_address: "node.example.com",
+      out_port: 443,
+      out_id: "00000000-0000-0000-0000-000000000000",
+      out_encryption: "none",
+      out_flow: "xtls-rprx-vision",
+      settings_json: "{}",
+      network: "grpc",
+      security: "reality",
+      service_name: "grpc",
+      stream_extra_json: "{}",
+      sockopt_json: "{}",
+      finalmask_json: "{}",
+      advanced_json: "{}",
+    });
+
+    expect(inbound).toMatchObject({
+      settings: {
+        clients: [
+          {
+            id: "00000000-0000-0000-0000-000000000000",
+            flow: "none",
+          },
+        ],
+      },
+    });
+    expect(outbound).toMatchObject({ settings: { flow: "none" } });
   });
 });

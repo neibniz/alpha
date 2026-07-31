@@ -743,6 +743,11 @@ func renderSubscriptionProxyWithConfigAndVariables(server *node.Server, binding 
 	if proxy.Type == "" {
 		proxy.Type = "vless"
 	}
+	if strings.EqualFold(strings.TrimSpace(proxy.Type), "vless") &&
+		strings.EqualFold(strings.TrimSpace(proxy.Security), "reality") &&
+		strings.EqualFold(strings.TrimSpace(proxy.Transport), "grpc") {
+		proxy.Flow = "none"
+	}
 	if proxy.Port == 0 {
 		proxy.Port = uint16Value(vars, "port")
 	}
@@ -1190,6 +1195,47 @@ func applyConfigVariableOverrides(data ConfigObject, vars ConfigObject, template
 	return data
 }
 
+func normalizeVlessFlowForRuntime(data ConfigObject, templateType string) {
+	if stringValue(data, "protocol") != "vless" {
+		return
+	}
+	settings, ok := data["settings"].(ConfigObject)
+	if !ok {
+		return
+	}
+	stream, _ := data["streamSettings"].(ConfigObject)
+	grpcReality := strings.EqualFold(strings.TrimSpace(stringValue(stream, "network")), "grpc") &&
+		strings.EqualFold(strings.TrimSpace(stringValue(stream, "security")), "reality")
+	flowDisabled := func(user ConfigObject) bool {
+		return grpcReality || strings.EqualFold(strings.TrimSpace(stringValue(user, "flow")), "none")
+	}
+
+	if templateType == node.XrayTemplateInbound {
+		delete(settings, "flow")
+		for _, field := range []string{"clients", "users"} {
+			switch users := settings[field].(type) {
+			case []any:
+				for _, item := range users {
+					if user, ok := item.(ConfigObject); ok && flowDisabled(user) {
+						delete(user, "flow")
+					}
+				}
+			case []ConfigObject:
+				for _, user := range users {
+					if flowDisabled(user) {
+						delete(user, "flow")
+					}
+				}
+			}
+		}
+		return
+	}
+	if templateType == node.XrayTemplateOutbound &&
+		(grpcReality || strings.EqualFold(strings.TrimSpace(stringValue(settings, "flow")), "none")) {
+		delete(settings, "flow")
+	}
+}
+
 func normalizeAndValidateXrayConfig(data ConfigObject, templateType string) error {
 	if data == nil {
 		return fmt.Errorf("xray template config must be a JSON object")
@@ -1202,6 +1248,7 @@ func normalizeAndValidateXrayConfig(data ConfigObject, templateType string) erro
 			return err
 		}
 	}
+	normalizeVlessFlowForRuntime(data, templateType)
 	if templateType != node.XrayTemplateInbound {
 		return nil
 	}

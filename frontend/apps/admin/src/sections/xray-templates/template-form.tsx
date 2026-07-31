@@ -95,6 +95,7 @@ import {
   ROUTING_PRESETS,
   SECURITIES,
   safeJsonParse,
+  normalizeVlessRealityGrpcConfig,
   XRAY_TEMPLATE_TYPES,
   type XrayTemplateType,
 } from "./config";
@@ -2378,10 +2379,13 @@ export default function XrayTemplateForm({
       }
     }
 
+    const outboundSettings = isJsonObject(config.settings)
+      ? config.settings
+      : {};
     if (
       values.type === "outbound" &&
       values.protocol === "vless" &&
-      !isVlessFlowAllowed(values.network, values.out_flow)
+      !isVlessFlowAllowed(values.network, outboundSettings.flow)
     ) {
       setSubmitError(
         "out_flow",
@@ -2507,16 +2511,27 @@ export default function XrayTemplateForm({
       sourceInitialValues?.config &&
       !advancedTouched &&
       !hasStructuredConfigChanges(dirtyFields);
-    const config = preserveInitialConfig
+    const sourceConfig = preserveInitialConfig
       ? isJsonObject(sourceInitialValues.config)
         ? sourceInitialValues.config
         : {}
       : buildConfig(values);
+    const config = normalizeVlessRealityGrpcConfig(sourceConfig, values.type);
     if (!validateXrayConfig(values, config)) return;
     const defaultVariables = safeJsonParse<JsonObject>(
       values.default_variables_json || "",
       {}
     );
+    const streamSettings = isJsonObject(config.streamSettings)
+      ? config.streamSettings
+      : {};
+    if (
+      config.protocol === "vless" &&
+      streamSettings.network === "grpc" &&
+      streamSettings.security === "reality"
+    ) {
+      defaultVariables.flow = "none";
+    }
     const conflicts = findDefaultVariableConflicts(
       values.type,
       config,

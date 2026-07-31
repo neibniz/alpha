@@ -135,6 +135,43 @@ function objectValue(value: unknown): JsonObject {
   return isJsonObject(value) ? value : {};
 }
 
+export function normalizeVlessRealityGrpcConfig(
+  config: JsonObject,
+  templateType: XrayTemplateType
+) {
+  const stream = objectValue(config.streamSettings);
+  if (
+    formString(config.protocol).trim().toLowerCase() !== "vless" ||
+    normalizeTransportNetwork(stream.network) !== "grpc" ||
+    formString(stream.security).trim().toLowerCase() !== "reality"
+  ) {
+    return config;
+  }
+
+  const settings = objectValue(config.settings);
+  if (templateType === "outbound") {
+    return {
+      ...config,
+      settings: { ...settings, flow: "none" },
+    };
+  }
+  if (templateType !== "inbound") return config;
+
+  const normalizedSettings = omitKeys(settings, ["flow"]);
+  for (const field of ["clients", "users"] as const) {
+    const users = settings[field];
+    if (!Array.isArray(users)) continue;
+    normalizedSettings[field] = users.map((user) =>
+      isJsonObject(user) ? { ...user, flow: "none" } : user
+    );
+  }
+
+  return {
+    ...config,
+    settings: normalizedSettings,
+  };
+}
+
 function firstArrayValue(...values: unknown[]) {
   const arrays = values.filter(Array.isArray);
   return arrays.find((value) => value.length > 0) || arrays[0] || [];
@@ -1176,9 +1213,10 @@ export function buildInboundConfig(values: XrayFormValues) {
       : undefined,
   });
 
-  return hasAdvancedJson(values.advanced_json)
+  const result = hasAdvancedJson(values.advanced_json)
     ? safeJsonParse(formString(values.advanced_json), config)
     : config;
+  return normalizeVlessRealityGrpcConfig(result, "inbound");
 }
 
 export function buildOutboundConfig(values: XrayFormValues) {
@@ -1193,9 +1231,10 @@ export function buildOutboundConfig(values: XrayFormValues) {
     streamSettings: streamUnsupported ? undefined : buildStreamSettings(values),
   });
 
-  return hasAdvancedJson(values.advanced_json)
+  const result = hasAdvancedJson(values.advanced_json)
     ? safeJsonParse(formString(values.advanced_json), config)
     : config;
+  return normalizeVlessRealityGrpcConfig(result, "outbound");
 }
 
 export function buildDnsConfig(values: XrayFormValues) {

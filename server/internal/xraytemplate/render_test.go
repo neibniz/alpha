@@ -85,6 +85,62 @@ func TestRenderBindingConfigAcceptsInboundRealityWithTarget(t *testing.T) {
 	}
 }
 
+func TestRenderBindingConfigNormalizesGrpcRealityFlow(t *testing.T) {
+	enabled := true
+	server := &node.Server{Id: 1, Name: "hk", Address: "node.example.com"}
+	binding := &node.ServerXrayTemplate{
+		Alias: "main-grpc",
+		Template: &node.XrayTemplate{
+			Type: node.XrayTemplateInbound,
+			Config: `{
+				"tag": "main-grpc",
+				"port": 443,
+				"protocol": "vless",
+				"settings": {
+					"decryption": "none",
+					"clients": [{"email": "template", "flow": "xtls-rprx-vision"}]
+				},
+				"streamSettings": {
+					"network": "grpc",
+					"security": "reality",
+					"realitySettings": {
+						"target": "www.ebay.com:443",
+						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
+						"serverNames": ["www.ebay.com"],
+						"shortIds": ["0123456789abcdef"]
+					},
+					"grpcSettings": {"serviceName": "grpc", "authority": "www.ebay.com"}
+				}
+			}`,
+			DefaultVariables: `{"flow":"xtls-rprx-vision"}`,
+			Enabled:          &enabled,
+		},
+		Variables: `{"flow":"xtls-rprx-vision"}`,
+		Enabled:   &enabled,
+	}
+	ref := BuildRef(server, []*node.ServerXrayTemplate{binding})
+	rendered, err := RenderBindingConfig(server, binding, ref)
+	if err != nil {
+		t.Fatalf("render config: %v", err)
+	}
+	settings := rendered["settings"].(ConfigObject)
+	clients := settings["clients"].([]any)
+	client := clients[0].(ConfigObject)
+	if _, ok := client["flow"]; ok {
+		t.Fatalf("grpc reality runtime config must omit flow, got %v", client["flow"])
+	}
+
+	proxy, err := RenderSubscriptionProxy(server, binding, ref, UserInfo{
+		UUID: "00000000-0000-0000-0000-000000000000",
+	})
+	if err != nil {
+		t.Fatalf("render subscription proxy: %v", err)
+	}
+	if proxy.Flow != "none" {
+		t.Fatalf("grpc reality subscription flow = %q, want none", proxy.Flow)
+	}
+}
+
 func TestBindingMatchesInboundAcceptsStableAliases(t *testing.T) {
 	binding := &node.ServerXrayTemplate{
 		Alias: "main-grpc",
@@ -829,9 +885,9 @@ func TestRenderSubscriptionProxyDerivesRealityPublicKey(t *testing.T) {
 					"network": "tcp",
 					"security": "reality",
 					"realitySettings": {
-						"target": "www.apple.com:443",
+						"target": "www.ebay.com:443",
 						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-						"serverNames": ["www.apple.com"],
+						"serverNames": ["www.ebay.com"],
 						"shortIds": ["0123456789abcdef"]
 					}
 				}
@@ -877,9 +933,9 @@ func TestRenderSubscriptionProxyUsesVlessUserFlow(t *testing.T) {
 					"network": "tcp",
 					"security": "reality",
 					"realitySettings": {
-						"target": "www.apple.com:443",
+						"target": "www.ebay.com:443",
 						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-						"serverNames": ["www.apple.com"],
+						"serverNames": ["www.ebay.com"],
 						"shortIds": ["0123456789abcdef"]
 					}
 				}
@@ -934,9 +990,9 @@ func TestRenderSubscriptionProxyKeepsXHTTPExtra(t *testing.T) {
 					"network": "xhttp",
 					"security": "reality",
 					"realitySettings": {
-						"target": "www.apple.com:443",
+						"target": "www.ebay.com:443",
 						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-						"serverNames": ["www.apple.com"],
+						"serverNames": ["www.ebay.com"],
 						"shortIds": ["0123456789abcdef"]
 					},
 					"xhttpSettings": {
@@ -999,9 +1055,9 @@ func TestRenderSubscriptionProxyUsesXHTTPBindingMode(t *testing.T) {
 					"network": "xhttp",
 					"security": "reality",
 					"realitySettings": {
-						"target": "www.apple.com:443",
+						"target": "www.ebay.com:443",
 						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-						"serverNames": ["www.apple.com"],
+						"serverNames": ["www.ebay.com"],
 						"shortIds": ["0123456789abcdef"]
 					},
 					"xhttpSettings": {
@@ -1058,14 +1114,14 @@ func TestRenderSubscriptionProxyKeepsGrpcSettings(t *testing.T) {
 					"network": "grpc",
 					"security": "reality",
 					"realitySettings": {
-						"target": "www.apple.com:443",
+						"target": "www.ebay.com:443",
 						"privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-						"serverNames": ["www.apple.com"],
+						"serverNames": ["www.ebay.com"],
 						"shortIds": ["0123456789abcdef"]
 					},
 					"grpcSettings": {
 						"serviceName": "shop",
-						"authority": "www.apple.com",
+						"authority": "www.ebay.com",
 						"multiMode": true,
 						"user_agent": "alpha-test",
 						"idle_timeout": 60,
@@ -1095,8 +1151,8 @@ func TestRenderSubscriptionProxyKeepsGrpcSettings(t *testing.T) {
 	if proxy.ServiceName != "shop" {
 		t.Fatalf("service name = %q, want shop", proxy.ServiceName)
 	}
-	if proxy.GrpcAuthority != "www.apple.com" {
-		t.Fatalf("grpc authority = %q, want www.apple.com", proxy.GrpcAuthority)
+	if proxy.GrpcAuthority != "www.ebay.com" {
+		t.Fatalf("grpc authority = %q, want www.ebay.com", proxy.GrpcAuthority)
 	}
 	if !proxy.GrpcMultiMode {
 		t.Fatal("expected grpc multi mode")

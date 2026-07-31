@@ -35,9 +35,9 @@ SELECT
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "target": "www.apple.com:443",
+          "target": "www.ebay.com:443",
           "privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-          "serverNames": ["www.apple.com"],
+          "serverNames": ["www.ebay.com"],
           "shortIds": ["0123456789abcdef"]
         }
       }
@@ -63,9 +63,9 @@ SELECT
       "flow": "xtls-rprx-vision",
       "transport": "tcp",
       "security": "reality",
-      "reality_target": "www.apple.com:443",
+      "reality_target": "www.ebay.com:443",
       "reality_private_key": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-      "reality_server_names": ["www.apple.com"],
+      "reality_server_names": ["www.ebay.com"],
       "reality_short_ids": ["0123456789abcdef"]
     }$json$::jsonb,
     $json${}$json$::jsonb,
@@ -103,7 +103,7 @@ SELECT
         "users": [
           {
             "id": "00000000-0000-0000-0000-000000000000",
-            "flow": "xtls-rprx-vision",
+            "flow": "none",
             "email": "template"
           }
         ]
@@ -112,14 +112,14 @@ SELECT
         "network": "grpc",
         "security": "reality",
         "realitySettings": {
-          "target": "www.apple.com:443",
+          "target": "www.ebay.com:443",
           "privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-          "serverNames": ["www.apple.com"],
+          "serverNames": ["www.ebay.com"],
           "shortIds": ["0123456789abcdef"]
         },
         "grpcSettings": {
           "serviceName": "grpc",
-          "authority": "www.apple.com"
+          "authority": "www.ebay.com"
         }
       }
     }$json$::jsonb,
@@ -143,15 +143,15 @@ SELECT
       "tag": "vless-reality-grpc",
       "listen": "0.0.0.0",
       "port": 443,
-      "flow": "xtls-rprx-vision",
+      "flow": "none",
       "transport": "grpc",
       "security": "reality",
-      "reality_target": "www.apple.com:443",
+      "reality_target": "www.ebay.com:443",
       "reality_private_key": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-      "reality_server_names": ["www.apple.com"],
+      "reality_server_names": ["www.ebay.com"],
       "reality_short_ids": ["0123456789abcdef"],
       "grpc_service_name": "grpc",
-      "grpc_authority": "www.apple.com"
+      "grpc_authority": "www.ebay.com"
     }$json$::jsonb,
     $json${}$json$::jsonb,
     'Default VLESS Reality gRPC inbound. Replace the Reality key pair and camouflage target before production.',
@@ -196,9 +196,9 @@ SELECT
         "network": "xhttp",
         "security": "reality",
         "realitySettings": {
-          "target": "www.apple.com:443",
+          "target": "www.ebay.com:443",
           "privateKey": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-          "serverNames": ["www.apple.com"],
+          "serverNames": ["www.ebay.com"],
           "shortIds": ["0123456789abcdef"]
         },
         "xhttpSettings": {
@@ -239,9 +239,9 @@ SELECT
       "port": 443,
       "transport": "xhttp",
       "security": "reality",
-      "reality_target": "www.apple.com:443",
+      "reality_target": "www.ebay.com:443",
       "reality_private_key": "X3rxqzJ2ki0i6v22lwyM-NNQeGctkKCdv1C6lm3GjxA",
-      "reality_server_names": ["www.apple.com"],
+      "reality_server_names": ["www.ebay.com"],
       "reality_short_ids": ["0123456789abcdef"],
       "path": "/xhttp",
       "xhttp_mode": "stream-one",

@@ -45,7 +45,7 @@ function normalizeIPAddress(raw: string | null) {
     }
     return undefined;
   }
-  if (!value.includes(":") || !/^[0-9A-Fa-f:.]+$/.test(value)) {
+  if (!(value.includes(":") && /^[0-9A-Fa-f:.]+$/.test(value))) {
     return undefined;
   }
   try {

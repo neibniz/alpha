@@ -13,6 +13,19 @@ esac
 
 cd "$deploy_root"
 
+if [ ! -f .env ]; then
+  printf 'deployment environment is missing: %s/.env\n' "$deploy_root" >&2
+  exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+. ./.env
+set +a
+if [ -z "${ALPHA_USER_PUBLIC_ORIGIN:-}" ]; then
+  printf 'ALPHA_USER_PUBLIC_ORIGIN is required in %s/.env\n' "$deploy_root" >&2
+  exit 1
+fi
+
 for command in awk curl date docker grep jq sed stat; do
   if ! command -v "$command" >/dev/null 2>&1; then
     printf 'required command is missing: %s\n' "$command" >&2
@@ -89,7 +102,7 @@ printf 'service_health=ok\n'
 
 allowed_headers=$(curl -sS --max-time 5 -o /dev/null -D - \
   -X OPTIONS \
-  -H 'Origin: http://192.168.31.192:3000' \
+  -H "Origin: $ALPHA_USER_PUBLIC_ORIGIN" \
   -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: content-type,login-type' \
   http://127.0.0.1:27001/v1/auth/login)

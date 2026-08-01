@@ -2,7 +2,7 @@
 set -eu
 
 ROOT=${1:-/data/alpha}
-LAN_HOST=${2:-192.168.31.192}
+LAN_HOST=${2:-}
 
 case "$ROOT" in
   /data|/data/*) ;;
@@ -13,6 +13,10 @@ case "$ROOT" in
 esac
 
 case "$LAN_HOST" in
+  "")
+    echo "LAN host argument is required" >&2
+    exit 1
+    ;;
   *[!0-9A-Za-z.:-]*)
     echo "LAN host contains unsupported characters" >&2
     exit 1

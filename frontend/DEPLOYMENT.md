@@ -49,6 +49,7 @@ ALPHA_AUTH_COOKIE_SECURE
 ALPHA_PUBLIC_ORIGIN
 ALPHA_TRUST_PROXY_HEADERS
 ALPHA_CLIENT_IP_SOURCE
+ALPHA_ALLOWED_DEV_ORIGINS
 ```
 
 Admin defaults to same-origin `/api` calls. Set `ALPHA_ADMIN_UPSTREAM` to the
@@ -98,6 +99,21 @@ No certificate or signing secret is required. Keep the Server listener behind
 the configured reverse proxy, and make that proxy overwrite standard forwarding
 headers instead of appending caller-provided values. Server request logs and all
 authentication audit records then use the same resolved address.
+
+A custom Cloudflare Worker that proxies subscription requests directly to Server
+must overwrite the internal edge header instead of accepting it from the caller:
+
+```js
+const headers = new Headers(request.headers);
+headers.set(
+  "X-Alpha-Client-IP",
+  request.headers.get("CF-Connecting-IP") || ""
+);
+return fetch(upstream, { headers, method: request.method });
+```
+
+`ALPHA_ALLOWED_DEV_ORIGINS` is only for comma-separated hostnames that need to
+reach the local Next.js development server. Leave it unset in production.
 
 ## Vercel
 

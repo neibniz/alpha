@@ -1,6 +1,6 @@
 ---
 # Credentials and the privacy keyring belong in vault.yml or protected extra vars.
-server_domain: api.euler.icu
+server_domain: api.example.com
 server_image: ghcr.io/neibniz/alpha-server:latest
 server_bind_host: 127.0.0.1
 server_container_port: 27001

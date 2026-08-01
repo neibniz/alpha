@@ -38,9 +38,12 @@ Stage the two archives, their `.sha256` files, the server source, and the LAN de
   /data/alpha \
   /data/alpha/.staging/<release> \
   <release> \
-  192.168.31.192 \
+  192.0.2.10 \
   /api/subscribe
 ```
+
+`192.0.2.10` is a reserved documentation address. Replace it with the LAN hostname or address that
+users actually open; the activation script intentionally has no host default.
 
 Activation verifies both checksums, builds separate candidate server, user, and admin images,
 creates a PostgreSQL snapshot, and performs server, frontend, BFF, and same-origin checks. A failed

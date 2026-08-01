@@ -105,7 +105,7 @@ func TestRegistrationPublicIPPrefersObservedPublicAddress(t *testing.T) {
 }
 
 func TestRegistrationPublicIPAllowsReportedAddressBehindPrivateProxy(t *testing.T) {
-	value, err := registrationPublicIP("1.1.1.1", "192.168.31.1")
+	value, err := registrationPublicIP("1.1.1.1", "10.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}

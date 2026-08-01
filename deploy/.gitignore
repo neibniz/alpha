@@ -4,3 +4,5 @@
 .vault-password
 vault-password.txt
 inventories/**/group_vars/all/vault.yml
+inventories/**/group_vars/all/*.local.yml
+inventories/**/hosts.local.yml

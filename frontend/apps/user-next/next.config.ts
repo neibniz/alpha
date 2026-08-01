@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 import { buildSubscriptionProxyRewrites } from "./src/lib/subscription-proxy";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+const allowedDevOrigins = (process.env.ALPHA_ALLOWED_DEV_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -32,7 +36,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: isDevelopment ? ["192.168.31.192"] : undefined,
+  allowedDevOrigins:
+    isDevelopment && allowedDevOrigins.length ? allowedDevOrigins : undefined,
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,

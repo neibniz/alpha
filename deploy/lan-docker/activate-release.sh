@@ -5,7 +5,7 @@ set -eu
 ROOT=${1:-/data/alpha}
 STAGING=${2:-}
 RELEASE_ID=${3:-}
-LAN_HOST=${4:-192.168.31.192}
+LAN_HOST=${4:-}
 SUBSCRIBE_PATH=${5:-/api/subscribe}
 
 case "$ROOT" in

@@ -64,6 +64,15 @@ Production uses one host inventory. A physical machine is declared once and then
 service groups it runs. This avoids duplicate inventory aliases for the same IP and keeps dynamic
 xray-agent matching deterministic.
 
+The committed inventory contains only reserved example domains and TEST-NET addresses. Never put
+real domains, host addresses, account emails, or private-key names in tracked inventory files.
+For a local deployment, copy `hosts.yml` to the ignored `hosts.local.yml` and place variable
+overrides in the ignored `group_vars/all/99-production.local.yml`. Semaphore users should keep the
+same values in protected inventory and environment settings.
+
+For example, `99-production.local.yml` is the appropriate place for `server_domain`, `user_domain`,
+`admin_domain`, `caddy_email`, and `ansible_ssh_private_key_file` overrides.
+
 ```text
 inventories/prod/
   hosts.yml
@@ -84,7 +93,7 @@ port 22, set `ansible_port` once on the host:
 all:
   hosts:
     alpha-01:
-      ansible_host: 1.2.3.4
+      ansible_host: 192.0.2.10
       ansible_user: root
       ansible_port: 2222
   children:
@@ -101,6 +110,9 @@ all:
 Run commands from the repository's `deploy` directory. Its `ansible.cfg` selects
 `inventories/prod/hosts.yml` automatically. Validate inventory, playbooks, rendered service
 configuration, Compose files, Caddy sites, and shell scripts before creating a Semaphore task:
+
+When using an ignored local inventory, append
+`-i inventories/prod/hosts.local.yml` to `ansible-inventory` and `ansible-playbook` commands.
 
 GitHub's `Deployment validation` workflow overrides this with `inventories/prod/ci.yml`. The CI
 inventory defines the required groups but contains no target hosts, so validation never connects

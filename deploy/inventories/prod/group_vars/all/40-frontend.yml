@@ -1,6 +1,6 @@
 ---
-user_domain: user.euler.icu
-admin_domain: admin.euler.icu
+user_domain: user.example.com
+admin_domain: admin.example.com
 
 frontend_package_enabled: true
 frontend_release_version: frontend/v1.4.2

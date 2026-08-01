@@ -46,7 +46,7 @@ describe("subscription configuration data", () => {
   it("accepts concrete hostnames and valid IPv4 addresses", () => {
     expect(isValidDomainLine("subscribe.example.com")).toBe(true);
     expect(isValidDomainLine("localhost")).toBe(true);
-    expect(isValidDomainLine("192.168.31.192")).toBe(true);
+    expect(isValidDomainLine("192.0.2.192")).toBe(true);
   });
 
   it("rejects wildcards, protocols, ports, paths, and malformed hostnames", () => {

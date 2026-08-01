@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lib/pq"
 	"github.com/neibniz/alpha/server/internal/model/node"
 	modelSubscribe "github.com/neibniz/alpha/server/internal/model/subscribe"
 	"github.com/neibniz/alpha/server/internal/model/user"
@@ -18,7 +19,6 @@ import (
 	"github.com/neibniz/alpha/server/pkg/timex"
 	"github.com/neibniz/alpha/server/pkg/tool"
 	"github.com/neibniz/alpha/server/pkg/xerr"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -317,22 +317,18 @@ func QueryAvailableNodesForSubscribeDetailsWithCache(ctx context.Context, svcCtx
 
 // HydrateSubscribeProductsForDetails attaches lightweight product selector data
 // to subscription details so callers that render many subscriptions avoid one
-// product lookup per row.
+// product lookup per row. Current products define runtime node access; purchase
+// snapshots are only a fallback for products that no longer exist.
 func HydrateSubscribeProductsForDetails(ctx context.Context, svcCtx *svc.ServiceContext, items []*user.SubscribeDetails) error {
 	if len(items) == 0 {
 		return nil
 	}
 	missingIDs := newSubscribeProfileIDSet(len(items))
-	snapshotCache := newSubscribeSnapshotProductCache(len(items))
 	for _, item := range items {
 		if item == nil {
 			continue
 		}
 		if hasProductSelection(item.Subscribe) {
-			continue
-		}
-		if snapshotSub, ok := snapshotCache.Product(item.ProductSnapshot); ok {
-			item.Subscribe = snapshotSub
 			continue
 		}
 		if item.SubscribeId <= 0 {
@@ -341,25 +337,28 @@ func HydrateSubscribeProductsForDetails(ctx context.Context, svcCtx *svc.Service
 		missingIDs.Add(item.SubscribeId)
 	}
 	ids := missingIDs.Values()
-	if len(ids) == 0 || svcCtx == nil || svcCtx.DB == nil {
-		return nil
-	}
-
 	var products []modelSubscribe.Subscribe
-	if err := svcCtx.DB.WithContext(ctx).
-		Model(&modelSubscribe.Subscribe{}).
-		Select(subscribeProductSelectorColumns).
-		Where("id IN ?", ids).
-		Find(&products).Error; err != nil {
-		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe product selectors error: %v", err)
+	if len(ids) > 0 && svcCtx != nil && svcCtx.DB != nil {
+		if err := svcCtx.DB.WithContext(ctx).
+			Model(&modelSubscribe.Subscribe{}).
+			Select(subscribeProductSelectorColumns).
+			Where("id IN ?", ids).
+			Find(&products).Error; err != nil {
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe product selectors error: %v", err)
+		}
 	}
 	productIndex := newSubscribeProductSelectorIndex(products)
+	snapshotCache := newSubscribeSnapshotProductCache(len(items))
 	for _, item := range items {
 		if item == nil || hasProductSelection(item.Subscribe) {
 			continue
 		}
 		if product, ok := productIndex.Find(item.SubscribeId); ok {
 			item.Subscribe = product
+			continue
+		}
+		if snapshotSub, ok := snapshotCache.Product(item.ProductSnapshot); ok {
+			item.Subscribe = snapshotSub
 		}
 	}
 	return nil
@@ -489,10 +488,13 @@ func subscribeProductForDetails(ctx context.Context, svcCtx *svc.ServiceContext,
 	if hasProductSelection(userSub.Subscribe) {
 		return userSub.Subscribe, nil
 	}
+	if svcCtx != nil && svcCtx.SubscribeModel != nil {
+		return getCurrentSubscribeProduct(ctx, svcCtx, userSub.ToSubscribe())
+	}
 	if snapshotSub, ok := ordersnapshot.SubscribeModel(userSub.ProductSnapshot); ok {
 		return snapshotSub, nil
 	}
-	return getCurrentSubscribeProduct(ctx, svcCtx, userSub.ToSubscribe())
+	return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseQueryError), "subscribe product selector is unavailable")
 }
 
 func hasProductSelection(product *modelSubscribe.Subscribe) bool {

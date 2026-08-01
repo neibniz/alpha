@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/neibniz/alpha/server/internal/model/node"
 	modelSubscribe "github.com/neibniz/alpha/server/internal/model/subscribe"
 	"github.com/neibniz/alpha/server/internal/model/user"
@@ -15,6 +16,7 @@ import (
 	"github.com/neibniz/alpha/server/internal/types"
 	"github.com/neibniz/alpha/server/internal/viewutil"
 	"github.com/neibniz/alpha/server/internal/xraytemplate"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -41,6 +43,56 @@ func TestQueryAvailableNodesForSubscribeDetailsUsesSnapshotFallback(t *testing.T
 	}
 	if len(nodes) != 0 {
 		t.Fatalf("QueryAvailableNodesForSubscribeDetails() returned %d nodes, want 0", len(nodes))
+	}
+}
+
+func TestSubscribeProductForDetailsPrefersCurrentProductAndFallsBackWhenDeleted(t *testing.T) {
+	ctx := context.Background()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&modelSubscribe.Subscribe{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&modelSubscribe.Subscribe{Id: 10, Name: "current", Nodes: "1,2", Sort: 1}).Error; err != nil {
+		t.Fatal(err)
+	}
+	mr := miniredis.RunT(t)
+	rds := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rds.Close() })
+	service := &svc.ServiceContext{
+		DB:             db,
+		Redis:          rds,
+		SubscribeModel: modelSubscribe.NewModel(db, rds),
+	}
+	snapshot := ordersnapshot.Marshal(ordersnapshot.Snapshot{
+		Kind:  ordersnapshot.KindSubscribe,
+		ID:    10,
+		Name:  "snapshot",
+		Nodes: []int64{1},
+	})
+
+	current, err := subscribeProductForDetails(ctx, service, &user.SubscribeDetails{
+		SubscribeId:     10,
+		ProductSnapshot: snapshot,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current == nil || current.Id != 10 || current.Nodes != "1,2" {
+		t.Fatalf("current product selector = %#v, want current nodes", current)
+	}
+
+	fallback, err := subscribeProductForDetails(ctx, service, &user.SubscribeDetails{
+		SubscribeId:     404,
+		ProductSnapshot: snapshot,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fallback == nil || fallback.Nodes != "1" || fallback.Name != "snapshot" {
+		t.Fatalf("deleted product selector = %#v, want snapshot fallback", fallback)
 	}
 }
 
@@ -83,6 +135,8 @@ func TestHydrateSubscribeProductsForDetailsBatchesMissingSelectors(t *testing.T)
 		{Id: 4, SubscribeId: 12, ProductSnapshot: snapshot},
 		{Id: 5, SubscribeId: 13, Subscribe: &modelSubscribe.Subscribe{}},
 		{Id: 6, SubscribeId: 12, ProductSnapshot: " " + snapshot + " "},
+		{Id: 7, SubscribeId: 404, ProductSnapshot: snapshot},
+		{Id: 8, SubscribeId: 404, ProductSnapshot: " " + snapshot + " "},
 	}
 
 	if err := HydrateSubscribeProductsForDetails(ctx, &svc.ServiceContext{DB: db}, items); err != nil {
@@ -100,14 +154,20 @@ func TestHydrateSubscribeProductsForDetailsBatchesMissingSelectors(t *testing.T)
 	if items[2].Subscribe == nil || items[2].Subscribe.Id != 11 || items[2].Subscribe.Nodes != "3" || items[2].Subscribe.NodeTags != "premium" {
 		t.Fatalf("second product selector not hydrated: %#v", items[2].Subscribe)
 	}
-	if items[3].Subscribe == nil || items[3].Subscribe.Nodes != "99" || items[3].Subscribe.NodeTags != "snapshot" {
-		t.Fatalf("snapshot selector should take precedence over current product: %#v", items[3].Subscribe)
+	if items[3].Subscribe == nil || items[3].Subscribe.Id != 12 || items[3].Subscribe.Nodes != "current" || items[3].Subscribe.NodeTags != "current" {
+		t.Fatalf("current product selector should take precedence over snapshot: %#v", items[3].Subscribe)
 	}
 	if items[4].Subscribe == nil || items[4].Subscribe.Id != 13 || items[4].Subscribe.Nodes != "13" || items[4].Subscribe.NodeTags != "fallback" {
 		t.Fatalf("empty preloaded product should fall back to current selector: %#v", items[4].Subscribe)
 	}
 	if items[5].Subscribe != items[3].Subscribe {
-		t.Fatalf("duplicate snapshot selector should reuse cached product pointer")
+		t.Fatalf("duplicate subscribe id should reuse current selector pointer")
+	}
+	if items[6].Subscribe == nil || items[6].Subscribe.Nodes != "99" || items[6].Subscribe.NodeTags != "snapshot" {
+		t.Fatalf("deleted product should use snapshot selector: %#v", items[6].Subscribe)
+	}
+	if items[7].Subscribe != items[6].Subscribe {
+		t.Fatalf("duplicate deleted product snapshot should reuse cached pointer")
 	}
 }
 

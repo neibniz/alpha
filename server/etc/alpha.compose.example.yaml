@@ -1,0 +1,47 @@
+# Linux single-host Docker Compose example. Secrets are injected from
+# ./secrets through NAME_FILE environment variables in docker-compose.yml.
+
+Host: "127.0.0.1"
+Port: 8080
+
+HTTP:
+  AllowedOrigins:
+    - "https://user.example.com"
+    - "https://admin.example.com"
+  TrustedProxies:
+    - "127.0.0.1"
+    - "::1"
+
+Logger:
+  Mode: console
+  Level: info
+
+JwtAuth:
+  AccessExpire: 3600
+
+Postgres:
+  Addr: "127.0.0.1:5432"
+  Username: "alpha"
+  Dbname: "alpha"
+  Config: "sslmode=disable&TimeZone=Asia/Shanghai"
+  MaxOpenConns: 100
+
+Redis:
+  Host: "127.0.0.1:6379"
+
+ClickHouse:
+  Enabled: true
+  Addr: "127.0.0.1:9000"
+  Database: "alpha_analytics"
+  Username: "alpha"
+
+GeoIP:
+  Enable: true
+  DatabasePath: "/usr/share/alpha/geoip/dbip-city-lite.mmdb"
+
+Privacy:
+  Enabled: true
+  KeyFile: "/run/secrets/privacy-keyring.json"
+
+Administrator:
+  Email: "admin@example.com"

@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/github/license/neibniz/alpha)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.5-blue)](https://go.dev/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/neibniz/alpha/server)](https://goreportcard.com/report/github.com/neibniz/alpha/server)
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/neibniz/alpha/server.yml)](../.github/workflows/server.yml)
@@ -20,7 +20,7 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
 ### Key Features
 
 - **Multi-Protocol Support**: Supports Shadowsocks, V2Ray, Trojan, and more.
-- **Privacy First**: No user logs are collected, ensuring privacy and security.
+- **Privacy Controls**: Supports encrypted private fields, masked log views, and explicit retention policies.
 - **Minimalist Design**: Simple yet powerful, with complete business logic.
 - **User Management**: Full authentication and authorization system.
 - **Subscription System**: Manage user subscriptions and service provisioning.
@@ -34,7 +34,7 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
 
 ### Prerequisites
 
-- **Go**: 1.21 or higher
+- **Go**: 1.26.5 (the toolchain pinned by `go.mod`)
 - **Docker**: Optional, for containerized deployment
 - **Git**: For cloning the repository
 
@@ -67,47 +67,26 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
    ./alpha-server-linux-amd64 run --config etc/alpha.yaml
    ```
 
-### 🐳 Docker Deployment
+### Docker Compose Deployment
 
-1. **Build the Docker image**:
-   ```bash
-   docker buildx build --platform linux/amd64 -t alpha-server:latest .
-   ```
+The maintained Linux single-host example starts Server, PostgreSQL, Redis, and
+single-node ClickHouse with loopback-only listeners, read-only secret mounts,
+health-gated startup, and bounded container logs.
 
-   The build downloads the version pinned in
-   `assets/geoip/dbip-city-lite.env`, verifies its SHA256 checksum, and
-   includes it in the image. Container startup never downloads GeoIP data.
-   Set `ALPHA_GEOIP_ENABLED=false` to disable lookups, or override
-   `ALPHA_GEOIP_DATABASE_PATH` to use another mounted MMDB file.
+```bash
+cp .env.compose.example .env
+cp etc/alpha.compose.example.yaml etc/alpha.compose.yaml
+```
 
-2. **Run the container**:
-   ```bash
-   docker run --rm -p 8080:8080 -v $(pwd)/etc:/app/etc alpha-server:latest
-   ```
+Follow the complete [Docker Compose deployment guide](doc/docker-compose.md)
+before running `docker compose up -d`. The guide covers secret generation,
+initial migrations, reverse proxying, health checks, upgrades, rollback, and
+backups. A [Chinese guide](doc/docker-compose-zh.md) is also available.
 
-3. **Use Docker Compose** (create `docker-compose.yml`):
-   ```yaml
-   version: '3.8'
-   services:
-     alpha-server:
-       image: alpha-server:latest
-       ports:
-         - "8080:8080"
-       volumes:
-         - ./etc:/app/etc
-       environment:
-         - TZ=Asia/Shanghai
-   ```
-   Run:
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **Pull from Docker Hub** (after CI/CD publishes):
-   ```bash
-   docker pull alpha/alpha-server:latest
-   docker run --rm -p 8080:8080 alpha/alpha-server:latest
-   ```
+GitHub Actions publishes Linux AMD64 and ARM64 images to
+`ghcr.io/neibniz/alpha-server`. Pin a release tag or digest in production. The
+image already contains a checksum-verified GeoIP database and does not download
+it during container startup.
 
 ## 📖 API Documentation
 

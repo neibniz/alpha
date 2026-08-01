@@ -41,6 +41,7 @@ Administrator:
 #   ALPHA_CLICKHOUSE_PASSWORD
 #   ALPHA_NODE_SECRET
 #   ALPHA_NODE_DEPLOY_SECRET
+#   ALPHA_FORWARDER_BOOTSTRAP_SECRET
 #   ALPHA_ADMIN_PASSWORD
 #
 # Existing YAML fields remain supported for backward compatibility.

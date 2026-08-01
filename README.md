@@ -25,8 +25,19 @@ cd forwared && go test ./...
 cd deploy && make check
 ```
 
-Production deployment is managed by `deploy/` and targets `/data` on managed
-hosts. See [`deploy/README.md`](deploy/README.md) for inventory and secret setup.
+## Deployment
+
+Choose one deployment path and keep its configuration as the source of truth:
+
+| Scenario | Guide |
+| --- | --- |
+| Server with PostgreSQL, Redis, and ClickHouse on one Linux host | [Server Docker Compose](server/doc/docker-compose.md) / [中文](server/doc/docker-compose-zh.md) |
+| Full stack or multi-host production deployment under `/data` | [Ansible deployment](deploy/README.md) |
+| User/Admin containers, Vercel, or Cloudflare | [Frontend deployment](frontend/DEPLOYMENT.md) |
+
+The Server Compose example is the shortest production-oriented path. Ansible is
+recommended when Server, frontends, agents, forwarders, or data services need
+to be managed across multiple hosts.
 
 ## Releases
 

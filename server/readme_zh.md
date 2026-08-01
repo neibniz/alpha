@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/github/license/neibniz/alpha)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.5-blue)](https://go.dev/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/neibniz/alpha/server)](https://goreportcard.com/report/github.com/neibniz/alpha/server)
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/neibniz/alpha/server.yml)](../.github/workflows/server.yml)
@@ -34,7 +34,7 @@ Alpha 服务端是 Alpha 项目的后端组件，为代理服务提供强大的 
 ### 核心特性
 
 - **多协议支持**：支持 Shadowsocks、V2Ray、Trojan 等多种加密协议。
-- **隐私保护**：不收集用户日志，确保隐私和安全。
+- **隐私保护**：支持隐私字段加密、日志默认脱敏和明确的数据保留策略。
 - **极简设计**：简单易用，保留完整的业务逻辑。
 - **用户管理**：完善的认证和授权系统。
 - **订阅管理**：处理用户订阅和服务开通。
@@ -48,7 +48,7 @@ Alpha 服务端是 Alpha 项目的后端组件，为代理服务提供强大的 
 
 ### 前提条件
 
-- **Go**：1.21 或更高版本
+- **Go**：1.26.5（以 `go.mod` 固定的工具链为准）
 - **Docker**：可选，用于容器化部署
 - **Git**：用于克隆仓库
 
@@ -81,46 +81,23 @@ Alpha 服务端是 Alpha 项目的后端组件，为代理服务提供强大的 
    ./alpha-server-linux-amd64 run --config etc/alpha.yaml
    ```
 
-### 🐳 Docker 部署
+### Docker Compose 部署
 
-1. **构建 Docker 镜像**：
-   ```bash
-   docker buildx build --platform linux/amd64 -t alpha-server:latest .
-   ```
+仓库维护的 Linux 单机示例会同时启动 Server、PostgreSQL、Redis 和单节点
+ClickHouse，并提供仅回环监听、只读密钥挂载、依赖健康检查和日志轮转基线。
 
-   构建过程会下载 `assets/geoip/dbip-city-lite.env` 中固定的数据库版本，
-   校验 SHA256 后写入镜像，容器启动时不会再下载 GeoIP 数据。可通过
-   `ALPHA_GEOIP_ENABLED=false` 禁用查询，或使用
-   `ALPHA_GEOIP_DATABASE_PATH` 指向挂载的其他 MMDB 文件。
+```bash
+cp .env.compose.example .env
+cp etc/alpha.compose.example.yaml etc/alpha.compose.yaml
+```
 
-2. **运行容器**：
-   ```bash
-   docker run --rm -p 8080:8080 -v $(pwd)/etc:/app/etc alpha-server:latest
-   ```
+执行 `docker compose up -d` 前，请完整阅读
+[Docker Compose 部署指南](doc/docker-compose-zh.md)。其中包含密钥生成、首次迁移、反向
+代理、健康检查、升级回滚和备份流程；同时提供[英文版本](doc/docker-compose.md)。
 
-3. **使用 Docker Compose**（创建 `docker-compose.yml`）：
-   ```yaml
-   version: '3.8'
-   services:
-     alpha-server:
-       image: alpha-server:latest
-       ports:
-         - "8080:8080"
-       volumes:
-         - ./etc:/app/etc
-       environment:
-         - TZ=Asia/Shanghai
-   ```
-   运行：
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **从 Docker Hub 拉取**（CI/CD 发布后）：
-   ```bash
-   docker pull alpha/alpha-server:latest
-   docker run --rm -p 8080:8080 alpha/alpha-server:latest
-   ```
+GitHub Actions 会向 `ghcr.io/neibniz/alpha-server` 发布 Linux AMD64 和 ARM64 镜像。
+生产环境应固定发布版本或镜像摘要。镜像已经包含经过校验的 GeoIP 数据库，启动时不会
+联网下载。
 
 ## 📖 API 文档
 

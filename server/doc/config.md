@@ -93,6 +93,7 @@ Keep sensitive values out of `alpha.yaml`. Supply them as environment variables 
 | `ClickHouse.Password` | `ALPHA_CLICKHOUSE_PASSWORD` |
 | `Node.NodeSecret` | `ALPHA_NODE_SECRET` |
 | `Node.NodeDeploySecret` | `ALPHA_NODE_DEPLOY_SECRET` |
+| `Forwarder.BootstrapSecret` | `ALPHA_FORWARDER_BOOTSTRAP_SECRET` |
 | `Administrator.Password` | `ALPHA_ADMIN_PASSWORD` |
 
 Every variable supports a matching `_FILE` form:
@@ -108,7 +109,9 @@ be used for new deployments.
 
 ## Deployment Requirements
 
-- Set configuration and secret file permissions to `0600`.
+- Set ordinary configuration and secret mounts to `0600`. The Docker Compose
+  example sets its secret files to owner `65532:65532` and mode `0400` so the
+  unprivileged Server can read them without allowing group or other access.
 - Use at least 32 random characters for JWT and node secrets.
 - Configure both node secrets together; leaving both empty disables node-authenticated operations.
 - Use at least 20 random characters for PostgreSQL, Redis, and ClickHouse passwords.

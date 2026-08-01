@@ -3,6 +3,11 @@
 *-dev.yaml
 *.local.yaml
 /etc/alpha.yaml
+/etc/alpha.compose.yaml
+/secrets/
+/data/
+/backup/
+/.env
 /test/
 *.log
 .DS_Store

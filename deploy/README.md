@@ -9,6 +9,11 @@ This directory contains the production deployment path for Semaphore UI + Ansibl
 - Package mode serves Admin through Caddy and runs User in a Bun runtime. Image mode runs `alpha-frontend-admin` and `alpha-frontend-user` as separate containers behind Caddy.
 - Dependencies, server, user frontend, and admin frontend can be deployed on one host or split across inventory groups.
 
+For a Server-only single-host installation, use the maintained
+[Docker Compose guide](../server/doc/docker-compose.md) instead. Do not combine
+the hand-managed Compose example and Ansible roles on the same service paths;
+choose one owner for configuration, secrets, upgrades, and rollback.
+
 ## Topology Variables
 
 Set these in Semaphore UI extra vars or environment variables:

@@ -90,6 +90,7 @@ Logger:
 | `ClickHouse.Password` | `ALPHA_CLICKHOUSE_PASSWORD` |
 | `Node.NodeSecret` | `ALPHA_NODE_SECRET` |
 | `Node.NodeDeploySecret` | `ALPHA_NODE_DEPLOY_SECRET` |
+| `Forwarder.BootstrapSecret` | `ALPHA_FORWARDER_BOOTSTRAP_SECRET` |
 | `Administrator.Password` | `ALPHA_ADMIN_PASSWORD` |
 
 每个变量都支持对应的 `_FILE` 形式，例如：
@@ -104,7 +105,8 @@ ALPHA_ADMIN_PASSWORD_FILE=/run/secrets/admin-password
 
 ## 部署注意事项
 
-- 配置文件和密钥文件权限应为 `0600`。
+- 普通配置和密钥挂载应使用 `0600`。Docker Compose 示例将 secret 文件设置为
+  `65532:65532`、模式 `0400`，使非 root Server 可读取且不允许组或其他用户访问。
 - JWT 和节点密钥至少使用 32 个随机字符。
 - PostgreSQL、Redis 和 ClickHouse 密码至少使用 20 个随机字符。
 - 不要在日志、Compose 输出或版本控制中记录密钥内容。

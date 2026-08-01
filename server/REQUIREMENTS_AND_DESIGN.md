@@ -9,16 +9,16 @@ Alpha Server 是 Alpha 开源代理面板的后端服务组件，基于 Go 语�
 - 提供代理服务的用户管理、订阅管理、节点管理、支付集成、订单管理等核心后端能力
 - 为 Alpha Web（前端）、Alpha User Web（用户端）、Alpha Admin Web（管理端）提供 RESTful API
 - 支持多协议代理服务（Shadowsocks、V2Ray、Trojan 等）
-- 坚持隐私优先原则，不收集用户日志
+- 坚持隐私优先原则，对必要的访问与审计数据加密存储并默认脱敏展示
 
 ### 1.2 技术栈
 
 | 层级 | 技术选型 |
 |------|---------|
-| 语言 | Go 1.23+ |
+| 语言 | Go 1.26.5 |
 | Web 框架 | Gin |
-| ORM | GORM（MySQL 驱动） |
-| 数据库 | MySQL |
+| ORM | GORM（PostgreSQL 驱动） |
+| 数据库 | PostgreSQL |
 | 缓存/Session | Redis |
 | 任务队列 | Asynq（基于 Redis） |
 | 定时调度 | Asynq Scheduler |
@@ -251,7 +251,7 @@ Alpha Server
 │  ┌────┴──────────────┴──────────────┴───────────────┴──────┐ │
 │  │                  Service Context (SVC)                   │ │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────────┐│ │
-│  │  │  Config  │ │  Redis  │ │  MySQL  │ │   Model Layer   ││ │
+│  │  │  Config  │ │  Redis  │ │PostgreSQL│ │  Model Layer   ││ │
 │  │  └─────────┘ └─────────┘ └─────────┘ └─────────────────┘│ │
 │  └──────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
@@ -358,7 +358,7 @@ Client → Nginx/负载均衡 → Gin Router → Middleware Chain
   → Handler（参数绑定）
     → Logic（业务逻辑）
       → Model（数据持久层）
-        → MySQL / Redis
+        → PostgreSQL / Redis
       ← Model
     ← Logic
   ← Handler（响应格式化）
@@ -451,7 +451,7 @@ xray-agent → POST /v1/server/push（上报用户流量）
 - 使用 GORM 作为 ORM 框架
 - 支持软删除（`gorm.io/plugin/soft_delete`）
 - 自动迁移（`initialize/migrate`）
-- 支持 MySQL 驱动
+- 支持 PostgreSQL 驱动
 
 ---
 
@@ -468,7 +468,7 @@ xray-agent → POST /v1/server/push（上报用户流量）
 | Server | Host/Port/Debug/TLS |
 | JwtAuth | JWT密钥/过期时间 |
 | Logger | 日志级别/格式/输出路径 |
-| MySQL | 数据库连接配置 |
+| PostgreSQL | 数据库连接配置 |
 | Redis | 缓存连接配置 |
 | Site | 站点名称/描述/Logo/关键词/CustomHTML/CustomData |
 | Node | 节点密钥/拉取间隔/推送间隔/流量上报阈值/IP策略/DNS/出口规则 |
@@ -564,7 +564,7 @@ ServiceGroup
               ┌────────┘   │   └────────┐
               ▼            ▼            ▼
         ┌─────────┐ ┌──────────┐ ┌──────────┐
-        │  MySQL  │ │  Redis   │ │ 节点集群  │
+        │PostgreSQL│ │  Redis   │ │ 节点集群  │
         └─────────┘ └──────────┘ └──────────┘
 ```
 
@@ -574,8 +574,8 @@ ServiceGroup
 |------|------|
 | 源码编译 | `make linux-amd64` 等，支持多平台交叉编译 |
 | Docker | `docker buildx build` 构建镜像，单容器运行 |
-| Docker Compose | 编排 MySQL + Redis + Server 一起运行 |
-| Docker Hub | 官方镜像: `alpha/alpha-server:latest` |
+| Docker Compose | 编排 PostgreSQL + Redis + ClickHouse + Server，详见 `doc/docker-compose-zh.md` |
+| GHCR | 官方镜像：`ghcr.io/neibniz/alpha-server` |
 
 ### 8.3 支持平台
 
@@ -662,10 +662,10 @@ server/
 | 需求项 | 描述 |
 |--------|------|
 | 性能 | 使用 Gin 高性能框架，Asynq 支持并发20处理任务 |
-| 安全 | JWT认证 + NodeSecret节点认证 + 设备指纹 + Turnstile人机验证 |
+| 安全 | JWT 认证 + 节点认证 + 登录限流 + Turnstile 人机验证 |
 | 可扩展 | 适配器模式支持多客户端，支付平台可插拔扩展 |
 | 可观测 | OpenTelemetry 链路追踪 + Zap 结构化日志 |
 | 可部署 | 支持多平台交叉编译 + Docker/Docker Compose |
-| 隐私 | 不收集用户日志，加密传输，支持 TLS |
-| 高可用 | Redis Session 共享，MySQL 数据持久化，服务优雅关闭 |
+| 隐私 | 必要日志默认脱敏，隐私字段加密存储，支持 TLS 与审计访问控制 |
+| 高可用 | Redis Session 共享，PostgreSQL 数据持久化，服务优雅关闭 |
 | 国际化 | 支持中英文文档，货币多币种支持 |

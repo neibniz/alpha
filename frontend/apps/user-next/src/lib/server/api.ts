@@ -57,6 +57,7 @@ async function requestUpstream<T>(
   init: RequestInit | undefined,
   options: {
     authenticated: boolean;
+    cache?: RequestCache;
     revalidate?: number;
     tags?: string[];
   }
@@ -81,13 +82,16 @@ async function requestUpstream<T>(
     attachEdgeClientIPHeader(upstreamHeaders, requestHeaders);
   }
 
+  const cacheMode =
+    options.cache ?? (options.authenticated ? "no-store" : "force-cache");
   const response = await fetch(upstreamURL, {
     ...init,
-    cache: options.authenticated ? "no-store" : "force-cache",
+    cache: cacheMode,
     headers: upstreamHeaders,
-    next: options.authenticated
-      ? undefined
-      : { revalidate: options.revalidate ?? 60, tags: options.tags },
+    next:
+      options.authenticated || cacheMode === "no-store"
+        ? undefined
+        : { revalidate: options.revalidate ?? 60, tags: options.tags },
     signal: init?.signal || AbortSignal.timeout(8000),
   });
   const raw = await response.text();
@@ -118,8 +122,7 @@ const authenticatedRequest: ApiRequester = <T>(
 const siteConfigRequest: ApiRequester = <T>(path: string, init?: RequestInit) =>
   requestUpstream<T>(path, init, {
     authenticated: false,
-    revalidate: 300,
-    tags: ["site-config"],
+    cache: "no-store",
   });
 
 const publicProductsRequest: ApiRequester = <T>(

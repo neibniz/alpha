@@ -50,10 +50,16 @@ import { toast } from "sonner";
 import {
   getCurrentUser,
   getMembershipCard,
+  getSiteConfig,
   getSubscriptions,
 } from "@/lib/client-api";
 import { formatBytes, percentOf } from "@/lib/format";
 import type { Subscription } from "@/lib/models";
+import {
+  DEFAULT_SITE_NAME,
+  SITE_CONFIG_QUERY_KEY,
+  SITE_CONFIG_STALE_TIME,
+} from "@/lib/site-brand";
 import { AlphaLogo } from "./alpha-logo";
 
 const primaryNavigation = [
@@ -352,13 +358,19 @@ export function AppShell({
     queryKey: ["alpha-membership-card"],
     staleTime: 30_000,
   });
+  const siteConfig = useQuery({
+    queryFn: getSiteConfig,
+    queryKey: SITE_CONFIG_QUERY_KEY,
+    staleTime: SITE_CONFIG_STALE_TIME,
+  });
   const identifier =
     user.data?.authMethods.find((method) => method.type === "email")
       ?.identifier ||
     user.data?.authMethods[0]?.identifier ||
     (user.data ? `用户 #${user.data.id}` : "账户");
   const initial = identifier.trim().charAt(0).toUpperCase() || "A";
-  const pageLabel = routeLabels[pathname] || "Alpha";
+  const pageLabel = routeLabels[pathname] || "工作台";
+  const siteName = siteConfig.data?.siteName || DEFAULT_SITE_NAME;
   const selectedSubscriptionId = Number(searchParams.get("subscription")) || 0;
 
   const logout = async () => {
@@ -442,8 +454,8 @@ export function AppShell({
               </TooltipContent>
             </Tooltip>
             <div className="flex min-w-0 items-center gap-3 text-sm">
-              <span className="hidden text-muted-foreground sm:inline">
-                Alpha
+              <span className="hidden max-w-36 truncate text-muted-foreground sm:inline">
+                {siteName}
               </span>
               <span className="hidden text-muted-foreground sm:inline">/</span>
               <strong className="truncate font-medium">{pageLabel}</strong>

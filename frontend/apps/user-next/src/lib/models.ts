@@ -131,8 +131,12 @@ export type OrderSummary = {
 
 export type SiteConfig = {
   currencySymbol: string;
+  keywords: string;
   oauthMethods: string[];
   panDomain: boolean;
+  siteDescription: string;
+  siteLogo: string;
+  siteName: string;
   subscribeDomain: string;
   subscribePath: string;
 };

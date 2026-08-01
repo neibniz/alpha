@@ -6,6 +6,7 @@ import { authCookieName, isServerDemoMode } from "@/lib/runtime";
 import {
   getServerCurrentUser,
   getServerMembershipCard,
+  getServerSiteConfig,
   getServerSubscriptions,
   isServerAuthError,
 } from "@/lib/server/api";
@@ -41,6 +42,11 @@ export default async function AuthenticatedLayout({
           queryFn: getServerMembershipCard,
           queryKey: ["alpha-membership-card"],
           staleTime: 30_000,
+        },
+        {
+          queryFn: getServerSiteConfig,
+          queryKey: ["alpha-site-config"],
+          staleTime: 60_000,
         },
       ]}
     >

@@ -33,6 +33,12 @@ import { toast } from "sonner";
 import { AlphaLogo } from "@/components/alpha-logo";
 import { getSiteConfig } from "@/lib/client-api";
 import { isClientDemoMode } from "@/lib/runtime";
+import {
+  DEFAULT_SITE_DESCRIPTION,
+  DEFAULT_SITE_NAME,
+  SITE_CONFIG_QUERY_KEY,
+  SITE_CONFIG_STALE_TIME,
+} from "@/lib/site-brand";
 
 type AuthMode = "login" | "register" | "reset";
 
@@ -56,8 +62,8 @@ export function AuthScreen() {
   const router = useRouter();
   const config = useQuery({
     queryFn: getSiteConfig,
-    queryKey: ["alpha-site-config"],
-    staleTime: 300_000,
+    queryKey: SITE_CONFIG_QUERY_KEY,
+    staleTime: SITE_CONFIG_STALE_TIME,
   });
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -205,15 +211,16 @@ export function AuthScreen() {
   };
 
   const githubEnabled = config.data?.oauthMethods.includes("github") ?? true;
+  const siteName = config.data?.siteName || DEFAULT_SITE_NAME;
   const title =
     mode === "login"
-      ? "登录 Alpha"
+      ? `登录 ${siteName}`
       : mode === "register"
-        ? "创建 Alpha 账户"
+        ? `创建 ${siteName} 账户`
         : "重置密码";
   const description =
     mode === "login"
-      ? "继续管理你的订阅和实时流量。"
+      ? config.data?.siteDescription || DEFAULT_SITE_DESCRIPTION
       : mode === "register"
         ? "一个账户可以管理多个独立订阅。"
         : "验证邮箱后设置新的账户密码。";
@@ -426,7 +433,7 @@ export function AuthScreen() {
         </Card>
       </main>
       <footer className="px-4 pb-7 text-center text-muted-foreground text-xs leading-5">
-        继续操作即表示你同意 Alpha 的服务条款和隐私政策。
+        继续操作即表示你同意 {siteName} 的服务条款和隐私政策。
       </footer>
     </div>
   );

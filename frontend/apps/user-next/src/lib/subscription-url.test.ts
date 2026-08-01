@@ -9,8 +9,12 @@ const subscription = {
 
 const config: SiteConfig = {
   currencySymbol: "¥",
+  keywords: "",
   oauthMethods: ["github"],
   panDomain: false,
+  siteDescription: "",
+  siteLogo: "",
+  siteName: "Alpha",
   subscribeDomain: "https://sub-a.example.com\nsub-b.example.com",
   subscribePath: "v1/subscribe/config",
 };

@@ -31,6 +31,10 @@ import type {
   WalletLog,
 } from "@/lib/models";
 import { isClientDemoMode } from "@/lib/runtime";
+import {
+  DEFAULT_SITE_DESCRIPTION,
+  DEFAULT_SITE_NAME,
+} from "@/lib/site-brand";
 export { createOrderRequestId } from "@/lib/request-id";
 export {
   buildSubscriptionUrl,
@@ -750,6 +754,12 @@ export async function createRechargeOrder(input: {
 type RawSiteConfig = {
   currency?: { currency_symbol?: string };
   oauth_methods?: string[];
+  site?: {
+    keywords?: string;
+    site_desc?: string;
+    site_logo?: string;
+    site_name?: string;
+  };
   subscribe?: {
     pan_domain?: boolean;
     subscribe_domain?: string;
@@ -767,8 +777,12 @@ export async function getSiteConfigWith(
   if (isClientDemoMode()) {
     return {
       currencySymbol: "¥",
+      keywords: "",
       oauthMethods: ["github"],
       panDomain: false,
+      siteDescription: DEFAULT_SITE_DESCRIPTION,
+      siteLogo: "",
+      siteName: DEFAULT_SITE_NAME,
       subscribeDomain: "subscribe.alpha.example",
       subscribePath: "/s",
     };
@@ -776,8 +790,13 @@ export async function getSiteConfigWith(
   const data = await request<RawSiteConfig>("v1/common/site/config");
   return {
     currencySymbol: data?.currency?.currency_symbol || "¥",
+    keywords: data?.site?.keywords?.trim() || "",
     oauthMethods: data?.oauth_methods || [],
     panDomain: Boolean(data?.subscribe?.pan_domain),
+    siteDescription:
+      data?.site?.site_desc?.trim() || DEFAULT_SITE_DESCRIPTION,
+    siteLogo: data?.site?.site_logo?.trim() || "",
+    siteName: data?.site?.site_name?.trim() || DEFAULT_SITE_NAME,
     subscribeDomain: data?.subscribe?.subscribe_domain || "",
     subscribePath: data?.subscribe?.subscribe_path || "",
   };

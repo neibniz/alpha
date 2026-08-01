@@ -29,7 +29,7 @@ func TestClientAuthCodeURLAndUserInfo(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	client := New(Config{ClientID: "client", ClientSecret: "secret", RedirectURL: "https://panel.example/oauth/github/"})
+	client := New(Config{ClientID: "client", ClientSecret: "secret", RedirectURL: "https://panel.example/oauth/github/callback"})
 	client.apiBaseURL = server.URL
 
 	authURL, err := url.Parse(client.AuthCodeURL("state-value"))

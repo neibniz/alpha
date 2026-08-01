@@ -70,7 +70,6 @@ func (l *BindOAuthLogic) github(req *types.BindOAuthRequest) (string, error) {
 		req.Redirect,
 		cfg.RedirectURL,
 		oauthcallback.GitHubBindPath,
-		oauthcallback.GitHubBindBridgePath,
 	)
 	if err != nil {
 		return "", err

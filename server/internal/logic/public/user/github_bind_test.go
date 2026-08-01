@@ -51,7 +51,7 @@ func TestGitHubBindCreatesSeparateState(t *testing.T) {
 		AuthModel: model,
 		Privacy:   privacy.DisabledCodec(),
 	})
-	resp, err := logic.BindOAuth(&types.BindOAuthRequest{Method: "github", Redirect: "https://panel.example/bind/github/index.html"})
+	resp, err := logic.BindOAuth(&types.BindOAuthRequest{Method: "github", Redirect: "https://panel.example/bind/github/callback"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestGitHubBindCreatesSeparateState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bindState.UserID != account.Id || bindState.Redirect != "https://panel.example/bind/github/index.html" {
+	if bindState.UserID != account.Id || bindState.Redirect != "https://panel.example/bind/github/callback" {
 		t.Fatalf("stored bind state = %#v", bindState)
 	}
 	if rds.Exists(context.Background(), oauthcallback.GitHubLoginStateScope+":"+state).Val() != 0 {
@@ -98,7 +98,7 @@ func TestGitHubBindStateIsBoundToInitiatingUser(t *testing.T) {
 	mini := miniredis.RunT(t)
 	rds := redis.NewClient(&redis.Options{Addr: mini.Addr()})
 	t.Cleanup(func() { _ = rds.Close() })
-	stateValue, err := oauthcallback.EncodeBindState(8, "https://panel.example/bind/github/")
+	stateValue, err := oauthcallback.EncodeBindState(8, "https://panel.example/bind/github/callback")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestGitHubBindCallbackStoresStableUserID(t *testing.T) {
 		t.Fatal(err)
 	}
 	state := "bind-callback-state"
-	stateValue, err := oauthcallback.EncodeBindState(account.Id, "https://panel.example/bind/github/")
+	stateValue, err := oauthcallback.EncodeBindState(account.Id, "https://panel.example/bind/github/callback")
 	if err != nil {
 		t.Fatal(err)
 	}

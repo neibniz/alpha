@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { githubOAuthCallbackUrl } from "@/lib/oauth-callback";
 import {
   isSameOriginRequest,
   postUpstreamJson,
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       "v1/auth/oauth/login",
       {
         method: "github",
-        redirect: `${publicOrigin(request)}/oauth/github/callback`,
+        redirect: githubOAuthCallbackUrl(publicOrigin(request), "login"),
       }
     );
     if (

@@ -78,7 +78,6 @@ func (l *BindOAuthCallbackLogic) github(req *types.BindOAuthCallbackRequest) err
 		redirect,
 		cfg.RedirectURL,
 		oauthcallback.GitHubBindPath,
-		oauthcallback.GitHubBindBridgePath,
 	)
 	if err != nil {
 		return errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "invalid github redirect")

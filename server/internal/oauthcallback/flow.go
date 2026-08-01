@@ -12,10 +12,8 @@ import (
 )
 
 const (
-	GitHubLoginPath       = "/oauth/github"
-	GitHubBindPath        = "/bind/github"
-	GitHubLoginBridgePath = "/oauth/github/index.html"
-	GitHubBindBridgePath  = "/bind/github/index.html"
+	GitHubLoginPath       = "/oauth/github/callback"
+	GitHubBindPath        = "/bind/github/callback"
 	GitHubLoginStateScope = "github:login"
 	GitHubBindStateScope  = "github:bind"
 )

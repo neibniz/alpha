@@ -63,7 +63,6 @@ func (l *OAuthLoginLogic) github(req *types.OAthLoginRequest) (string, error) {
 		req.Redirect,
 		cfg.RedirectURL,
 		oauthcallback.GitHubLoginPath,
-		oauthcallback.GitHubLoginBridgePath,
 	)
 	if err != nil {
 		return "", err

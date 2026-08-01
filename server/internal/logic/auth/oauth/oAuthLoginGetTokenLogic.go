@@ -104,7 +104,6 @@ func (l *OAuthLoginGetTokenLogic) github(req *types.OAuthLoginGetTokenRequest, r
 		redirect,
 		cfg.RedirectURL,
 		oauthcallback.GitHubLoginPath,
-		oauthcallback.GitHubLoginBridgePath,
 	)
 	if err != nil {
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "invalid github redirect")

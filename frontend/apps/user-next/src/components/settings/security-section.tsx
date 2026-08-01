@@ -24,6 +24,7 @@ import {
   unbindOAuth,
   updatePassword,
 } from "@/lib/client-api";
+import { githubOAuthCallbackUrl } from "@/lib/oauth-callback";
 import { errorMessage } from "./settings-common";
 
 export function SecuritySection() {
@@ -77,7 +78,7 @@ export function SecuritySection() {
     try {
       const redirect = await startOAuthBind(
         "github",
-        `${window.location.origin}/bind/github`
+        githubOAuthCallbackUrl(window.location.origin, "bind")
       );
       window.location.assign(redirect);
     } catch (error) {

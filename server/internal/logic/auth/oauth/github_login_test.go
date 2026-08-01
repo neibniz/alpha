@@ -28,7 +28,7 @@ func TestGitHubOAuthLoginCreatesScopedState(t *testing.T) {
 	logic, rds := newGitHubLoginLogic(t, true)
 	resp, err := logic.OAuthLogin(&types.OAthLoginRequest{
 		Method:   "github",
-		Redirect: "https://panel.example/oauth/github/index.html",
+		Redirect: "https://panel.example/oauth/github/callback",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -45,19 +45,19 @@ func TestGitHubOAuthLoginCreatesScopedState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored != "https://panel.example/oauth/github/index.html" {
+	if stored != "https://panel.example/oauth/github/callback" {
 		t.Fatalf("stored redirect = %q", stored)
 	}
 }
 
 func TestGitHubOAuthLoginRejectsDisabledAndUntrustedRedirect(t *testing.T) {
 	disabled, _ := newGitHubLoginLogic(t, false)
-	if _, err := disabled.OAuthLogin(&types.OAthLoginRequest{Method: "github", Redirect: "https://panel.example/oauth/github/"}); err == nil {
+	if _, err := disabled.OAuthLogin(&types.OAthLoginRequest{Method: "github", Redirect: "https://panel.example/oauth/github/callback"}); err == nil {
 		t.Fatal("disabled github oauth should be rejected")
 	}
 
 	enabled, _ := newGitHubLoginLogic(t, true)
-	if _, err := enabled.OAuthLogin(&types.OAthLoginRequest{Method: "github", Redirect: "https://evil.example/oauth/github/"}); err == nil {
+	if _, err := enabled.OAuthLogin(&types.OAthLoginRequest{Method: "github", Redirect: "https://evil.example/oauth/github/callback"}); err == nil {
 		t.Fatal("untrusted github redirect should be rejected")
 	}
 }
@@ -106,7 +106,7 @@ func TestGitHubOAuthCallbackAuthenticatesExistingUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	state := "callback-state"
-	if err := rds.Set(context.Background(), oauthcallback.GitHubLoginStateScope+":"+state, "https://panel.example/oauth/github/", 0).Err(); err != nil {
+	if err := rds.Set(context.Background(), oauthcallback.GitHubLoginStateScope+":"+state, "https://panel.example/oauth/github/callback", 0).Err(); err != nil {
 		t.Fatal(err)
 	}
 

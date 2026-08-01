@@ -27,16 +27,16 @@ func TestValidateRedirect(t *testing.T) {
 		path    string
 		wantErr bool
 	}{
-		{name: "login", raw: "https://panel.example/oauth/github/", base: "https://panel.example/", path: GitHubLoginPath},
-		{name: "bind", raw: "https://panel.example/bind/github", base: "https://panel.example/", path: GitHubBindPath},
-		{name: "login bridge", raw: "https://panel.example/oauth/github/index.html", base: "https://panel.example/", path: GitHubLoginBridgePath},
-		{name: "bind bridge", raw: "https://panel.example/bind/github/index.html", base: "https://panel.example/", path: GitHubBindBridgePath},
-		{name: "default https port", raw: "https://panel.example:443/oauth/github/", base: "https://panel.example/", path: GitHubLoginPath},
-		{name: "wrong origin", raw: "https://evil.example/oauth/github/", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
-		{name: "subdomain", raw: "https://evil.panel.example/oauth/github/", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
+		{name: "login", raw: "https://panel.example/oauth/github/callback", base: "https://panel.example/", path: GitHubLoginPath},
+		{name: "bind", raw: "https://panel.example/bind/github/callback", base: "https://panel.example/", path: GitHubBindPath},
+		{name: "default https port", raw: "https://panel.example:443/oauth/github/callback", base: "https://panel.example/", path: GitHubLoginPath},
+		{name: "legacy login path", raw: "https://panel.example/oauth/github", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
+		{name: "legacy bind path", raw: "https://panel.example/bind/github", base: "https://panel.example/", path: GitHubBindPath, wantErr: true},
+		{name: "wrong origin", raw: "https://evil.example/oauth/github/callback", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
+		{name: "subdomain", raw: "https://evil.panel.example/oauth/github/callback", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
 		{name: "wrong path", raw: "https://panel.example/profile", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
-		{name: "query injection", raw: "https://panel.example/oauth/github/?next=https://evil.example", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
-		{name: "outside base path", raw: "https://panel.example/oauth/github/", base: "https://panel.example/callback", path: GitHubLoginPath, wantErr: true},
+		{name: "query injection", raw: "https://panel.example/oauth/github/callback?next=https://evil.example", base: "https://panel.example/", path: GitHubLoginPath, wantErr: true},
+		{name: "outside base path", raw: "https://panel.example/oauth/github/callback", base: "https://panel.example/callback", path: GitHubLoginPath, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -11,7 +11,7 @@ import {
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { filterLoginLog } from "@workspace/ui/services/admin/log";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";
 import { useRef } from "react";

@@ -44,7 +44,7 @@ import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { cn } from "@workspace/ui/lib/utils";
 import {
   createServer,

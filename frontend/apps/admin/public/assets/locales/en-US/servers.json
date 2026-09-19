@@ -1,4 +1,5 @@
 {
+  "credentialWarning": "Credential warning",
   "workspace": "Infrastructure",
   "actions": {
     "cancel": "Cancel",

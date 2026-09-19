@@ -100,6 +100,7 @@
     "unknown": "系统发生错误，请稍后再试。"
   },
   "filter": {
+    "clear": "清空筛选",
     "choose": "请选择...",
     "search": "搜索..."
   },
@@ -121,6 +122,8 @@
     "defaultDescription": "专业、纯净的代理面板工具，适合学习与实践。"
   },
   "sidebar": {
+    "navigation": "主导航",
+    "skipToContent": "跳转到内容",
     "currentWorkspace": "当前工作区",
     "description": "显示移动端侧边栏。",
     "title": "侧边栏",
@@ -128,6 +131,15 @@
     "workspaces": "工作区"
   },
   "table": {
+    "bulkActions": "批量操作",
+    "clearSelection": "取消选择",
+    "loadFailed": "数据加载失败",
+    "loadFailedDescription": "请检查连接后重试。上次加载的结果可能已过期。",
+    "retry": "重试",
+    "loading": "更新中",
+    "refresh": "刷新",
+    "columns": "显示列",
+    "reset": "重置筛选",
     "asc": "升序",
     "desc": "降序",
     "hide": "隐藏",
@@ -145,6 +157,7 @@
     "toggle": "切换主题"
   },
   "timezone": {
+    "choose": "时区",
     "all": "全部",
     "current": "当前",
     "recommended": "推荐",

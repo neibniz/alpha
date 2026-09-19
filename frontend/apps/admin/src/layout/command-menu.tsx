@@ -9,7 +9,6 @@ import {
   CommandList,
   CommandShortcut,
 } from "@workspace/ui/components/command";
-import { Kbd } from "@workspace/ui/components/kbd";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,10 +47,6 @@ export function CommandMenu() {
         <Search data-icon="inline-start" />
         <span className="hidden lg:inline">
           {t("command.search", "Search pages")}
-        </span>
-        <span className="hidden items-center gap-1 lg:ml-auto lg:flex">
-          <Kbd>⌘</Kbd>
-          <Kbd>K</Kbd>
         </span>
       </Button>
       <CommandDialog

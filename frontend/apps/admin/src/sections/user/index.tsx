@@ -42,7 +42,7 @@ import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { cn } from "@workspace/ui/lib/utils";
 import {
   batchDeleteUser,
@@ -153,7 +153,7 @@ function UserStatusCell({
   };
 
   return (
-    <div className="flex min-w-32 items-center justify-between gap-3">
+    <div className="flex min-w-0 items-center justify-between gap-2">
       <span
         className={cn(
           "inline-flex items-center gap-2 text-xs",
@@ -343,12 +343,13 @@ export default function User() {
               onReset={() => ref.current?.refresh()}
               scope="all"
               trigger={
-                <Button size="sm" variant="destructive">
+                <Button
+                  className="text-muted-foreground hover:text-destructive"
+                  size="sm"
+                  variant="outline"
+                >
                   <TriangleAlert className="size-4" />
-                  {t(
-                    "resetAllSubscriptionTraffic",
-                    "Reset all subscription traffic"
-                  )}
+                  {t("resetAllTraffic", "Reset all subscription traffic")}
                 </Button>
               }
             />

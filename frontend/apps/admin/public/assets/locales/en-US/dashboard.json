@@ -1,4 +1,9 @@
 {
+  "onlineServers": "Online servers",
+  "hostThroughput": "Host network throughput",
+  "awaitingData": "Waiting for live data",
+  "awaitingDataDescription": "The summary will appear after the first server update.",
+  "staleData": "Showing the last received snapshot",
   "operations": "Operations",
   "activity": {
     "detail": {

@@ -5,7 +5,7 @@ import { Badge } from "@workspace/ui/components/badge";
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { filterEmailLog } from "@workspace/ui/services/admin/log";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";
 import { useRef } from "react";

@@ -1,4 +1,9 @@
 {
+  "onlineServers": "在线服务器",
+  "hostThroughput": "主机网络吞吐量",
+  "awaitingData": "等待实时数据",
+  "awaitingDataDescription": "收到服务器首次上报后显示监控概览。",
+  "staleData": "正在显示最近一次收到的数据",
   "operations": "运营中心",
   "activity": {
     "detail": {

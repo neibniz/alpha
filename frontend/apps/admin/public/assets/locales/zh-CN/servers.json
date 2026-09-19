@@ -1,4 +1,5 @@
 {
+  "credentialWarning": "凭据安全提醒",
   "workspace": "基础设施",
   "actions": {
     "cancel": "取消",

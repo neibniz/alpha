@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import { Switch } from "@workspace/ui/components/switch";
-import type { ProTableActions } from "@workspace/ui/composed/pro-table/pro-table";
+import type { ProTableActions } from "@/components/pro-table/pro-table";
 import { Eye, ShieldCheck } from "lucide-react";
 import {
   type RefObject,

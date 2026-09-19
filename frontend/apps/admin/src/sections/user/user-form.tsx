@@ -20,8 +20,8 @@ import {
 } from "@workspace/ui/components/sheet";
 import { Switch } from "@workspace/ui/components/switch";
 import { EnhancedInput } from "@workspace/ui/composed/enhanced-input";
-import { Icon } from "@workspace/ui/composed/icon";
 import { unitConversion } from "@workspace/ui/utils/unit-conversions";
+import { LoaderCircle } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -153,7 +153,7 @@ export default function UserForm<T extends object>({
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="sm:col-span-2">
                     <FormLabel>{t("userEmail", "Email")}</FormLabel>
                     <FormControl>
                       <EnhancedInput
@@ -280,7 +280,7 @@ export default function UserForm<T extends object>({
                 control={form.control}
                 name="only_first_purchase"
                 render={({ field }) => (
-                  <FormItem className="flex min-h-16 items-center justify-between gap-3 rounded-md border px-3 py-2">
+                  <FormItem className="flex min-h-16 flex-row items-center justify-between gap-3 self-end rounded-md border px-3 py-2">
                     <div>
                       <FormLabel>
                         {t("onlyFirstPurchase", "First purchase only")}
@@ -406,7 +406,7 @@ export default function UserForm<T extends object>({
                 control={form.control}
                 name="is_admin"
                 render={({ field }) => (
-                  <FormItem className="flex min-h-16 items-center justify-between gap-3 rounded-md border px-3 py-2 sm:col-span-2">
+                  <FormItem className="flex min-h-16 flex-row items-center justify-between gap-3 rounded-md border px-3 py-2 sm:col-span-2">
                     <div>
                       <FormLabel>{t("manager", "Administrator")}</FormLabel>
                       <p className="mt-1 text-muted-foreground text-xs">
@@ -417,12 +417,10 @@ export default function UserForm<T extends object>({
                       </p>
                     </div>
                     <FormControl>
-                      <div>
-                        <Switch
-                          checked={!!field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </div>
+                      <Switch
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -442,9 +440,7 @@ export default function UserForm<T extends object>({
             {t("cancel", "Cancel")}
           </Button>
           <Button disabled={loading} onClick={form.handleSubmit(handleSubmit)}>
-            {loading && (
-              <Icon className="mr-2 animate-spin" icon="mdi:loading" />
-            )}{" "}
+            {loading && <LoaderCircle className="animate-spin" />}
             {t("confirm", "Confirm")}
           </Button>
         </SheetFooter>

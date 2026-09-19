@@ -2,7 +2,7 @@
 
 import { useSearch } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
-import { ProTable } from "@workspace/ui/composed/pro-table/pro-table";
+import { ProTable } from "@/components/pro-table/pro-table";
 import { filterResetSubscribeLog } from "@workspace/ui/services/admin/log";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";
 import { useTranslation } from "react-i18next";

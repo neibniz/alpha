@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearch } from "@tanstack/react-router";
-import { ProTable } from "@workspace/ui/composed/pro-table/pro-table";
+import { ProTable } from "@/components/pro-table/pro-table";
 import { filterTrafficLogDetails } from "@workspace/ui/services/admin/log";
 import { formatBytes } from "@workspace/ui/utils/formatting";
 import { normalizePageResult } from "@workspace/ui/utils/pagination";

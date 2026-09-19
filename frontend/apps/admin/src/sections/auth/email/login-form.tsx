@@ -14,10 +14,9 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@workspace/ui/components/input-group";
-import { Separator } from "@workspace/ui/components/separator";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { PasswordInput } from "@workspace/ui/composed/password-input";
-import { KeyRound, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRef } from "react";
 import { useForm } from "react-hook-form";
@@ -55,7 +54,9 @@ export default function LoginForm({
       .string()
       .trim()
       .min(1, t("login.emailRequired", "Email is required")),
-    password: z.string(),
+    password: z
+      .string()
+      .min(1, t("login.passwordRequired", "Password is required")),
     cf_token:
       verify.enable_login_verify && verify.turnstile_site_key
         ? z.string()
@@ -80,93 +81,89 @@ export default function LoginForm({
   });
 
   return (
-    <>
-      <Form {...form}>
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-          <FieldGroup className="gap-5">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("login.emailLabel", "Email")}</FormLabel>
-                  <InputGroup>
-                    <InputGroupAddon>
-                      <Mail />
-                    </InputGroupAddon>
-                    <FormControl>
-                      <InputGroupInput
-                        autoComplete="username"
-                        placeholder={t(
-                          "login.emailPlaceholder",
-                          "Enter your email..."
-                        )}
-                        type="email"
-                        {...field}
-                      />
-                    </FormControl>
-                  </InputGroup>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("login.passwordLabel", "Password")}</FormLabel>
+    <Form {...form}>
+      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <FieldGroup className="gap-5">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("login.emailLabel", "Email")}</FormLabel>
+                <InputGroup>
+                  <InputGroupAddon>
+                    <Mail />
+                  </InputGroupAddon>
                   <FormControl>
-                    <PasswordInput
-                      autoComplete="current-password"
+                    <InputGroupInput
+                      autoComplete="username"
                       placeholder={t(
-                        "login.passwordPlaceholder",
-                        "Enter your password..."
+                        "login.emailPlaceholder",
+                        "Enter your email..."
                       )}
+                      type="email"
                       {...field}
+                    />
+                  </FormControl>
+                </InputGroup>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <FormLabel>{t("login.passwordLabel", "Password")}</FormLabel>
+                  <Button
+                    className="h-auto p-0 font-normal text-xs text-muted-foreground"
+                    onClick={() => onSwitchForm("reset")}
+                    type="button"
+                    variant="link"
+                  >
+                    {t("login.forgotPassword", "Forgot Password?")}
+                  </Button>
+                </div>
+                <FormControl>
+                  <PasswordInput
+                    autoComplete="current-password"
+                    placeholder={t(
+                      "login.passwordPlaceholder",
+                      "Enter your password..."
+                    )}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {verify.enable_login_verify && (
+            <FormField
+              control={form.control}
+              name="cf_token"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <CloudFlareTurnstile
+                      id="login"
+                      {...field}
+                      ref={turnstile}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {verify.enable_login_verify && (
-              <FormField
-                control={form.control}
-                name="cf_token"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <CloudFlareTurnstile
-                        id="login"
-                        {...field}
-                        ref={turnstile}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </FieldGroup>
-          <Button className="w-full" disabled={loading} size="lg" type="submit">
-            {loading ? <Spinner /> : null}
-            {t("login.title", "Login")}
-          </Button>
-        </form>
-      </Form>
-      <Separator className="my-4" />
-      <div className="flex justify-center">
-        <Button
-          onClick={() => onSwitchForm("reset")}
-          size="sm"
-          type="button"
-          variant="link"
-        >
-          <KeyRound data-icon="inline-start" />
-          {t("login.forgotPassword", "Forgot Password?")}
+          )}
+        </FieldGroup>
+        <Button className="w-full" disabled={loading} size="lg" type="submit">
+          {loading ? <Spinner /> : null}
+          {t("login.title", "Login")}
         </Button>
-      </div>
-    </>
+      </form>
+    </Form>
   );
 }

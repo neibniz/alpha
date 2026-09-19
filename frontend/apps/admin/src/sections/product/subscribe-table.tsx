@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import { Switch } from "@workspace/ui/components/switch";
+import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import {
   Table,
   TableBody,
@@ -859,32 +860,24 @@ export default function SubscribeTable() {
       </section>
 
       <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="inline-flex h-10 w-fit items-center rounded-lg border bg-card p-0.5">
-          <Button
-            className={cn(
-              "h-9 rounded-md px-5",
-              view === "matrix" && "bg-primary/15 text-primary"
-            )}
-            onClick={() => setView("matrix")}
-            variant="ghost"
-          >
-            {t("view.matrix", "Plan matrix")}
-          </Button>
-          <Button
-            className={cn(
-              "h-9 rounded-md px-5",
-              view === "queue" && "bg-primary/15 text-primary"
-            )}
-            onClick={() => setView("queue")}
-            variant="ghost"
-          >
-            {t("view.queue", "Publishing queue")}
-          </Button>
-        </div>
+        <Tabs
+          onValueChange={(value) => setView(value as "matrix" | "queue")}
+          value={view}
+        >
+          <TabsList>
+            <TabsTrigger value="matrix">
+              {t("view.matrix", "Plan matrix")}
+            </TabsTrigger>
+            <TabsTrigger value="queue">
+              {t("view.queue", "Publishing queue")}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center xl:justify-end">
           <div className="relative w-full sm:max-w-sm">
             <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
             <Input
+              aria-label={t("searchPlaceholder", "Search products")}
               className="h-10 pl-9"
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t("searchPlaceholder", "Search products")}

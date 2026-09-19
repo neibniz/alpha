@@ -31,7 +31,7 @@ import {
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { cn } from "@workspace/ui/lib/utils";
 import {
   getOrderList,
@@ -43,6 +43,7 @@ import { type MouseEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Display } from "@/components/display";
+import { AdminPage, AdminPageHeader } from "@/components/admin-page";
 import { useSubscribe } from "@/stores/subscribe";
 import { formatDate } from "@/utils/common";
 import { UserDetail } from "../user/user-detail";
@@ -294,220 +295,231 @@ export default function Order() {
 
   return (
     <>
-      <ProTable<OrderRow, OrderFilter>
-        action={ref}
-        actions={{
-          columnSize: 64,
-          render: (order) => [
-            <Tooltip key="detail">
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label={t("viewDetail", "View order detail")}
-                  onClick={() => setDetailOrderId(order.id)}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <Eye />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent sideOffset={6}>
-                {t("viewDetail", "View order detail")}
-              </TooltipContent>
-            </Tooltip>,
-          ],
-        }}
-        columns={[
-          {
-            accessorKey: "order_no",
-            header: t("orderNumber", "Order Number"),
-          },
-          {
-            accessorKey: "type",
-            header: t("type.0", "Type"),
-            cell: ({ row }) => {
-              const type = row.getValue("type") as number;
-              return getTypeLabel(type);
+      <AdminPage>
+        <AdminPageHeader
+          title={t("managementTitle", "Orders")}
+          description={t(
+            "pageDescription",
+            "Payments, fulfillment and order history."
+          )}
+        />
+        <ProTable<OrderRow, OrderFilter>
+          action={ref}
+          actions={{
+            columnSize: 64,
+            render: (order) => [
+              <Tooltip key="detail">
+                <TooltipTrigger asChild>
+                  <Button
+                    aria-label={t("viewDetail", "View order detail")}
+                    onClick={() => setDetailOrderId(order.id)}
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <Eye />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>
+                  {t("viewDetail", "View order detail")}
+                </TooltipContent>
+              </Tooltip>,
+            ],
+          }}
+          columns={[
+            {
+              accessorKey: "order_no",
+              header: t("orderNumber", "Order Number"),
             },
-          },
-          {
-            accessorKey: "subscribe_id",
-            header: t("subscribe", "Subscribe"),
-            cell: ({ row }) => getOrderProductName(row.original as OrderRow),
-          },
-          {
-            accessorKey: "amount",
-            header: t("amount", "Amount"),
-            cell: ({ row }) => {
-              const order = row.original as OrderRow;
-              return (
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <Button className="p-0" variant="link">
-                      <Display type="currency" value={order.amount} />
-                    </Button>
-                  </HoverCardTrigger>
-                  <HoverCardContent>
-                    <div className="grid gap-3">
-                      {order.trade_no && (
-                        <>
-                          <div className="font-semibold">
-                            {t("tradeNo", "Transaction Number")}
-                          </div>
-                          <span className="text-muted-foreground">
-                            {order.trade_no}
-                          </span>
-                          <Separator className="my-2" />
-                        </>
-                      )}
+            {
+              accessorKey: "type",
+              header: t("type.0", "Type"),
+              cell: ({ row }) => {
+                const type = row.getValue("type") as number;
+                return getTypeLabel(type);
+              },
+            },
+            {
+              accessorKey: "subscribe_id",
+              header: t("subscribe", "Subscribe"),
+              cell: ({ row }) => getOrderProductName(row.original as OrderRow),
+            },
+            {
+              accessorKey: "amount",
+              header: t("amount", "Amount"),
+              cell: ({ row }) => {
+                const order = row.original as OrderRow;
+                return (
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <Button className="p-0" variant="link">
+                        <Display type="currency" value={order.amount} />
+                      </Button>
+                    </HoverCardTrigger>
+                    <HoverCardContent>
+                      <div className="grid gap-3">
+                        {order.trade_no && (
+                          <>
+                            <div className="font-semibold">
+                              {t("tradeNo", "Transaction Number")}
+                            </div>
+                            <span className="text-muted-foreground">
+                              {order.trade_no}
+                            </span>
+                            <Separator className="my-2" />
+                          </>
+                        )}
+                        <ul className="grid gap-3">
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {order.type === 5
+                                ? t("membershipPrice", "Membership Price")
+                                : t("subscribePrice", "Subscription Price")}
+                            </span>
+                            <span>
+                              <Display type="currency" value={order.price} />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {t("discount", "Discount Amount")}
+                            </span>
+                            <span>
+                              <Display type="currency" value={order.discount} />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {t("couponDiscount", "Coupon Discount")}
+                            </span>
+                            <span>
+                              <Display
+                                type="currency"
+                                value={order.coupon_discount}
+                              />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {t(
+                                "commissionDeduction",
+                                "Commission balance used"
+                              )}
+                            </span>
+                            <span>
+                              <Display
+                                type="currency"
+                                value={order.commission_deduction}
+                              />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {t("giftAmount", "Gift amount")}
+                            </span>
+                            <span>
+                              <Display
+                                type="currency"
+                                value={order.gift_amount}
+                              />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {t("feeAmount", "Fee Amount")}
+                            </span>
+                            <span>
+                              <Display
+                                type="currency"
+                                value={order.fee_amount}
+                              />
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between font-semibold">
+                            <span className="text-muted-foreground">
+                              {t("total", "Total")}
+                            </span>
+                            <span>
+                              <Display type="currency" value={order.amount} />
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                      <Separator className="my-4" />
                       <ul className="grid gap-3">
                         <li className="flex items-center justify-between">
                           <span className="text-muted-foreground">
-                            {order.type === 5
-                              ? t("membershipPrice", "Membership Price")
-                              : t("subscribePrice", "Subscription Price")}
+                            {t("method", "Payment Method")}
                           </span>
                           <span>
-                            <Display type="currency" value={order.price} />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            {t("discount", "Discount Amount")}
-                          </span>
-                          <span>
-                            <Display type="currency" value={order.discount} />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            {t("couponDiscount", "Coupon Discount")}
-                          </span>
-                          <span>
-                            <Display
-                              type="currency"
-                              value={order.coupon_discount}
-                            />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            {t(
-                              "commissionDeduction",
-                              "Commission balance used"
-                            )}
-                          </span>
-                          <span>
-                            <Display
-                              type="currency"
-                              value={order.commission_deduction}
-                            />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            {t("giftAmount", "Gift amount")}
-                          </span>
-                          <span>
-                            <Display
-                              type="currency"
-                              value={order.gift_amount}
-                            />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            {t("feeAmount", "Fee Amount")}
-                          </span>
-                          <span>
-                            <Display type="currency" value={order.fee_amount} />
-                          </span>
-                        </li>
-                        <li className="flex items-center justify-between font-semibold">
-                          <span className="text-muted-foreground">
-                            {t("total", "Total")}
-                          </span>
-                          <span>
-                            <Display type="currency" value={order.amount} />
+                            {order.payment?.name || order.payment?.platform}
                           </span>
                         </li>
                       </ul>
-                    </div>
-                    <Separator className="my-4" />
-                    <ul className="grid gap-3">
-                      <li className="flex items-center justify-between">
-                        <span className="text-muted-foreground">
-                          {t("method", "Payment Method")}
-                        </span>
-                        <span>
-                          {order.payment?.name || order.payment?.platform}
-                        </span>
-                      </li>
-                    </ul>
-                  </HoverCardContent>
-                </HoverCard>
-              );
+                    </HoverCardContent>
+                  </HoverCard>
+                );
+              },
             },
-          },
-          {
-            accessorKey: "user_id",
-            header: t("user", "User"),
-            cell: ({ row }) => {
-              const order = row.original as OrderRow;
-              return <UserDetail id={order.user_id} />;
+            {
+              accessorKey: "user_id",
+              header: t("user", "User"),
+              cell: ({ row }) => {
+                const order = row.original as OrderRow;
+                return <UserDetail id={order.user_id} />;
+              },
             },
-          },
-          {
-            accessorKey: "updated_at",
-            header: t("updateTime", "Update Time"),
-            cell: ({ row }) => {
-              const order = row.original as OrderRow;
-              return formatDate(order.updated_at);
+            {
+              accessorKey: "updated_at",
+              header: t("updateTime", "Update Time"),
+              cell: ({ row }) => {
+                const order = row.original as OrderRow;
+                return formatDate(order.updated_at);
+              },
             },
-          },
-          {
-            accessorKey: "status",
-            header: t("status.0", "Status"),
-            cell: ({ row }) => (
-              <OrderStatusControl
-                onUpdated={() => ref.current?.refresh()}
-                optionByValue={statusOptionByValue}
-                order={row.original as OrderRow}
-              />
-            ),
-          },
-        ]}
-        header={{ title: t("managementTitle", "Orders") }}
-        params={[
-          {
-            key: "status",
-            placeholder: t("status.0", "Status"),
-            options: statusFilterOptions,
-          },
-          {
-            key: "subscribe_id",
-            placeholder: `${t("subscribe", "Subscribe")}`,
-            options: subscribeFilterOptions,
-          },
-          {
-            key: "search",
-            placeholder: t(
-              "searchPlaceholder",
-              "Search order, transaction, or coupon"
-            ),
-          },
-          {
-            key: "user_id",
-            placeholder: t("userIdPlaceholder", "User ID"),
-            options: undefined,
-          },
-        ]}
-        request={async (pagination, filter) => {
-          const { data } = await getOrderList(
-            toAdminOrderListRequest(pagination, filter)
-          );
-          return normalizePageResult(data.data);
-        }}
-      />
+            {
+              accessorKey: "status",
+              header: t("status.0", "Status"),
+              cell: ({ row }) => (
+                <OrderStatusControl
+                  onUpdated={() => ref.current?.refresh()}
+                  optionByValue={statusOptionByValue}
+                  order={row.original as OrderRow}
+                />
+              ),
+            },
+          ]}
+          params={[
+            {
+              key: "status",
+              placeholder: t("status.0", "Status"),
+              options: statusFilterOptions,
+            },
+            {
+              key: "subscribe_id",
+              placeholder: `${t("subscribe", "Subscribe")}`,
+              options: subscribeFilterOptions,
+            },
+            {
+              key: "search",
+              placeholder: t(
+                "searchPlaceholder",
+                "Search order, transaction, or coupon"
+              ),
+            },
+            {
+              key: "user_id",
+              placeholder: t("userIdPlaceholder", "User ID"),
+              options: undefined,
+            },
+          ]}
+          request={async (pagination, filter) => {
+            const { data } = await getOrderList(
+              toAdminOrderListRequest(pagination, filter)
+            );
+            return normalizePageResult(data.data);
+          }}
+        />
+      </AdminPage>
       <OrderDetailSheet
         onOpenChange={(open) => {
           if (!open) setDetailOrderId(null);

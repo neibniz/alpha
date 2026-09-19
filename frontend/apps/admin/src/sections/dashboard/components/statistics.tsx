@@ -119,10 +119,10 @@ const NETWORK_RANGE_MS: Record<NetworkRange, number> = {
 const NETWORK_SERIES_MS = NETWORK_RANGE_MS["24h"];
 
 const RATE_COLORS = {
-  systemRxBps: "#4F83FF",
-  systemTxBps: "#3DD6B4",
-  xrayRxBps: "#F1A33B",
-  xrayTxBps: "#3DBBD8",
+  systemRxBps: "var(--chart-1)",
+  systemTxBps: "var(--chart-2)",
+  xrayRxBps: "var(--chart-4)",
+  xrayTxBps: "var(--chart-3)",
 };
 
 const ALERT_TITLE_KEYS: Record<string, string> = {
@@ -295,22 +295,29 @@ function StatusMetric({
   label,
   secondary,
   value,
+  tone,
 }: {
   icon: LucideIcon;
   label: string;
   secondary: string;
   value: string | number;
+  tone?: "success" | "traffic" | "usage";
 }) {
   return (
-    <div className="dashboard-status-metric min-w-0 border-t p-4 lg:border-t-0 lg:border-l">
+    <div
+      className="dashboard-status-metric min-w-0 px-4 py-3 first:pl-0 sm:px-5"
+      data-tone={tone}
+    >
       <div className="flex items-center gap-2 text-muted-foreground text-xs">
-        <Icon aria-hidden />
+        <span data-slot="metric-icon">
+          <Icon aria-hidden className="size-4" />
+        </span>
         <span className="truncate">{label}</span>
       </div>
-      <div className="mt-2 truncate font-semibold text-xl tabular-nums">
+      <div className="mt-2 break-words font-semibold text-[1.75rem] tabular-nums">
         {value}
       </div>
-      <div className="mt-1 truncate text-muted-foreground text-xs">
+      <div className="mt-1.5 text-muted-foreground text-xs leading-5">
         {secondary}
       </div>
     </div>
@@ -333,90 +340,103 @@ function HealthSummary({
     totalServers > 0 ? (onlineServers / totalServers) * 100 : 0;
   const network = realtime?.network;
   const totalRate =
-    (network?.system_rx_bps || 0) +
-    (network?.system_tx_bps || 0) +
-    (network?.xray_rx_bps || 0) +
-    (network?.xray_tx_bps || 0);
+    (network?.system_rx_bps || 0) + (network?.system_tx_bps || 0);
   const todayUpload = realtime?.traffic.today_upload || 0;
   const todayDownload = realtime?.traffic.today_download || 0;
 
   return (
-    <Card className="dashboard-health-band gap-0 overflow-hidden py-0">
-      <div className="dashboard-health-grid grid min-h-28 grid-cols-2 lg:grid-cols-[minmax(18rem,1.35fr)_repeat(4,minmax(0,1fr))]">
-        <div className="col-span-2 flex min-w-0 flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center lg:col-span-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-md",
-                hasRisk
+    <section className="dashboard-health-band">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-y py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-md",
+              !(connected && realtime)
+                ? "bg-muted text-muted-foreground"
+                : hasRisk
                   ? "bg-amber-500/10 text-amber-600 dark:text-amber-300"
                   : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
-              )}
-            >
-              {hasRisk ? (
-                <ShieldAlert aria-hidden />
-              ) : (
-                <ShieldCheck aria-hidden />
-              )}
+            )}
+          >
+            {hasRisk ? (
+              <ShieldAlert aria-hidden />
+            ) : (
+              <ShieldCheck aria-hidden />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="font-medium text-sm">
+              {!realtime
+                ? t("awaitingData", "Waiting for live data")
+                : !connected
+                  ? t("reconnecting", "Reconnecting")
+                  : hasRisk
+                    ? t("serviceNeedsAttention", "Service needs attention")
+                    : t("serviceHealthy", "Service is healthy")}
             </div>
-            <div className="min-w-0">
-              <div className="font-semibold text-base">
-                {hasRisk
-                  ? t("serviceNeedsAttention", "Service needs attention")
-                  : t("serviceHealthy", "Service is healthy")}
-              </div>
-              <div className="mt-1 truncate text-muted-foreground text-xs">
-                {hasRisk
-                  ? t("issuesDetected", {
-                      count: issues,
-                      defaultValue: "Detected {{count}} issues",
-                    })
-                  : connected
-                    ? t(
-                        "allSystemsNominal",
-                        "All monitored services are normal"
-                      )
-                    : t("reconnecting", "Reconnecting")}
-              </div>
+            <div className="mt-0.5 text-muted-foreground text-xs">
+              {!realtime
+                ? t(
+                    "awaitingDataDescription",
+                    "The summary will appear after the first server update."
+                  )
+                : !connected
+                  ? t("staleData", "Showing the last received snapshot")
+                  : hasRisk
+                    ? t("issuesDetected", {
+                        count: issues,
+                        defaultValue: "Detected {{count}} issues",
+                      })
+                    : connected
+                      ? t(
+                          "allSystemsNominal",
+                          "All monitored services are normal"
+                        )
+                      : t("reconnecting", "Reconnecting")}
             </div>
           </div>
-          <Button asChild className="shrink-0" size="sm">
-            <Link to="/dashboard/servers">
-              {hasRisk
-                ? t("resolveIssues", "Resolve issues")
-                : t("inspectServices", "Inspect services")}
-            </Link>
-          </Button>
         </div>
+        <Button asChild className="shrink-0" size="sm" variant="ghost">
+          <Link to="/dashboard/servers">
+            {hasRisk
+              ? t("resolveIssues", "Resolve issues")
+              : t("inspectServices", "Inspect services")}
+          </Link>
+        </Button>
+      </div>
+      <div className="dashboard-health-grid grid min-h-28 grid-cols-2 lg:grid-cols-4">
         <StatusMetric
           icon={Server}
-          label={t("onlineNodes", "Online nodes")}
+          tone="success"
+          label={t("onlineServers", "Online servers")}
           secondary={t("onlineRate", {
             defaultValue: "Online rate {{value}}",
             value: formatPercent(onlineRate),
           })}
-          value={`${onlineServers}/${totalServers}`}
+          value={realtime ? `${onlineServers} / ${totalServers}` : "--"}
         />
         <StatusMetric
           icon={Users}
           label={t("onlineNow", "Online now")}
           secondary={t("activeConnections", "Current active users")}
-          value={realtime?.online_users || 0}
+          value={realtime?.online_users ?? "--"}
         />
         <StatusMetric
           icon={Activity}
+          tone="traffic"
           label={t("currentRate", "Current rate")}
-          secondary={t("combinedThroughput", "Combined host and Xray")}
-          value={formatBitrate(totalRate)}
+          secondary={t("hostThroughput", "Host network throughput")}
+          value={realtime ? formatBitrate(totalRate) : "--"}
         />
         <StatusMetric
           icon={Wifi}
+          tone="usage"
           label={t("trafficToday", "Traffic today")}
           secondary={`${t("uploadShort", "Up")} ${formatBytes(todayUpload)} · ${t("downloadShort", "Down")} ${formatBytes(todayDownload)}`}
-          value={formatBytes(todayUpload + todayDownload)}
+          value={realtime ? formatBytes(todayUpload + todayDownload) : "--"}
         />
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -555,7 +575,7 @@ function NetworkChartCard({
         </div>
       </CardHeader>
       <CardContent className="px-0 pt-0">
-        <div className="h-[18rem] px-3 py-4 sm:h-[20rem] sm:px-5">
+        <div className="h-[16rem] px-3 py-4 sm:h-[17rem] sm:px-5">
           <ChartContainer
             className="h-full w-full"
             config={{
@@ -618,6 +638,7 @@ function NetworkChartCard({
               {showSystem ? (
                 <Line
                   dataKey="systemTxBps"
+                  isAnimationActive={false}
                   dot={false}
                   name="systemTxBps"
                   stroke={RATE_COLORS.systemTxBps}
@@ -628,6 +649,7 @@ function NetworkChartCard({
               {showSystem ? (
                 <Line
                   dataKey="systemRxBps"
+                  isAnimationActive={false}
                   dot={false}
                   name="systemRxBps"
                   stroke={RATE_COLORS.systemRxBps}
@@ -638,6 +660,7 @@ function NetworkChartCard({
               {showXray ? (
                 <Line
                   dataKey="xrayTxBps"
+                  isAnimationActive={false}
                   dot={false}
                   name="xrayTxBps"
                   stroke={RATE_COLORS.xrayTxBps}
@@ -648,6 +671,7 @@ function NetworkChartCard({
               {showXray ? (
                 <Line
                   dataKey="xrayRxBps"
+                  isAnimationActive={false}
                   dot={false}
                   name="xrayRxBps"
                   stroke={RATE_COLORS.xrayRxBps}
@@ -1071,7 +1095,7 @@ function TrafficRankingCard({
                   </TableCell>
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="size-2 shrink-0 rounded-full bg-emerald-500" />
+                      <Server className="size-3.5 shrink-0 text-muted-foreground" />
                       <span className="truncate font-medium">{row.name}</span>
                     </div>
                   </TableCell>
@@ -1173,14 +1197,12 @@ export default function Statistics() {
     <div className="flex w-full flex-col gap-4">
       <HealthSummary connected={realtimeConnected} realtime={realtime} />
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <NetworkChartCard realtime={realtime} />
-        <AlertQueueCard realtime={realtime} />
-      </div>
+      <NetworkChartCard realtime={realtime} />
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
         <TrafficRankingCard realtime={realtime} />
         <div className="grid gap-4">
+          <AlertQueueCard realtime={realtime} />
           <BusinessSnapshotCard realtime={realtime} />
           <ResourceLevelsCard realtime={realtime} />
         </div>

@@ -1,4 +1,3 @@
-import { Badge } from "@workspace/ui/components/badge";
 import { Item, ItemGroup, ItemSeparator } from "@workspace/ui/components/item";
 import { cn } from "@workspace/ui/lib/utils";
 import { Fragment, type ReactNode } from "react";
@@ -29,18 +28,14 @@ export function AdminPageHeader({
   title: React.ReactNode;
 }) {
   return (
-    <header className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <header className="admin-page-header flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="min-w-0">
-        {eyebrow ? (
-          <Badge className="mb-2" variant="secondary">
-            {eyebrow}
-          </Badge>
-        ) : null}
+        {eyebrow ? <span className="sr-only">{eyebrow}</span> : null}
         <h1 className="text-balance font-semibold text-2xl leading-tight">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 max-w-3xl text-muted-foreground text-sm leading-6">
+          <p className="mt-1.5 max-w-3xl text-muted-foreground text-sm leading-relaxed">
             {description}
           </p>
         ) : null}
@@ -86,7 +81,7 @@ export function AdminSettingsGroup({
   title: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(12rem,0.28fr)_minmax(0,0.72fr)]">
+    <section className="admin-settings-section grid gap-5 lg:grid-cols-[minmax(12rem,0.28fr)_minmax(0,0.72fr)]">
       <div>
         <h2 className="font-semibold text-sm">{title}</h2>
         {description ? (
@@ -95,7 +90,7 @@ export function AdminSettingsGroup({
           </p>
         ) : null}
       </div>
-      <ItemGroup className="overflow-hidden rounded-lg border bg-card">
+      <ItemGroup className="min-w-0 border-y">
         {Array.isArray(children) ? (
           children.map((child, index) => (
             <Fragment key={index}>

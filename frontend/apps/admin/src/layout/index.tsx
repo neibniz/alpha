@@ -1,38 +1,56 @@
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useLocation } from "@tanstack/react-router";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@workspace/ui/components/sidebar";
 import { getCookie } from "@workspace/ui/lib/cookies";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Header } from "@/layout/header";
 import { SidebarLeft } from "./sidebar-left";
 
 export default function DashboardLayout() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(
+    () => getCookie("sidebar_state") !== "false"
+  );
+  const { t } = useTranslation("components");
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sidebarState = getCookie("sidebar_state");
-    if (sidebarState !== undefined) {
-      setOpen(sidebarState === "true");
-    }
-  }, []);
+    if (pathname) contentRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
 
   return (
     <SidebarProvider
       className="admin-shell"
-      defaultOpen={open}
+      onOpenChange={setOpen}
+      open={open}
       style={
         {
-          "--sidebar-width": "14rem",
-          "--sidebar-width-icon": "3.25rem",
+          "--sidebar-width": "15.5rem",
+          "--sidebar-width-icon": "3.5rem",
         } as CSSProperties
       }
     >
+      <button
+        className="admin-skip-link"
+        onClick={() => {
+          contentRef.current?.focus();
+        }}
+        type="button"
+      >
+        {t("sidebar.skipToContent", "Skip to content")}
+      </button>
       <SidebarLeft />
       <SidebarInset className="admin-workspace relative min-w-0 flex-grow overflow-hidden">
         <Header />
-        <main className="admin-main flex-grow overflow-auto">
+        <div
+          className="admin-main flex-grow overflow-auto"
+          id="admin-content"
+          ref={contentRef}
+          tabIndex={-1}
+        >
           <div className="admin-page-stage" data-slot="admin-page-stage">
             <Outlet />
           </div>
@@ -46,7 +64,7 @@ export default function DashboardLayout() {
               IP Geolocation by DB-IP
             </a>
           </footer>
-        </main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

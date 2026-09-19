@@ -16,7 +16,7 @@ import { TicketImagePicker } from "@workspace/ui/composed/ticket-image-picker";
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/pro-table";
+} from "@/components/pro-table/pro-table";
 import { cn } from "@workspace/ui/lib/utils";
 import {
   createTicketFollow,
@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { formatDate } from "@/utils/common";
+import { AdminPage, AdminPageHeader } from "@/components/admin-page";
 import { UserDetail } from "../user/user-detail";
 
 export default function Page() {
@@ -74,130 +75,149 @@ export default function Page() {
   const ref = useRef<ProTableActions>(null);
   return (
     <>
-      <ProTable<API.TicketListItem, { status: number }>
-        action={ref}
-        actions={{
-          render(row) {
-            if (row.status !== 4) {
+      <AdminPage>
+        <AdminPageHeader
+          title={t("ticketList", "Ticket List")}
+          description={t(
+            "pageDescription",
+            "Customer conversations and follow-up requests."
+          )}
+        />
+        <ProTable<API.TicketListItem, { status: number }>
+          action={ref}
+          actions={{
+            render(row) {
+              if (row.status !== 4) {
+                return [
+                  <Button
+                    key="reply"
+                    onClick={() => setTicketId(row.id)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {t("reply", "Reply")}
+                  </Button>,
+                  <ConfirmButton
+                    cancelText={t("cancel", "Cancel")}
+                    confirmText={t("confirm", "Confirm")}
+                    description={t(
+                      "closeWarning",
+                      "Once closed, the ticket cannot be operated on. Please proceed with caution."
+                    )}
+                    key="colse"
+                    onConfirm={async () => {
+                      await updateTicketStatus({
+                        id: row.id,
+                        status: 4,
+                      });
+                      toast.success(t("closeSuccess", "Closed successfully"));
+                      ref.current?.refresh();
+                    }}
+                    title={t("confirmClose", "Are you sure you want to close?")}
+                    trigger={
+                      <Button size="sm" variant="ghost">
+                        {t("close", "Close")}
+                      </Button>
+                    }
+                  />,
+                ];
+              }
               return [
-                <Button key="reply" onClick={() => setTicketId(row.id)}>
-                  {t("reply", "Reply")}
+                <Button
+                  key="check"
+                  onClick={() => setTicketId(row.id)}
+                  size="sm"
+                >
+                  {t("check", "Check")}
                 </Button>,
-                <ConfirmButton
-                  cancelText={t("cancel", "Cancel")}
-                  confirmText={t("confirm", "Confirm")}
-                  description={t(
-                    "closeWarning",
-                    "Once closed, the ticket cannot be operated on. Please proceed with caution."
-                  )}
-                  key="colse"
-                  onConfirm={async () => {
-                    await updateTicketStatus({
-                      id: row.id,
-                      status: 4,
-                    });
-                    toast.success(t("closeSuccess", "Closed successfully"));
-                    ref.current?.refresh();
-                  }}
-                  title={t("confirmClose", "Are you sure you want to close?")}
-                  trigger={
-                    <Button variant="destructive">{t("close", "Close")}</Button>
-                  }
-                />,
               ];
-            }
-            return [
-              <Button key="check" onClick={() => setTicketId(row.id)} size="sm">
-                {t("check", "Check")}
-              </Button>,
-            ];
-          },
-        }}
-        columns={[
-          {
-            accessorKey: "title",
-            header: t("title", "Title"),
-          },
-          {
-            accessorKey: "user_id",
-            header: t("user", "User"),
-            cell: ({ row }) => <UserDetail id={row.original.user_id} />,
-          },
-          {
-            accessorKey: "status",
-            header: t("status.0", "Status"),
-            cell: ({ row }) => (
-              <span
-                className={cn(
-                  "flex items-center gap-2 before:block before:size-1.5 before:animate-pulse before:rounded-full before:ring-2 before:ring-opacity-50",
-                  {
-                    "before:bg-rose-500 before:ring-rose-500":
-                      row.original.status === 1,
-                    "before:bg-yellow-500 before:ring-yellow-500":
-                      row.original.status === 2,
-                    "before:bg-green-500 before:ring-green-500":
-                      row.original.status === 3,
-                    "before:bg-zinc-500 before:ring-zinc-500":
-                      row.original.status === 4,
-                  }
-                )}
-              >
-                {t(`status.${row.original.status}`)}
-              </span>
-            ),
-          },
-          {
-            accessorKey: "updated_at",
-            header: t("updatedAt", "Updated At"),
-            cell: ({ row }) => formatDate(row.getValue("updated_at")),
-          },
-        ]}
-        header={{
-          title: t("ticketList", "Ticket List"),
-        }}
-        params={[
-          {
-            key: "status",
-            placeholder: t("status.0", "Status"),
-            options: [
-              {
-                label: t("close", "Close"),
-                value: "4",
-              },
-            ],
-          },
-        ]}
-        request={async (pagination, filters) => {
-          const { data } = await getTicketList({
-            ...pagination,
-            ...filters,
-          });
+            },
+          }}
+          columns={[
+            {
+              accessorKey: "title",
+              header: t("title", "Title"),
+            },
+            {
+              accessorKey: "user_id",
+              header: t("user", "User"),
+              cell: ({ row }) => <UserDetail id={row.original.user_id} />,
+            },
+            {
+              accessorKey: "status",
+              header: t("status.0", "Status"),
+              cell: ({ row }) => (
+                <span
+                  className={cn(
+                    "flex items-center gap-2 before:block before:size-1.5 before:rounded-full",
+                    {
+                      "before:bg-rose-500 before:ring-rose-500":
+                        row.original.status === 1,
+                      "before:bg-yellow-500 before:ring-yellow-500":
+                        row.original.status === 2,
+                      "before:bg-green-500 before:ring-green-500":
+                        row.original.status === 3,
+                      "before:bg-zinc-500 before:ring-zinc-500":
+                        row.original.status === 4,
+                    }
+                  )}
+                >
+                  {t(`status.${row.original.status}`)}
+                </span>
+              ),
+            },
+            {
+              accessorKey: "updated_at",
+              header: t("updatedAt", "Updated At"),
+              cell: ({ row }) => formatDate(row.getValue("updated_at")),
+            },
+          ]}
+          params={[
+            {
+              key: "status",
+              placeholder: t("status.0", "Status"),
+              options: [
+                { label: t("status.1", "Pending Follow-up"), value: "1" },
+                { label: t("status.2", "Pending Reply"), value: "2" },
+                { label: t("status.3", "Resolved"), value: "3" },
+                {
+                  label: t("close", "Close"),
+                  value: "4",
+                },
+              ],
+            },
+          ]}
+          request={async (pagination, filters) => {
+            const { data } = await getTicketList({
+              ...pagination,
+              ...filters,
+            });
 
-          const result = normalizePageResult<API.TicketListItem>(data.data);
-          const list = result.list.slice();
+            const result = normalizePageResult<API.TicketListItem>(data.data);
+            const list = result.list.slice();
 
-          // Client-side ordering to improve triage efficiency:
-          // - Put "Pending Follow-up" (status=1) before "Pending Reply" (status=2)
-          // - Within each group, sort by updated_at desc
-          const statusPriority = (status: number) => {
-            if (status === 1) return 0;
-            if (status === 2) return 1;
-            return 2;
-          };
-          list.sort((a, b) => {
-            const pa = statusPriority(a.status);
-            const pb = statusPriority(b.status);
-            if (pa !== pb) return pa - pb;
-            return b.updated_at - a.updated_at;
-          });
+            // Client-side ordering to improve triage efficiency:
+            // - Put "Pending Follow-up" (status=1) before "Pending Reply" (status=2)
+            // - Within each group, sort by updated_at desc
+            const statusPriority = (status: number) => {
+              if (status === 1) return 0;
+              if (status === 2) return 1;
+              return 2;
+            };
+            list.sort((a, b) => {
+              const pa = statusPriority(a.status);
+              const pb = statusPriority(b.status);
+              if (pa !== pb) return pa - pb;
+              return b.updated_at - a.updated_at;
+            });
 
-          return {
-            list,
-            total: result.total,
-          };
-        }}
-      />
-
+            return {
+              list,
+              total: result.total,
+            };
+          }}
+        />
+      </AdminPage>
       <Drawer
         onOpenChange={(open) => {
           if (!open) {

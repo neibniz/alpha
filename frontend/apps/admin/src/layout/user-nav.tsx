@@ -10,69 +10,62 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import { LanguageSwitch } from "@workspace/ui/composed/language-switch";
+import { ChevronDown, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGlobalStore } from "@/stores/global";
 import { Logout } from "@/utils/common";
+import TimezoneSwitch from "./timezone-switch";
 
 export function UserNav() {
   const { t } = useTranslation("auth");
-  const { user } = useGlobalStore();
+  const user = useGlobalStore((store) => store.user);
+  if (!user) return null;
+  const identifier =
+    user.auth_methods?.[0]?.auth_identifier ||
+    t("consoleBadge", "Admin Console");
 
-  if (user) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            aria-label={t("accountMenu", "Account menu")}
-            className="rounded-md border"
-            size="icon"
-            variant="ghost"
-          >
-            <Avatar className="size-7">
-              <AvatarImage alt={user?.avatar ?? ""} src={user?.avatar ?? ""} />
-              <AvatarFallback className="rounded-sm bg-primary/10 font-semibold text-primary text-xs">
-                {user?.auth_methods?.[0]?.auth_identifier
-                  .toUpperCase()
-                  .charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56" forceMount>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="font-medium text-sm leading-none">
-                {user?.auth_methods?.[0]?.auth_identifier}
-              </p>
-              {/* <p className='text-xs leading-none text-muted-foreground'>ID: {user?.id}</p> */}
-            </div>
-          </DropdownMenuLabel>
-          {/* <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem>
-              Profile
-              <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              Billing
-              <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              Settings
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem>New Team</DropdownMenuItem>
-          </DropdownMenuGroup> */}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={Logout}>
-            {t("logout", "Logout")}
-            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label={t("accountMenu", "Account menu")}
+          className="h-9 gap-2 px-1.5"
+          variant="ghost"
+        >
+          <Avatar className="size-7">
+            <AvatarImage alt="" src={user.avatar || undefined} />
+            <AvatarFallback className="bg-muted text-xs">
+              {identifier.slice(0, 1).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="hidden max-w-28 truncate text-xs 2xl:block">
+            {identifier}
+          </span>
+          <ChevronDown className="hidden size-3 text-muted-foreground sm:block" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel className="grid gap-1">
+          <span className="text-xs font-normal text-muted-foreground">
+            {t("consoleBadge", "Admin Console")}
+          </span>
+          <span className="break-all text-sm">{identifier}</span>
+        </DropdownMenuLabel>
+        <div className="flex flex-wrap items-center gap-1 p-1 xl:hidden">
+          <div className="lg:hidden">
+            <LanguageSwitch />
+          </div>
+          <TimezoneSwitch />
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={Logout}>
+          <LogOut />
+          {t("logout", "Logout")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

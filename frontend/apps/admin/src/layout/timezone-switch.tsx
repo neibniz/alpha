@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@workspace/ui/components/popover";
-import { Icon } from "@workspace/ui/composed/icon";
+import { Check, Clock3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -202,8 +202,12 @@ export default function TimezoneSwitch() {
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
-        <Button className="p-0" size="icon" variant="ghost">
-          <Icon className="!size-6" icon="flat-color-icons:overtime" />
+        <Button
+          aria-label={t("timezone.choose", "Time zone")}
+          size="icon"
+          variant="ghost"
+        >
+          <Clock3 />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
@@ -229,7 +233,7 @@ export default function TimezoneSwitch() {
                           {option.timezone} • {getCurrentTime(option.value)}
                         </span>
                       </div>
-                      <Icon className="h-4 w-4 opacity-100" icon="uil:check" />
+                      <Check className="size-4" />
                     </div>
                   </CommandItem>
                 ))}
@@ -249,7 +253,7 @@ export default function TimezoneSwitch() {
                           {option.timezone} • {getCurrentTime(option.value)}
                         </span>
                       </div>
-                      <Icon className="h-4 w-4 opacity-0" icon="uil:check" />
+                      <Check className="size-4 opacity-0" />
                     </div>
                   </CommandItem>
                 ))}
@@ -276,7 +280,7 @@ export default function TimezoneSwitch() {
                           {option.timezone} • {getCurrentTime(option.value)}
                         </span>
                       </div>
-                      <Icon className="h-4 w-4 opacity-0" icon="uil:check" />
+                      <Check className="size-4 opacity-0" />
                     </div>
                   </CommandItem>
                 ))}
@@ -304,7 +308,7 @@ export default function TimezoneSwitch() {
                           {option.timezone} • {getCurrentTime(option.value)}
                         </span>
                       </div>
-                      <Icon className="h-4 w-4 opacity-0" icon="uil:check" />
+                      <Check className="size-4 opacity-0" />
                     </div>
                   </CommandItem>
                 ))}

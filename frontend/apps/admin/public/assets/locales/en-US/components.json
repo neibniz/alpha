@@ -100,6 +100,7 @@
     "unknown": "An error occurred in the system, please try again later."
   },
   "filter": {
+    "clear": "Clear filter",
     "choose": "Choose...",
     "search": "Search..."
   },
@@ -121,6 +122,8 @@
     "defaultDescription": "A pure, professional proxy panel for learning and real-world use."
   },
   "sidebar": {
+    "navigation": "Main navigation",
+    "skipToContent": "Skip to content",
     "currentWorkspace": "Current workspace",
     "description": "Displays the mobile sidebar.",
     "title": "Sidebar",
@@ -128,6 +131,15 @@
     "workspaces": "Workspaces"
   },
   "table": {
+    "bulkActions": "Bulk actions",
+    "clearSelection": "Clear selection",
+    "loadFailed": "Unable to load data",
+    "loadFailedDescription": "Check your connection and try again. Previously loaded results may be out of date.",
+    "retry": "Retry",
+    "loading": "Updating",
+    "refresh": "Refresh",
+    "columns": "Columns",
+    "reset": "Reset filters",
     "asc": "ASC",
     "desc": "DESC",
     "hide": "Hide",
@@ -145,6 +157,7 @@
     "toggle": "Toggle theme"
   },
   "timezone": {
+    "choose": "Time zone",
     "all": "All",
     "current": "Current",
     "recommended": "Recommended",

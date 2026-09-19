@@ -1,6 +1,6 @@
 {
   "workspace": "客户管理",
-  "accountAccessDescription": "邮箱作为主要登录身份，手机号可选。",
+  "accountAccessDescription": "使用邮箱登录，也可在账户中关联 GitHub。",
   "accountAccessSection": "账户访问",
   "actions": "操作",
   "administratorDescription": "授予该用户访问管理后台的权限。",

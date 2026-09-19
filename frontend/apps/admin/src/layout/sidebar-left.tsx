@@ -1,5 +1,15 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@workspace/ui/components/avatar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@workspace/ui/components/collapsible";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -10,123 +20,134 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  SidebarRail,
   useSidebar,
 } from "@workspace/ui/components/sidebar";
-import { Badge } from "@workspace/ui/components/badge";
-import { ChevronRight } from "lucide-react";
-import type React from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  findActiveNavGroup,
-  isActiveNavUrl,
-  type NavGroup,
-  useNavs,
-} from "./navs";
+import { useGlobalStore } from "@/stores/global";
+import { isActiveNavUrl, type NavGroup, useNavs } from "./navs";
 
-function DomainLinks({
-  domain,
+function NavigationGroup({
+  group,
   pathname,
 }: {
-  domain: NavGroup;
+  group: NavGroup;
   pathname: string;
 }) {
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const active = group.items.some((item) => isActiveNavUrl(item.url, pathname));
+  const compact =
+    group.items.length > 6 || group.items[0]?.url === "/dashboard/system";
+  const [open, setOpen] = useState(active || !compact);
+  const collapsed = state === "collapsed" && !isMobile;
+
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+
   return (
-    <SidebarMenu className="gap-1">
-      {domain.items.map((item) => {
-        const active = isActiveNavUrl(item.url, pathname);
-        const Icon = item.icon;
-        return (
-          <SidebarMenuItem key={item.url}>
-            <SidebarMenuButton
-              asChild
-              className="h-10"
-              isActive={active}
-              tooltip={item.title}
-            >
-              <Link to={item.url}>
-                <Icon aria-hidden />
-                <span className="truncate">{item.title}</span>
-                {active ? (
-                  <ChevronRight aria-hidden className="ml-auto" />
-                ) : null}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        );
-      })}
-    </SidebarMenu>
+    <Collapsible asChild onOpenChange={setOpen} open={collapsed || open}>
+      <SidebarGroup className="py-1.5">
+        {group.items.length > 1 ? (
+          <SidebarGroupLabel asChild>
+            <CollapsibleTrigger className="group/nav-heading mb-1 w-full justify-between">
+              <span>{group.title}</span>
+              <ChevronDown className="size-3 transition-transform group-data-[state=closed]/nav-heading:-rotate-90" />
+            </CollapsibleTrigger>
+          </SidebarGroupLabel>
+        ) : null}
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {group.items.map((item) => {
+                const selected = isActiveNavUrl(item.url, pathname);
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      className="h-9"
+                      isActive={selected}
+                      tooltip={item.title}
+                    >
+                      <Link
+                        aria-current={selected ? "page" : undefined}
+                        onClick={() => {
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                        to={item.url}
+                      >
+                        <Icon aria-hidden />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   );
 }
 
-export function SidebarLeft(props: React.ComponentProps<typeof Sidebar>) {
+export function SidebarLeft(props: ComponentProps<typeof Sidebar>) {
   const pathname = useLocation({ select: (location) => location.pathname });
   const navs = useNavs();
-  const activeDomain = findActiveNavGroup(navs, pathname);
-  const { isMobile } = useSidebar();
+  const site = useGlobalStore((store) => store.common.site);
+  const { isMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation("components");
-  const DomainIcon = activeDomain.icon;
+  const settings = navs.at(-1);
+  const siteName = site.site_name || "Alpha";
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader className="gap-3 px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-            <DomainIcon aria-hidden />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-sm">
-              {activeDomain.title}
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader className="h-16 justify-center border-b px-4 group-data-[collapsible=icon]:px-2">
+        <Link
+          className="admin-brand"
+          onClick={() => {
+            if (isMobile) setOpenMobile(false);
+          }}
+          to="/dashboard"
+        >
+          <Avatar className="size-8 shrink-0 rounded-md">
+            <AvatarImage
+              alt=""
+              className="object-contain"
+              src={site.site_logo || `${import.meta.env.BASE_URL}favicon.png`}
+            />
+            <AvatarFallback className="rounded-md">
+              {siteName.slice(0, 1)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="truncate font-semibold text-sm">{siteName}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {t("site.adminConsole", "Operations console")}
             </p>
-            <p className="truncate text-muted-foreground text-xs">
-              {activeDomain.description}
-            </p>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent className="px-2 py-3">
-        {isMobile ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              {t("sidebar.workspaces", "Workspaces")}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {navs.map((domain) => {
-                  const Icon = domain.icon;
-                  const active = domain.title === activeDomain.title;
-                  return (
-                    <SidebarMenuItem key={domain.title}>
-                      <SidebarMenuButton asChild isActive={active}>
-                        <Link to={domain.items[0]?.url || "/dashboard"}>
-                          <Icon aria-hidden />
-                          <span>{domain.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
-        {isMobile ? <SidebarSeparator /> : null}
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {t("sidebar.currentWorkspace", "Current workspace")}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <DomainLinks domain={activeDomain} pathname={pathname} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="gap-1 px-2 py-3">
+        <nav aria-label={t("sidebar.navigation", "Main navigation")}>
+          {navs.slice(0, -1).map((group) => (
+            <NavigationGroup
+              group={group}
+              key={group.items[0]?.url}
+              pathname={pathname}
+            />
+          ))}
+        </nav>
       </SidebarContent>
-      <SidebarFooter className="px-4 py-4">
-        <div className="flex items-center justify-between gap-2 text-muted-foreground text-xs">
-          <span>{t("site.adminConsole", "Operations console")}</span>
-          <Badge variant="outline">Alpha</Badge>
-        </div>
+      <SidebarFooter className="border-t px-2 py-2">
+        {settings ? (
+          <NavigationGroup group={settings} pathname={pathname} />
+        ) : null}
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

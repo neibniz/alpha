@@ -51,7 +51,7 @@ import { Icon } from "@workspace/ui/composed/icon";
 import {
   ProTable,
   type ProTableActions,
-} from "@workspace/ui/composed/pro-table/index";
+} from "@/components/pro-table/pro-table";
 import { UploadImage } from "@workspace/ui/composed/upload-image";
 import {
   createSubscribeApplication,

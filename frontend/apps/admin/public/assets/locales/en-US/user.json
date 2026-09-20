@@ -1,4 +1,9 @@
 {
+  "issueFailed": "Unable to issue the subscription. Check the order list before trying again.",
+  "billingPeriodsInvalid": "Enter a whole number between {{min}} and {{max}}.",
+  "quoteLoading": "Calculating order preview...",
+  "quoteFailed": "Unable to load the order preview",
+  "retry": "Retry",
   "workspace": "Customers",
   "accountAccessDescription": "Email is the primary sign-in identity; GitHub can be connected separately.",
   "accountAccessSection": "Account access",

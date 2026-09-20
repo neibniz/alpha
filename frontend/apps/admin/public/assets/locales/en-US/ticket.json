@@ -7,7 +7,11 @@
   "closeWarning": "Once closed, the ticket cannot be operated on. Please proceed with caution.",
   "confirm": "Confirm",
   "confirmClose": "Are you sure you want to close?",
-  "inputPlaceholder": "Please enter your question, we will reply as soon as possible.",
+  "inputPlaceholder": "Write a reply to the customer...",
+  "loading": "Loading conversation...",
+  "loadFailed": "Unable to load the conversation.",
+  "retry": "Retry",
+  "addImages": "Add images",
   "reply": "Reply",
   "send": "Send reply",
   "status": {

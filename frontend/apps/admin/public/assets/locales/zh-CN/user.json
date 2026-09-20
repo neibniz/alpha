@@ -1,4 +1,9 @@
 {
+  "issueFailed": "发放失败，请先检查订单列表，确认是否已创建订单后再重试。",
+  "billingPeriodsInvalid": "请输入 {{min}} 至 {{max}} 之间的整数。",
+  "quoteLoading": "正在计算订单预览…",
+  "quoteFailed": "订单预览加载失败",
+  "retry": "重试",
   "workspace": "客户管理",
   "accountAccessDescription": "使用邮箱登录，也可在账户中关联 GitHub。",
   "accountAccessSection": "账户访问",

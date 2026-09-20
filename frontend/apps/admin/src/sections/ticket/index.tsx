@@ -6,8 +6,13 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
 } from "@workspace/ui/components/drawer";
-import { Input } from "@workspace/ui/components/input";
+import { Textarea } from "@workspace/ui/components/textarea";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { X } from "lucide-react";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Icon } from "@workspace/ui/composed/icon";
@@ -48,7 +53,12 @@ export default function Page() {
   const [images, setImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
 
-  const { data: ticket, refetch: refetchTicket } = useQuery({
+  const {
+    data: ticket,
+    refetch: refetchTicket,
+    isPending,
+    isError,
+  } = useQuery({
     queryKey: ["getTicket", ticketId],
     queryFn: async () => {
       const { data } = await getTicket({
@@ -59,10 +69,22 @@ export default function Page() {
     enabled: !!ticketId,
     refetchInterval: 5000,
   });
+  const closeGuard = useFormCloseGuard({
+    open: ticketId !== null,
+    dirty: Boolean(message || images.length),
+    busy: sending,
+    onOpenChange: (open) => {
+      if (!open) {
+        setTicketId(null);
+        setMessage("");
+        setImages([]);
+      }
+    },
+  });
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (scrollRef.current) {
         scrollRef.current.children[1]?.scrollTo({
           top: scrollRef.current.children[1].scrollHeight,
@@ -70,6 +92,7 @@ export default function Page() {
         });
       }
     }, 66);
+    return () => clearTimeout(timer);
   }, [ticket?.follow?.length]);
 
   const ref = useRef<ProTableActions>(null);
@@ -218,30 +241,67 @@ export default function Page() {
           }}
         />
       </AdminPage>
-      <Drawer
-        onOpenChange={(open) => {
-          if (!open) {
-            setTicketId(null);
-            setMessage("");
-            setImages([]);
-          }
-        }}
-        open={!!ticketId}
-      >
-        <DrawerContent className="container mx-auto h-screen *:select-text">
-          <DrawerHeader className="border-b text-left">
-            <DrawerTitle>{ticket?.title}</DrawerTitle>
+      <Drawer onOpenChange={closeGuard.requestOpenChange} open={!!ticketId}>
+        {closeGuard.dialog}
+        <DrawerContent className="mx-auto flex h-[92dvh] max-w-4xl flex-col *:select-text">
+          <DrawerHeader className="relative shrink-0 border-b pr-16 text-left">
+            <DrawerTitle className="break-words">
+              {ticket?.title || t("ticketList", "Ticket List")}
+            </DrawerTitle>
+            <DrawerDescription>
+              #{ticketId} ·{" "}
+              {ticket
+                ? t(`status.${ticket.status}`)
+                : t("loading", "Loading conversation...")}
+            </DrawerDescription>
+            <Button
+              className="absolute right-4 top-4"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("close", "Close")}
+              disabled={sending}
+              onClick={() => closeGuard.requestOpenChange(false)}
+            >
+              <X />
+            </Button>
           </DrawerHeader>
-          <ScrollArea className="h-full overflow-hidden" ref={scrollRef}>
+          <ScrollArea
+            className="min-h-0 flex-1 overflow-hidden"
+            ref={scrollRef}
+          >
             <div className="flex h-full flex-col gap-4 p-4">
+              {isPending && (
+                <div
+                  role="status"
+                  aria-label={t("loading", "Loading conversation...")}
+                  className="flex flex-col gap-4"
+                >
+                  <Skeleton className="h-20 w-3/4" />
+                  <Skeleton className="ml-auto h-20 w-3/4" />
+                </div>
+              )}
+              {isError && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {t("loadFailed", "Unable to load the conversation.")}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refetchTicket()}
+                    >
+                      {t("retry", "Retry")}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* 显示工单描述作为第一条用户消息 */}
               {ticket?.description && (
                 <div className="flex items-center gap-4">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex min-w-0 max-w-[90%] flex-col gap-1">
                     <p className="text-muted-foreground text-sm">
                       {formatDate(ticket.created_at)}
                     </p>
-                    <p className="w-fit rounded-lg bg-accent p-2 font-medium">
+                    <p className="w-fit whitespace-pre-wrap break-words rounded-lg bg-accent p-3 text-sm leading-6">
                       {ticket.description}
                     </p>
                     <TicketImageGallery images={ticket.images || []} />
@@ -258,7 +318,7 @@ export default function Page() {
                   key={item.id}
                 >
                   <div
-                    className={cn("flex flex-col gap-1", {
+                    className={cn("flex min-w-0 max-w-[90%] flex-col gap-1", {
                       "items-end": item.from === "System",
                     })}
                   >
@@ -268,7 +328,7 @@ export default function Page() {
                     {item.content ? (
                       <p
                         className={cn(
-                          "w-fit whitespace-pre-wrap rounded-lg bg-accent p-2 font-medium",
+                          "w-fit whitespace-pre-wrap break-words rounded-lg bg-accent p-3 text-sm leading-6",
                           {
                             "bg-primary text-primary-foreground":
                               item.from === "System",
@@ -284,10 +344,10 @@ export default function Page() {
               ))}
             </div>
           </ScrollArea>
-          {ticket?.status !== 4 && (
-            <DrawerFooter>
+          {ticket && !isError && ticket.status !== 4 && (
+            <DrawerFooter className="shrink-0 border-t">
               <form
-                className="w-full space-y-3"
+                className="flex w-full flex-col gap-3"
                 onSubmit={async (event) => {
                   event.preventDefault();
                   const content = message.trim();
@@ -323,7 +383,9 @@ export default function Page() {
                   onError={(error) => toast.error(error)}
                 />
                 <div className="flex items-center gap-2">
-                  <Input
+                  <Textarea
+                    className="max-h-40 min-h-20 resize-y"
+                    aria-label={t("reply", "Reply")}
                     disabled={sending}
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder={t(

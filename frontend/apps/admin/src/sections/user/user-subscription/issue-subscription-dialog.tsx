@@ -1,4 +1,6 @@
 import { Button } from "@workspace/ui/components/button";
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { useOrderQuote } from "./use-order-quote";
 import {
   Alert,
   AlertDescription,
@@ -36,13 +38,11 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select";
-import {
-  issueUserSubscribeOrder,
-  quoteUserSubscribeOrder,
-} from "@workspace/ui/services/admin/user";
+import { issueUserSubscribeOrder } from "@workspace/ui/services/admin/user";
 import {
   CalendarDays,
   CircleAlert,
@@ -78,10 +78,9 @@ export function IssueSubscriptionDialog({
   const [quantity, setQuantity] = useState(1);
   const [amountMode, setAmountMode] = useState<AmountMode>("current_price");
   const [tradeNo, setTradeNo] = useState("");
-  const [quote, setQuote] = useState<API.IssueUserSubscribeOrderQuote>();
-  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const quoteSequence = useRef(0);
+  const submittingRef = useRef(false);
 
   const selectedProduct = useMemo(
     () => subscribes?.find((item) => item.id === subscribeId),
@@ -89,6 +88,36 @@ export function IssueSubscriptionDialog({
   );
   const minimum = Math.max(1, selectedProduct?.min_quantity || 1);
   const maximum = Math.max(minimum, selectedProduct?.max_quantity || 1000);
+  const {
+    quote,
+    loading: quoteLoading,
+    failed: quoteFailed,
+    retry,
+  } = useOrderQuote({
+    open,
+    userId,
+    subscribeId,
+    quantity,
+    minimum,
+    maximum,
+    amountMode,
+  });
+  const quantityValid =
+    Number.isInteger(quantity) && quantity >= minimum && quantity <= maximum;
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty,
+    busy: submitting,
+    onOpenChange: (next) => {
+      if (!next) {
+        setTradeNo("");
+        setSubscribeId(0);
+        setAmountMode("current_price");
+        setDirty(false);
+      }
+      setOpen(next);
+    },
+  });
 
   useEffect(() => {
     if (!open || subscribeId > 0 || !subscribes?.length) return;
@@ -98,33 +127,15 @@ export function IssueSubscriptionDialog({
     setQuantity(Math.max(1, first.min_quantity || 1));
   }, [open, subscribeId, subscribes]);
 
-  useEffect(() => {
-    if (!(open && subscribeId > 0 && quantity >= minimum)) {
-      setQuote(undefined);
-      return;
-    }
-    const sequence = ++quoteSequence.current;
-    const timer = window.setTimeout(async () => {
-      setQuoteLoading(true);
-      try {
-        const { data } = await quoteUserSubscribeOrder({
-          user_id: userId,
-          subscribe_id: subscribeId,
-          quantity,
-          amount_mode: amountMode,
-        });
-        if (sequence === quoteSequence.current) setQuote(data.data);
-      } catch {
-        if (sequence === quoteSequence.current) setQuote(undefined);
-      } finally {
-        if (sequence === quoteSequence.current) setQuoteLoading(false);
-      }
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [amountMode, minimum, open, quantity, subscribeId, userId]);
-
   const issue = async () => {
-    if (!quote) return;
+    if (
+      !quote?.user_enabled ||
+      quoteLoading ||
+      !quantityValid ||
+      submittingRef.current
+    )
+      return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const { data } = await issueUserSubscribeOrder({
@@ -141,21 +152,36 @@ export function IssueSubscriptionDialog({
       );
       setOpen(false);
       setTradeNo("");
+      setSubscribeId(0);
+      setAmountMode("current_price");
+      setDirty(false);
       onIssued();
+    } catch {
+      toast.error(
+        t(
+          "issueFailed",
+          "Unable to issue the subscription. Check the order list before trying again."
+        )
+      );
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="size-4" />
           {t("issueSubscription", "Issue subscription")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[min(760px,calc(100dvh-2rem))] overflow-y-auto p-0 sm:max-w-2xl">
+      <DialogContent
+        aria-busy={submitting}
+        className="flex max-h-[min(760px,calc(100dvh-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+      >
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="flex items-center gap-2">
             <ReceiptText className="size-5" />
@@ -169,7 +195,10 @@ export function IssueSubscriptionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup className="gap-5 px-6 py-5">
+        <FieldGroup
+          inert={submitting}
+          className="min-h-0 gap-5 overflow-y-auto px-6 py-5 [&>*]:shrink-0"
+        >
           <div className="grid gap-4 sm:grid-cols-[1fr_140px]">
             <Field>
               <FieldLabel htmlFor="issue-product">
@@ -177,6 +206,7 @@ export function IssueSubscriptionDialog({
               </FieldLabel>
               <Select
                 onValueChange={(value) => {
+                  setDirty(true);
                   const id = Number(value);
                   const product = subscribes?.find((item) => item.id === id);
                   setSubscribeId(id);
@@ -190,11 +220,13 @@ export function IssueSubscriptionDialog({
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {subscribes?.map((item) => (
-                    <SelectItem key={item.id} value={String(item.id)}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {subscribes?.map((item) => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </Field>
@@ -204,9 +236,14 @@ export function IssueSubscriptionDialog({
               </FieldLabel>
               <Input
                 id="issue-quantity"
+                aria-invalid={!quantityValid}
+                aria-describedby={
+                  !quantityValid ? "issue-quantity-error" : undefined
+                }
                 max={maximum}
                 min={minimum}
                 onChange={(event) => {
+                  setDirty(true);
                   const next = Number(event.target.value);
                   setQuantity(Number.isFinite(next) ? next : minimum);
                 }}
@@ -214,6 +251,18 @@ export function IssueSubscriptionDialog({
                 type="number"
                 value={quantity}
               />
+              {!quantityValid && (
+                <FieldDescription
+                  id="issue-quantity-error"
+                  className="text-destructive"
+                >
+                  {t(
+                    "billingPeriodsInvalid",
+                    "Enter a whole number between {{min}} and {{max}}.",
+                    { min: minimum, max: maximum }
+                  )}
+                </FieldDescription>
+              )}
             </Field>
           </div>
 
@@ -221,7 +270,10 @@ export function IssueSubscriptionDialog({
             <FieldLabel>{t("orderAmount", "Order amount")}</FieldLabel>
             <RadioGroup
               className="grid gap-2 sm:grid-cols-2"
-              onValueChange={(value) => setAmountMode(value as AmountMode)}
+              onValueChange={(value) => {
+                setDirty(true);
+                setAmountMode(value as AmountMode);
+              }}
               value={amountMode}
             >
               <FieldLabel htmlFor="amount-current">
@@ -268,7 +320,10 @@ export function IssueSubscriptionDialog({
               <Input
                 id="issue-trade-no"
                 maxLength={255}
-                onChange={(event) => setTradeNo(event.target.value)}
+                onChange={(event) => {
+                  setDirty(true);
+                  setTradeNo(event.target.value);
+                }}
                 placeholder={t(
                   "externalReferencePlaceholder",
                   "Optional offline payment or ticket reference"
@@ -326,13 +381,33 @@ export function IssueSubscriptionDialog({
               </CardContent>
             ) : (
               <CardContent className="px-4 py-8 text-center text-muted-foreground text-sm">
-                {t(
-                  "orderPreviewUnavailable",
-                  "Choose valid terms to preview the order."
-                )}
+                {quoteLoading
+                  ? t("quoteLoading", "Calculating order preview...")
+                  : t(
+                      "orderPreviewUnavailable",
+                      "Choose valid terms to preview the order."
+                    )}
               </CardContent>
             )}
           </Card>
+          {quoteFailed && (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>
+                {t("quoteFailed", "Unable to load the order preview")}
+              </AlertTitle>
+              <AlertDescription>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={retry}
+                >
+                  {t("retry", "Retry")}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {quote && !quote.user_enabled ? (
             <Alert variant="destructive">
@@ -348,8 +423,12 @@ export function IssueSubscriptionDialog({
           ) : null}
         </FieldGroup>
 
-        <DialogFooter className="border-t px-6 py-4">
-          <Button onClick={() => setOpen(false)} variant="outline">
+        <DialogFooter className="shrink-0 border-t px-6 py-4">
+          <Button
+            disabled={submitting}
+            onClick={() => closeGuard.requestOpenChange(false)}
+            variant="outline"
+          >
             {t("cancel", "Cancel")}
           </Button>
           <Button

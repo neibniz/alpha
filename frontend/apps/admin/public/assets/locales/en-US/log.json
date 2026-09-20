@@ -1,4 +1,6 @@
 {
+  "refresh": "Refresh",
+  "retry": "Retry",
   "workspace": "Analytics",
   "cancel": "Cancel",
   "column": {

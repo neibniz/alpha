@@ -156,6 +156,8 @@ export function ProTable<
   });
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [resetVersion, setResetVersion] = useState(0);
+  const displayedQueryRef = useRef("");
   const requestSequenceRef = useRef(0);
   const requestRef = useRef(request);
   const rowActionRenderRef = useRef(actions?.render);
@@ -267,6 +269,17 @@ export function ProTable<
 
   const fetchData = useCallback(async () => {
     const requestSequence = ++requestSequenceRef.current;
+    const query = JSON.stringify([
+      filterSignature,
+      pagination.pageIndex,
+      pagination.pageSize,
+    ]);
+    const queryChanged = displayedQueryRef.current !== query;
+    if (queryChanged) {
+      displayedQueryRef.current = query;
+      setData([]);
+    }
+    setRowSelection({});
     setLoading(true);
     setFailed(false);
     try {
@@ -276,18 +289,34 @@ export function ProTable<
       );
       const { list, total } = normalizePageResult(response);
       if (requestSequence === requestSequenceRef.current) {
+        const lastPage = Math.max(
+          0,
+          Math.ceil(total / pagination.pageSize) - 1
+        );
+        if (pagination.pageIndex > lastPage) {
+          setPagination((previous) => ({ ...previous, pageIndex: lastPage }));
+          return;
+        }
         setData(list);
         setRowCount(total);
         setRowSelection({});
       }
     } catch {
-      if (requestSequence === requestSequenceRef.current) setFailed(true);
+      if (requestSequence === requestSequenceRef.current) {
+        if (queryChanged) setRowCount(0);
+        setFailed(true);
+      }
     } finally {
       if (requestSequence === requestSequenceRef.current) {
         setLoading(false);
       }
     }
-  }, [filterValues, pagination.pageIndex, pagination.pageSize]);
+  }, [
+    filterValues,
+    filterSignature,
+    pagination.pageIndex,
+    pagination.pageSize,
+  ]);
   const reset = useCallback(async () => {
     setSorting([]);
     setColumnFilters(
@@ -301,6 +330,7 @@ export function ProTable<
     setColumnVisibility({});
     setRowSelection({});
     setPagination((previous) => ({ ...previous, pageIndex: 0 }));
+    setResetVersion((version) => version + 1);
   }, [initialFilters]);
   const ref = useRef<HTMLDivElement>(null);
   const size = useSize(ref);
@@ -332,7 +362,15 @@ export function ProTable<
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.pageIndex, pagination.pageSize, filterSignature]);
+    return () => {
+      requestSequenceRef.current += 1;
+    };
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    filterSignature,
+    resetVersion,
+  ]);
 
   const selectedRows = useMemo(
     () => table.getSelectedRowModel().flatRows.map((row) => row.original),

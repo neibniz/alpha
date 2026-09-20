@@ -1,6 +1,8 @@
 "use client";
 
 import { Badge } from "@workspace/ui/components/badge";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -130,7 +132,12 @@ export default function ProxyAccessLogPage() {
   }, [cursorHistory, filters, pageIndex, visibility]);
 
   useEffect(() => {
+    setRows([]);
+    setNextCursor("");
     load();
+    return () => {
+      requestID.current += 1;
+    };
   }, [load]);
 
   const applyFilters = () => {
@@ -149,7 +156,7 @@ export default function ProxyAccessLogPage() {
   };
 
   const goNext = () => {
-    if (!nextCursor) return;
+    if (loading || !nextCursor) return;
     setCursorHistory((current) => {
       const next = current.slice(0, pageIndex + 1);
       next.push(nextCursor);
@@ -171,7 +178,7 @@ export default function ProxyAccessLogPage() {
     <AdminPage>
       <AdminPageHeader
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SensitiveLogToggle
               onChange={updateVisibility}
               value={visibility}
@@ -198,7 +205,8 @@ export default function ProxyAccessLogPage() {
             </Button>
             <Button
               disabled={loading || Boolean(draftError)}
-              onClick={applyFilters}
+              form="proxy-access-filters"
+              type="submit"
             >
               {loading ? <Loader2 className="animate-spin" /> : <Search />}
               {t("search", "Search")}
@@ -213,7 +221,14 @@ export default function ProxyAccessLogPage() {
         title={t("title.proxyAccess", "Proxy Access")}
       />
 
-      <div className="border-y py-4">
+      <form
+        id="proxy-access-filters"
+        className="border-y py-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!loading) applyFilters();
+        }}
+      >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="proxy-access-start">
@@ -391,9 +406,12 @@ export default function ProxyAccessLogPage() {
             )}
           </p>
         )}
-      </div>
+      </form>
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div
+        aria-busy={loading}
+        className="overflow-hidden rounded-lg border bg-card"
+      >
         <div className="overflow-x-auto">
           <Table className="min-w-[900px]">
             <TableHeader>
@@ -409,6 +427,15 @@ export default function ProxyAccessLogPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {loading &&
+                rows.length === 0 &&
+                Array.from({ length: 5 }, (_, index) => (
+                  <TableRow key={`loading-${index}`}>
+                    <TableCell colSpan={8}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))}
               {rows.map((row) => (
                 <TableRow key={row.event_id}>
                   <TableCell className="whitespace-nowrap">
@@ -472,13 +499,18 @@ export default function ProxyAccessLogPage() {
           </Table>
         </div>
         {!loading && loadFailed ? (
-          <div
-            className="flex min-h-28 items-center justify-center gap-2 border-t text-muted-foreground text-sm"
-            role="alert"
+          <Alert
+            variant="destructive"
+            className="rounded-none border-x-0 border-b-0"
           >
-            <AlertCircle className="size-4" />
-            {t("loadFailed", "Failed to load access logs")}
-          </div>
+            <AlertCircle />
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+              {t("loadFailed", "Failed to load access logs")}
+              <Button variant="outline" size="sm" onClick={load}>
+                {t("retry", "Retry")}
+              </Button>
+            </AlertDescription>
+          </Alert>
         ) : null}
         {!(loading || loadFailed) && rows.length === 0 ? (
           <div className="border-t">

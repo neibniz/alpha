@@ -127,6 +127,66 @@ describe("ProTable workspace states", () => {
     { accessorKey: "name", header: "Name" },
   ];
 
+  it("reloads when resetting already-default filters", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce({ list: [{ id: 1, name: "Before" }], total: 1 })
+      .mockResolvedValue({ list: [], total: 0 });
+    render(<ProTable columns={columns} request={request} />);
+    await screen.findByText("Before");
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText("Before")).toBeNull());
+  });
+
+  it("clears old rows and bulk selections when a new filter fails", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce({
+        list: [{ id: 1, name: "Previous user" }],
+        total: 1,
+      })
+      .mockRejectedValue(new Error("failed"));
+    render(
+      <ProTable
+        columns={columns}
+        request={request}
+        params={[{ key: "search", placeholder: "Search names" }]}
+        actions={{
+          batchRender: () => [
+            <button key="delete" type="button">
+              Delete selected
+            </button>,
+          ],
+        }}
+      />
+    );
+    await screen.findByText("Previous user");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select row" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Search names" }), {
+      target: { value: "different" },
+    });
+    await screen.findByRole("alert");
+    expect(screen.queryByText("Previous user")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Bulk actions" })).toBeNull();
+  });
+
+  it("returns to the last valid page after records are deleted", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce({ list: [{ id: 1, name: "First" }], total: 11 })
+      .mockResolvedValueOnce({ list: [{ id: 11, name: "Last" }], total: 11 })
+      .mockResolvedValueOnce({ list: [], total: 10 })
+      .mockResolvedValue({ list: [{ id: 1, name: "First" }], total: 10 });
+    render(<ProTable columns={columns} request={request} />);
+    await screen.findByText("First");
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+    await screen.findByText("Last");
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText("First");
+    expect(request).toHaveBeenLastCalledWith({ page: 1, size: 10 }, {});
+  });
+
   it("shows a recoverable request failure instead of an empty success state", async () => {
     const request = vi
       .fn()

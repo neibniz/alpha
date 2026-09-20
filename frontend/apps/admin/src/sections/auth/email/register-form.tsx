@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -125,7 +126,7 @@ export default function RegisterForm({
         </Alert>
       ) : (
         <Form {...form}>
-          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <AdminForm className="flex flex-col gap-5" onSubmit={handleSubmit}>
             <FieldGroup className="gap-5">
               <FormField
                 control={form.control}
@@ -288,7 +289,7 @@ export default function RegisterForm({
               {loading ? <Spinner /> : null}
               {t("register.title", "Register")}
             </Button>
-          </form>
+          </AdminForm>
         </Form>
       )}
       <Separator className="my-4" />

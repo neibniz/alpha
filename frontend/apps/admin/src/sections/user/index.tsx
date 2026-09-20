@@ -38,7 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   ProTable,
   type ProTableActions,

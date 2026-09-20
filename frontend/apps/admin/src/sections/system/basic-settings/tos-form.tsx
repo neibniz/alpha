@@ -1,3 +1,5 @@
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
@@ -66,6 +68,16 @@ export default function TosConfig() {
     }
   }, [data, form]);
 
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: loading || form.formState.isSubmitting,
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
+
   async function onSubmit(values: TosFormData) {
     setLoading(true);
     try {
@@ -81,7 +93,8 @@ export default function TosConfig() {
   }
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
       <SheetTrigger asChild>
         <Button
           className="admin-setting-trigger h-auto w-full justify-between whitespace-normal text-left"
@@ -113,7 +126,7 @@ export default function TosConfig() {
         </SheetHeader>
         <ScrollArea className="h-[calc(100dvh-48px-36px-36px-24px-env(safe-area-inset-top))] px-6">
           <Form {...form}>
-            <form
+            <AdminForm
               className="space-y-2 pt-4"
               id="tos-form"
               onSubmit={form.handleSubmit(onSubmit)}
@@ -140,13 +153,13 @@ export default function TosConfig() {
                   </FormItem>
                 )}
               />
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">
           <Button
             disabled={loading}
-            onClick={() => setOpen(false)}
+            onClick={() => closeGuard.requestOpenChange(false)}
             variant="outline"
           >
             {t("common.cancel", "Cancel")}

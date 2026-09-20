@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card";
 import { EnhancedInput } from "@workspace/ui/composed/enhanced-input";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   createUserAuthMethod,
   deleteUserAuthMethod,

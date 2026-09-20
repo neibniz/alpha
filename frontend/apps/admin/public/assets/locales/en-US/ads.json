@@ -28,12 +28,14 @@
     "title": "Title",
     "type": "Type",
     "typeImage": "Image",
-    "typeVideo": "Video"
+    "typeVideo": "Video",
+    "dialogDescription": "Configure media, destination, and the active schedule."
   },
   "status": "Status",
   "targetUrl": "Target URL",
   "title": "Title",
   "type": "Type",
   "updateSuccess": "Updated successfully",
-  "validityPeriod": "Validity Period"
+  "validityPeriod": "Validity Period",
+  "pageDescription": "Manage advertising content, destinations, and schedules."
 }

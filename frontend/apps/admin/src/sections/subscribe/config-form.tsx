@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
@@ -457,7 +458,7 @@ export default function ConfigForm() {
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1 px-6">
             <Form {...form}>
-              <form
+              <AdminForm
                 className="subscribe-settings-form py-5"
                 id="subscribe-config-form"
                 onSubmit={form.handleSubmit(onSubmit, handleInvalid)}
@@ -865,7 +866,7 @@ export default function ConfigForm() {
                     </section>
                   </TabsContent>
                 </Tabs>
-              </form>
+              </AdminForm>
             </Form>
           </ScrollArea>
           <SheetFooter className="subscribe-config-footer flex-row justify-between gap-2">

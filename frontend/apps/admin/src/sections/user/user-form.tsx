@@ -1,3 +1,5 @@
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -101,8 +103,19 @@ export default function UserForm<T extends object>({
   });
 
   useEffect(() => {
+    if (form.formState.isDirty) return;
     form?.reset(initialValues);
   }, [form, initialValues]);
+
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(loading || form.formState.isSubmitting),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
 
   async function handleSubmit(data: UserFormValues) {
     const bool = await onSubmit(data as T);
@@ -111,7 +124,8 @@ export default function UserForm<T extends object>({
   }
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
       <SheetTrigger asChild>
         <Button
           onClick={() => {
@@ -134,7 +148,7 @@ export default function UserForm<T extends object>({
         </SheetHeader>
         <ScrollArea className="h-[calc(100dvh-153px-env(safe-area-inset-top))]">
           <Form {...form}>
-            <form
+            <AdminForm
               className="grid gap-4 px-5 py-5 sm:grid-cols-2"
               onSubmit={form.handleSubmit(handleSubmit)}
             >
@@ -160,7 +174,9 @@ export default function UserForm<T extends object>({
                         placeholder={t("userEmailPlaceholder", "Enter email")}
                         {...field}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -182,7 +198,9 @@ export default function UserForm<T extends object>({
                         type="password"
                         {...field}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -217,7 +235,9 @@ export default function UserForm<T extends object>({
                         )}
                         {...field}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -239,7 +259,9 @@ export default function UserForm<T extends object>({
                         )}
                         {...field}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -267,7 +289,9 @@ export default function UserForm<T extends object>({
                         type="number"
                         {...field}
                         onValueChange={(value) => {
-                          form.setValue(field.name, Number(value));
+                          form.setValue(field.name, Number(value), {
+                            shouldDirty: true,
+                          });
                         }}
                         suffix="%"
                       />
@@ -332,7 +356,9 @@ export default function UserForm<T extends object>({
                         }
                         min={0}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -363,7 +389,9 @@ export default function UserForm<T extends object>({
                         }
                         min={0}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -394,7 +422,9 @@ export default function UserForm<T extends object>({
                         }
                         min={0}
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                       />
                     </FormControl>
@@ -426,14 +456,14 @@ export default function UserForm<T extends object>({
                   </FormItem>
                 )}
               />
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 border-t px-5 py-3">
           <Button
             disabled={loading}
             onClick={() => {
-              setOpen(false);
+              closeGuard.requestOpenChange(false);
             }}
             variant="outline"
           >

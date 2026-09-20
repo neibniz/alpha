@@ -1,7 +1,8 @@
+import { AdminActionButton } from "@/components/admin-action-button";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
 import { Switch } from "@workspace/ui/components/switch";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   ProTable,
   type ProTableActions,
@@ -77,7 +78,11 @@ export default function Ads() {
             }}
             title={t("confirmDelete", "Confirm Delete")}
             trigger={
-              <Button variant="destructive">{t("delete", "Delete")}</Button>
+              <AdminActionButton
+                label={t("delete", "Delete")}
+                icon={Trash2}
+                destructive
+              />
             }
           />,
         ],
@@ -133,6 +138,10 @@ export default function Ads() {
         },
       ]}
       header={{
+        description: t(
+          "pageDescription",
+          "Manage advertising content, destinations, and schedules."
+        ),
         toolbar: (
           <AdsForm<API.CreateAdsRequest>
             loading={loading}

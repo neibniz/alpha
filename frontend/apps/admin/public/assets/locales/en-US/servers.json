@@ -241,5 +241,13 @@
   "user": "User",
   "inboundShort": "In",
   "outboundShort": "Out",
-  "xrayTemplates": "Xray Templates"
+  "xrayTemplates": "Xray Templates",
+  "form": {
+    "nameRequired": "Enter a server name",
+    "addressRequired": "Enter a server address",
+    "identity": "Server identity",
+    "identityDescription": "Identify the server and set the address used for connection.",
+    "location": "Location",
+    "locationDescription": "Optional location information for the server directory."
+  }
 }

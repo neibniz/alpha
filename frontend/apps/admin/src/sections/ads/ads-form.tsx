@@ -1,3 +1,7 @@
+import { AdminActionButton } from "@/components/admin-action-button";
+import { LoaderCircle, Pencil, Plus } from "lucide-react";
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -16,6 +20,7 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -115,6 +120,16 @@ export default function AdsForm<T extends object>({
     />
   );
 
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(loading || form.formState.isSubmitting),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
+
   async function handleSubmit(data: AdsFormValues) {
     const bool = await onSubmit(data as T);
     if (bool) setOpen(false);
@@ -137,19 +152,39 @@ export default function AdsForm<T extends object>({
   }
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
-      <Button disabled={opening} onClick={handleOpen}>
-        {opening && <Icon className="mr-2 animate-spin" icon="mdi:loading" />}
-        {trigger}
-      </Button>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
+      {initialValues ? (
+        <AdminActionButton
+          disabled={opening}
+          onClick={handleOpen}
+          label={trigger}
+          icon={opening ? LoaderCircle : Pencil}
+        />
+      ) : (
+        <Button disabled={opening} onClick={handleOpen}>
+          {opening ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
+          {trigger}
+        </Button>
+      )}
       <SheetContent className="w-[500px] max-w-full md:max-w-screen-md">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>
+            {t(
+              "form.dialogDescription",
+              "Edit content and review its publication settings."
+            )}
+          </SheetDescription>
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-48px-36px-36px-env(safe-area-inset-top))]">
           <Form {...form}>
-            <form
-              className="space-y-4 px-6 pt-4"
+            <AdminForm
+              className="px-6 py-6"
               onSubmit={form.handleSubmit(handleSubmit)}
             >
               <FormField
@@ -161,7 +196,9 @@ export default function AdsForm<T extends object>({
                     <FormControl>
                       <EnhancedInput
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                         placeholder={t("form.enterTitle", "Enter title")}
                         value={field.value}
@@ -183,7 +220,9 @@ export default function AdsForm<T extends object>({
                         className="flex gap-4"
                         defaultValue={field.value}
                         onValueChange={(value) => {
-                          form.setValue(field.name, normalizeAdsType(value));
+                          form.setValue(field.name, normalizeAdsType(value), {
+                            shouldDirty: true,
+                          });
                         }}
                       >
                         <FormItem className="flex items-center space-x-3 space-y-0">
@@ -222,7 +261,9 @@ export default function AdsForm<T extends object>({
                     <FormControl>
                       <EnhancedInput
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                         placeholder={t(
                           "form.enterDescription",
@@ -245,7 +286,9 @@ export default function AdsForm<T extends object>({
                     <FormControl>
                       <EnhancedInput
                         onValueChange={(value) => {
-                          form.setValue(field.name, value);
+                          form.setValue(field.name, value, {
+                            shouldDirty: true,
+                          });
                         }}
                         placeholder={t(
                           "form.enterTargetUrl",
@@ -272,7 +315,9 @@ export default function AdsForm<T extends object>({
                           const timestamp = value
                             ? new Date(value).getTime()
                             : 0;
-                          form.setValue(field.name, timestamp);
+                          form.setValue(field.name, timestamp, {
+                            shouldDirty: true,
+                          });
                           const endTime = form.getValues("end_time");
                           if (endTime && timestamp > endTime) {
                             form.setValue("end_time", 0);
@@ -315,7 +360,9 @@ export default function AdsForm<T extends object>({
                             ? new Date(value).getTime()
                             : 0;
                           if (!startTime || timestamp < startTime) return;
-                          form.setValue(field.name, timestamp);
+                          form.setValue(field.name, timestamp, {
+                            shouldDirty: true,
+                          });
                         }}
                         placeholder={t("form.enterEndTime", "Select end time")}
                         step="1"
@@ -331,14 +378,14 @@ export default function AdsForm<T extends object>({
                   </FormItem>
                 )}
               />
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">
           <Button
             disabled={loading}
             onClick={() => {
-              setOpen(false);
+              closeGuard.requestOpenChange(false);
             }}
             variant="outline"
           >

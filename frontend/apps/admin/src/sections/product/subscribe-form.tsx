@@ -1,5 +1,8 @@
 "use client";
 
+import { productErrorTab } from "./product-editor-tabs";
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Accordion,
@@ -109,6 +112,7 @@ interface SubscribeFormProps<T> {
 }
 
 const defaultValues = {
+  name: "",
   inventory: undefined,
   speed_limit: 0,
   device_limit: 0,
@@ -337,6 +341,7 @@ export default function SubscribeForm<T extends object>({
 
   const { t } = useTranslation("product");
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
   const [resolvedInitialValues, setResolvedInitialValues] = useState<
     Partial<T> | undefined
   >(initialValues);
@@ -345,7 +350,10 @@ export default function SubscribeForm<T extends object>({
 
   const formSchema = z
     .object({
-      name: z.string(),
+      name: z
+        .string()
+        .trim()
+        .min(1, t("form.nameRequired", "Enter a product name")),
       description: z.string().optional(),
       unit_price: z.number().int().nonnegative(),
       unit_time: z.string(),
@@ -438,7 +446,8 @@ export default function SubscribeForm<T extends object>({
       values: DiscountFormItem[],
       fieldName: "discount",
       lastChangedField?: string,
-      changedIndex?: number
+      changedIndex?: number,
+      shouldDirty = true
     ) => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
@@ -526,7 +535,7 @@ export default function SubscribeForm<T extends object>({
 
         if (hasChanges) {
           form.setValue(fieldName, calculatedValues, {
-            shouldDirty: true,
+            shouldDirty,
           });
         }
       }, 300);
@@ -539,13 +548,20 @@ export default function SubscribeForm<T extends object>({
   }, [initialValues]);
 
   useEffect(() => {
+    if (open && form.formState.isDirty) return;
     form?.reset({
       ...defaultValues,
       ...normalizedInitialValues,
     });
     const discount = form.getValues("discount") || [];
     if (discount.length > 0) {
-      debouncedCalculateDiscount(discount, "discount");
+      debouncedCalculateDiscount(
+        discount,
+        "discount",
+        undefined,
+        undefined,
+        false
+      );
     }
   }, [form, normalizedInitialValues, open, debouncedCalculateDiscount]);
 
@@ -558,12 +574,25 @@ export default function SubscribeForm<T extends object>({
     []
   );
 
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(
+      loading || loadingInitialValues || form.formState.isSubmitting
+    ),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
+
   async function handleSubmit(data: SubscribeFormValues) {
     const bool = await onSubmit(data as T);
     if (bool) setOpen(false);
   }
 
   async function handleOpen() {
+    setActiveTab("basic");
     const initialFormValues = shake(initialValues, (value) => value === null);
     setResolvedInitialValues(initialValues);
     form.reset({
@@ -610,15 +639,16 @@ export default function SubscribeForm<T extends object>({
   const unit_time = form.watch("unit_time");
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
       <SheetTrigger asChild>{renderTrigger()}</SheetTrigger>
       <SheetContent
         className="w-[min(920px,calc(100vw-24px))] max-w-full gap-0 md:max-w-4xl"
-        onClose={() => setOpen(false)}
+        onClose={() => closeGuard.requestOpenChange(false)}
       >
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription className="sr-only">
+          <SheetDescription>
             {t(
               "form.editorDescription",
               "Configure product details, pricing, and availability."
@@ -627,8 +657,18 @@ export default function SubscribeForm<T extends object>({
         </SheetHeader>
         <ScrollArea className="h-[calc(100dvh-48px-36px-36px-env(safe-area-inset-top))] px-6">
           <Form {...form}>
-            <form className="pt-4" onSubmit={form.handleSubmit(handleSubmit)}>
-              <Tabs className="w-full" defaultValue="basic">
+            <AdminForm
+              className="py-6"
+              inert={loadingInitialValues}
+              onSubmit={form.handleSubmit(handleSubmit, (errors) =>
+                setActiveTab(productErrorTab(Object.keys(errors)))
+              )}
+            >
+              <Tabs
+                className="w-full"
+                value={activeTab}
+                onValueChange={setActiveTab}
+              >
                 <TabsList className="mb-6 grid w-full grid-cols-4">
                   <TabsTrigger
                     className="flex items-center gap-1 px-1 text-xs sm:gap-2 sm:text-sm"
@@ -673,7 +713,7 @@ export default function SubscribeForm<T extends object>({
                               <EnhancedInput
                                 {...field}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -696,7 +736,7 @@ export default function SubscribeForm<T extends object>({
                               <EnhancedInput
                                 {...field}
                                 onValueChange={(v) =>
-                                  form.setValue(field.name, v as string)
+                                  field.onChange(v as string)
                                 }
                                 placeholder={t("form.languagePlaceholder")}
                               />
@@ -726,7 +766,7 @@ export default function SubscribeForm<T extends object>({
                                   unitConversion("gbToBytes", value)
                                 }
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                                 suffix="GB"
                               />
@@ -754,7 +794,7 @@ export default function SubscribeForm<T extends object>({
                                   unitConversion("mbToBits", value)
                                 }
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                                 suffix="Mbps"
                               />
@@ -777,7 +817,7 @@ export default function SubscribeForm<T extends object>({
                                 type="number"
                                 {...field}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -807,7 +847,7 @@ export default function SubscribeForm<T extends object>({
                                 }
                                 min={-1}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                                 placeholder={t("form.unlimitedInventory")}
                                 step={1}
@@ -832,7 +872,7 @@ export default function SubscribeForm<T extends object>({
                                 type="number"
                                 {...field}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -884,7 +924,7 @@ export default function SubscribeForm<T extends object>({
                                 }
                                 min={0}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -905,7 +945,7 @@ export default function SubscribeForm<T extends object>({
                                 {...field}
                                 onChange={(value) => {
                                   if (value) {
-                                    form.setValue(field.name, value);
+                                    field.onChange(value);
                                   }
                                 }}
                                 options={[
@@ -944,7 +984,7 @@ export default function SubscribeForm<T extends object>({
                                 }
                                 min={0}
                                 onValueChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -964,7 +1004,7 @@ export default function SubscribeForm<T extends object>({
                                 {...field}
                                 onChange={(value) => {
                                   if (typeof value === "number") {
-                                    form.setValue(field.name, value);
+                                    field.onChange(value);
                                   }
                                 }}
                                 options={[
@@ -1088,7 +1128,7 @@ export default function SubscribeForm<T extends object>({
                               max={100}
                               min={0}
                               onValueChange={(value) => {
-                                form.setValue(field.name, value);
+                                field.onChange(value);
                               }}
                               placeholder={t("form.auto", "Auto")}
                               step={1}
@@ -1123,7 +1163,7 @@ export default function SubscribeForm<T extends object>({
                               <Switch
                                 checked={field.value !== false}
                                 onCheckedChange={(value) =>
-                                  form.setValue(field.name, value)
+                                  field.onChange(value)
                                 }
                               />
                             </FormControl>
@@ -1154,7 +1194,7 @@ export default function SubscribeForm<T extends object>({
                               <Switch
                                 checked={field.value !== false}
                                 onCheckedChange={(value) =>
-                                  form.setValue(field.name, value)
+                                  field.onChange(value)
                                 }
                               />
                             </FormControl>
@@ -1212,7 +1252,7 @@ export default function SubscribeForm<T extends object>({
                               <Switch
                                 checked={!!field.value}
                                 onCheckedChange={(value) =>
-                                  form.setValue(field.name, value)
+                                  field.onChange(value)
                                 }
                               />
                             </FormControl>
@@ -1240,7 +1280,7 @@ export default function SubscribeForm<T extends object>({
                               <Switch
                                 checked={!!field.value}
                                 onCheckedChange={(value) => {
-                                  form.setValue(field.name, value);
+                                  field.onChange(value);
                                 }}
                               />
                             </FormControl>
@@ -1403,7 +1443,7 @@ export default function SubscribeForm<T extends object>({
                               min={1}
                               max={1000}
                               onValueChange={(value) =>
-                                form.setValue(field.name, Number(value) || 1)
+                                field.onChange(Number(value) || 1)
                               }
                               step={1}
                               type="number"
@@ -1427,7 +1467,7 @@ export default function SubscribeForm<T extends object>({
                               min={0}
                               max={1000}
                               onValueChange={(value) =>
-                                form.setValue(field.name, Number(value) || 0)
+                                field.onChange(Number(value) || 0)
                               }
                               placeholder={t(
                                 "form.systemLimit",
@@ -1526,32 +1566,27 @@ export default function SubscribeForm<T extends object>({
 
                                 return (
                                   <AccordionItem key={tag} value={String(tag)}>
-                                    <AccordionTrigger>
-                                      <div className="flex items-center gap-2">
-                                        <Checkbox
-                                          checked={value.includes(tagId)}
-                                          onCheckedChange={(checked) =>
-                                            checked
-                                              ? form.setValue(field.name, [
-                                                  ...value,
-                                                  tagId,
-                                                ])
-                                              : form.setValue(
-                                                  field.name,
-                                                  value.filter(
-                                                    (v) => v !== tagId
-                                                  )
-                                                )
-                                          }
-                                        />
-                                        <Label>
+                                    <div className="flex items-center gap-3">
+                                      <Checkbox
+                                        aria-label={tag}
+                                        checked={value.includes(tagId)}
+                                        onCheckedChange={(checked) =>
+                                          checked
+                                            ? field.onChange([...value, tagId])
+                                            : field.onChange(
+                                                value.filter((v) => v !== tagId)
+                                              )
+                                        }
+                                      />
+                                      <AccordionTrigger className="min-w-0 flex-1">
+                                        <span>
                                           {tag}
                                           <span className="ml-2 text-muted-foreground text-xs">
                                             ({nodesWithTag.length})
                                           </span>
-                                        </Label>
-                                      </div>
-                                    </AccordionTrigger>
+                                        </span>
+                                      </AccordionTrigger>
+                                    </div>
                                     <AccordionContent>
                                       <ul className="space-y-1">
                                         {getNodesByTag(tag).map((node) => (
@@ -1600,15 +1635,12 @@ export default function SubscribeForm<T extends object>({
                                     key={item.id}
                                   >
                                     <Checkbox
+                                      aria-label={item.name}
                                       checked={value.includes(item.id!)}
                                       onCheckedChange={(checked) =>
                                         checked
-                                          ? form.setValue(field.name, [
-                                              ...value,
-                                              item.id,
-                                            ])
-                                          : form.setValue(
-                                              field.name,
+                                          ? field.onChange([...value, item.id])
+                                          : field.onChange(
                                               value.filter(
                                                 (value: number) =>
                                                   value !== item.id
@@ -1639,14 +1671,14 @@ export default function SubscribeForm<T extends object>({
                   </div>
                 </TabsContent>
               </Tabs>
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">
           <Button
             disabled={loading || loadingInitialValues}
             onClick={() => {
-              setOpen(false);
+              closeGuard.requestOpenChange(false);
             }}
             variant="outline"
           >
@@ -1655,6 +1687,7 @@ export default function SubscribeForm<T extends object>({
           <Button
             disabled={loading || loadingInitialValues}
             onClick={form.handleSubmit(handleSubmit, (errors) => {
+              setActiveTab(productErrorTab(Object.keys(errors)));
               const keys = Object.keys(errors) as Array<
                 keyof SubscribeFormValues
               >;

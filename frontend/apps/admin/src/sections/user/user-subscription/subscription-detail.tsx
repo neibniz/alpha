@@ -9,7 +9,7 @@ import {
   SheetTrigger,
 } from "@workspace/ui/components/sheet";
 import { Switch } from "@workspace/ui/components/switch";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   ProTable,
   type ProTableActions,

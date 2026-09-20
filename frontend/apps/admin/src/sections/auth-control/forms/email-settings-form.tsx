@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
@@ -178,7 +179,7 @@ export default function EmailSettingsForm() {
         </SheetHeader>
         <ScrollArea className="h-[calc(100dvh-48px-36px-36px-24px-env(safe-area-inset-top))] px-6">
           <Form {...form}>
-            <form
+            <AdminForm
               className="space-y-2 pt-4"
               id="email-settings-form"
               onSubmit={form.handleSubmit(onSubmit)}
@@ -852,7 +853,7 @@ export default function EmailSettingsForm() {
                   />
                 </TabsContent>
               </Tabs>
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">

@@ -241,5 +241,13 @@
   "user": "用户",
   "inboundShort": "入",
   "outboundShort": "出",
-  "xrayTemplates": "Xray 模板"
+  "xrayTemplates": "Xray 模板",
+  "form": {
+    "nameRequired": "请输入服务器名称",
+    "addressRequired": "请输入服务器地址",
+    "identity": "服务器标识",
+    "identityDescription": "设置用于识别和连接服务器的名称与地址。",
+    "location": "地理位置",
+    "locationDescription": "可选填写，便于在服务器列表中按地区识别。"
+  }
 }

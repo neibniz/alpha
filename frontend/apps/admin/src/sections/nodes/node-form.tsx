@@ -1,5 +1,7 @@
 "use client";
 
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
@@ -212,7 +214,7 @@ export default function NodeForm(props: {
   );
 
   useEffect(() => {
-    if (initialValues) {
+    if (initialValues && !form.formState.isDirty) {
       form.reset(buildDefaultValues(initialValues));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,7 +222,7 @@ export default function NodeForm(props: {
 
   function handleServerChange(nextId?: number | null) {
     const id = nextId || 0;
-    form.setValue("server_id", id);
+    form.setValue("server_id", id, { shouldDirty: true });
 
     if (!id) {
       setAutoFilledFields(new Set());
@@ -284,13 +286,13 @@ export default function NodeForm(props: {
     fieldName: "name" | "address",
     value: string
   ) => {
-    form.setValue(fieldName, value);
+    form.setValue(fieldName, value, { shouldDirty: true });
     removeAutoFilledField(fieldName);
   };
 
   function handleInboundChange(nextInbound?: string | null) {
     const inbound = nextInbound || "";
-    form.setValue("inbound_alias", inbound);
+    form.setValue("inbound_alias", inbound, { shouldDirty: true });
 
     if (!(inbound && serverId)) {
       removeAutoFilledField("inbound_alias");
@@ -313,6 +315,16 @@ export default function NodeForm(props: {
     }
   }
 
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(loading || form.formState.isSubmitting),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
+
   async function handleSubmit(values: NodeFormValues) {
     const result = await onSubmit({
       ...values,
@@ -333,7 +345,13 @@ export default function NodeForm(props: {
   }
 
   return (
-    <Sheet onOpenChange={handleOpenChange} open={open}>
+    <Sheet
+      onOpenChange={(next) =>
+        next ? handleOpenChange(true) : closeGuard.requestOpenChange(false)
+      }
+      open={open}
+    >
+      {closeGuard.dialog}
       <SheetTrigger asChild>
         {typeof trigger === "string" ? <Button>{trigger}</Button> : trigger}
       </SheetTrigger>
@@ -350,7 +368,10 @@ export default function NodeForm(props: {
         </SheetHeader>
         <ScrollArea className="min-h-0 flex-1 px-6">
           <Form {...form}>
-            <form className="grid grid-cols-1">
+            <AdminForm
+              className="grid grid-cols-1"
+              onSubmit={form.handleSubmit(handleSubmit)}
+            >
               <section className="grid gap-4 border-b py-5">
                 <p className="font-medium text-xs">
                   {t("form.bindingSection", "Server and Inbound")}
@@ -452,7 +473,9 @@ export default function NodeForm(props: {
                             max={65_535}
                             min={1}
                             onValueChange={(v) => {
-                              form.setValue("port", Number(v));
+                              form.setValue("port", Number(v), {
+                                shouldDirty: true,
+                              });
                               removeAutoFilledField("port");
                             }}
                             placeholder="1-65535"
@@ -479,7 +502,11 @@ export default function NodeForm(props: {
                       <FormLabel>{t("tags", "Tags")}</FormLabel>
                       <FormControl>
                         <TagInput
-                          onChange={(v) => form.setValue(field.name, v || [])}
+                          onChange={(v) =>
+                            form.setValue(field.name, v || [], {
+                              shouldDirty: true,
+                            })
+                          }
                           options={existingTags}
                           placeholder={t(
                             "tags_placeholder",
@@ -499,14 +526,14 @@ export default function NodeForm(props: {
                   )}
                 />
               </section>
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
 
         <SheetFooter className="flex-row justify-end gap-2 border-t px-6 py-4">
           <Button
             disabled={loading}
-            onClick={() => setOpen(false)}
+            onClick={() => closeGuard.requestOpenChange(false)}
             variant="outline"
           >
             {t("cancel", "Cancel")}

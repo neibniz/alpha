@@ -1,6 +1,8 @@
+import { AdminActionButton } from "@/components/admin-action-button";
+import { Trash2 } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Switch } from "@workspace/ui/components/switch";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   ProTable,
   type ProTableActions,
@@ -86,7 +88,11 @@ export default function Page() {
               }}
               title={t("confirmDelete", "Confirm Delete")}
               trigger={
-                <Button variant="destructive">{t("delete", "Delete")}</Button>
+                <AdminActionButton
+                  label={t("delete", "Delete")}
+                  icon={Trash2}
+                  destructive
+                />
               }
             />,
           ];
@@ -171,6 +177,10 @@ export default function Page() {
         },
       ]}
       header={{
+        description: t(
+          "pageDescription",
+          "Organize help articles, tags, and publication status."
+        ),
         title: t("DocumentList", "Document List"),
         toolbar: (
           <DocumentForm<API.CreateDocumentRequest>

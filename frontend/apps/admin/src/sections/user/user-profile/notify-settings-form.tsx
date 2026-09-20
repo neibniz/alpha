@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -59,7 +60,7 @@ export function NotifySettingsForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <AdminForm onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{t("notifySettingsTitle", "Notify Settings")}</CardTitle>
@@ -146,7 +147,7 @@ export function NotifySettingsForm({
             </div>
           </CardContent>
         </Card>
-      </form>
+      </AdminForm>
     </Form>
   );
 }

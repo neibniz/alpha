@@ -14,33 +14,35 @@ export function DiscardChangesDialog({
   open,
   onOpenChange,
   onDiscard,
+  disabled = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDiscard: () => void;
+  disabled?: boolean;
 }) {
-  const { t } = useTranslation("subscribe");
+  const { t } = useTranslation("components");
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {t("discard.title", "Discard unsaved changes?")}
+            {t("form.discardTitle", "Discard unsaved changes?")}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {t(
-              "discard.description",
-              "Your changes have not been saved. This action cannot be undone."
+              "form.discardDescription",
+              "Your edits have not been saved. Keep editing or discard them and close."
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>
-            {t("discard.continueEditing", "Continue editing")}
+            {t("form.keepEditing", "Keep editing")}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={onDiscard}>
-            {t("discard.confirm", "Discard changes")}
+          <AlertDialogAction disabled={disabled} onClick={onDiscard}>
+            {t("form.discard", "Discard changes")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

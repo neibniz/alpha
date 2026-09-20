@@ -164,5 +164,16 @@
     "search": "Search timezone...",
     "server": "Server"
   },
-  "unlimited": "Unlimited"
+  "unlimited": "Unlimited",
+  "form": {
+    "reviewErrors": "Review the highlighted fields",
+    "discardTitle": "Discard unsaved changes?",
+    "discardDescription": "Your edits have not been saved. Keep editing or discard them and close.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
+  "action": {
+    "failed": "The operation failed. Check the current state before trying again.",
+    "processing": "Processing"
+  }
 }

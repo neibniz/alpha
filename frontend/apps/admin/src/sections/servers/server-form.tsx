@@ -1,5 +1,8 @@
 "use client";
 
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminFormSection } from "@/components/admin-form-section";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -66,7 +69,18 @@ export default function ServerForm(props: {
   };
 
   const form = useForm<ServerFormValues>({
-    resolver: zodResolver(serverFormSchema),
+    resolver: zodResolver(
+      serverFormSchema.extend({
+        name: z
+          .string()
+          .trim()
+          .min(1, t("form.nameRequired", "Enter a server name")),
+        address: z
+          .string()
+          .trim()
+          .min(1, t("form.addressRequired", "Enter a server address")),
+      })
+    ),
     defaultValues: {
       name: "",
       address: "",
@@ -76,7 +90,7 @@ export default function ServerForm(props: {
   });
 
   useEffect(() => {
-    if (!initialValues) return;
+    if (!initialValues || form.formState.isDirty) return;
     form.reset({
       name: (initialValues.name as string) || "",
       address: (initialValues.address as string) || "",
@@ -84,6 +98,16 @@ export default function ServerForm(props: {
       city: (initialValues.city as string) || "",
     });
   }, [form, initialValues]);
+
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(loading || form.formState.isSubmitting),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
 
   async function handleSubmit(values: ServerFormValues) {
     const ok = await onSubmit(values);
@@ -94,7 +118,8 @@ export default function ServerForm(props: {
   }
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
       {trigger ? (
         <SheetTrigger asChild>
           <Button
@@ -114,7 +139,7 @@ export default function ServerForm(props: {
           </Button>
         </SheetTrigger>
       ) : null}
-      <SheetContent className="w-[560px] max-w-full gap-0">
+      <SheetContent className="w-[560px] max-w-full gap-0 sm:max-w-[560px]">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
@@ -126,47 +151,23 @@ export default function ServerForm(props: {
         </SheetHeader>
         <ScrollArea className="h-[calc(100dvh-48px-36px-36px-env(safe-area-inset-top))]">
           <Form {...form}>
-            <form className="grid grid-cols-1 gap-4 px-6 pt-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("name", "Name")}</FormLabel>
-                    <FormControl>
-                      <EnhancedInput
-                        {...field}
-                        onValueChange={(v) => field.onChange(v)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            <AdminForm
+              className="px-6 py-6"
+              onSubmit={form.handleSubmit(handleSubmit)}
+            >
+              <AdminFormSection
+                title={t("form.identity", "Server identity")}
+                description={t(
+                  "form.identityDescription",
+                  "Identify the server and set the address used for connection."
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("address", "Address")}</FormLabel>
-                    <FormControl>
-                      <EnhancedInput
-                        {...field}
-                        onValueChange={(v) => field.onChange(v)}
-                        placeholder={t("address_placeholder", "Server address")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              >
                 <FormField
                   control={form.control}
-                  name="country"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("country", "Country")}</FormLabel>
+                      <FormLabel>{t("name", "Name")}</FormLabel>
                       <FormControl>
                         <EnhancedInput
                           {...field}
@@ -179,28 +180,74 @@ export default function ServerForm(props: {
                 />
                 <FormField
                   control={form.control}
-                  name="city"
+                  name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("city", "City")}</FormLabel>
+                      <FormLabel>{t("address", "Address")}</FormLabel>
                       <FormControl>
                         <EnhancedInput
                           {...field}
                           onValueChange={(v) => field.onChange(v)}
+                          placeholder={t(
+                            "address_placeholder",
+                            "Server address"
+                          )}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </form>
+              </AdminFormSection>
+              <AdminFormSection
+                title={t("form.location", "Location")}
+                description={t(
+                  "form.locationDescription",
+                  "Optional location information for the server directory."
+                )}
+              >
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("country", "Country")}</FormLabel>
+                        <FormControl>
+                          <EnhancedInput
+                            {...field}
+                            onValueChange={(v) => field.onChange(v)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("city", "City")}</FormLabel>
+                        <FormControl>
+                          <EnhancedInput
+                            {...field}
+                            onValueChange={(v) => field.onChange(v)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </AdminFormSection>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">
           <Button
             disabled={loading}
-            onClick={() => setOpen(false)}
+            onClick={() => closeGuard.requestOpenChange(false)}
             variant="outline"
           >
             {t("cancel", "Cancel")}

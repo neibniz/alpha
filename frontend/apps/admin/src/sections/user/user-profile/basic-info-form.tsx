@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -82,7 +83,7 @@ export function BasicInfoForm({
 
   return (
     <Form {...form}>
-      <form autoComplete="off" onSubmit={form.handleSubmit(onSubmit)}>
+      <AdminForm autoComplete="off" onSubmit={form.handleSubmit(onSubmit)}>
         <Input
           aria-hidden="true"
           autoComplete="username"
@@ -369,7 +370,7 @@ export function BasicInfoForm({
             />
           </CardContent>
         </Card>
-      </form>
+      </AdminForm>
     </Form>
   );
 }

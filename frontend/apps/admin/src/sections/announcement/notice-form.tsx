@@ -1,3 +1,7 @@
+import { AdminActionButton } from "@/components/admin-action-button";
+import { LoaderCircle, Pencil, Plus } from "lucide-react";
+import { useFormCloseGuard } from "@/components/use-form-close-guard";
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -72,12 +76,23 @@ export default function AnnouncementForm<T extends object>({
   });
 
   useEffect(() => {
+    if (form.formState.isDirty) return;
     form?.reset({
       title: "",
       content: "",
       ...initialValues,
     });
   }, [form, initialValues]);
+
+  const closeGuard = useFormCloseGuard({
+    open,
+    dirty: form.formState.isDirty,
+    busy: Boolean(loading || form.formState.isSubmitting),
+    onOpenChange: (next) => {
+      if (!next) form.reset();
+      setOpen(next);
+    },
+  });
 
   async function handleSubmit(data: AnnouncementFormValues) {
     const bool = await onSubmit(data as T);
@@ -105,15 +120,29 @@ export default function AnnouncementForm<T extends object>({
   }
 
   return (
-    <Sheet onOpenChange={setOpen} open={open}>
-      <Button disabled={opening} onClick={handleOpen}>
-        {opening && <Icon className="mr-2 animate-spin" icon="mdi:loading" />}
-        {trigger}
-      </Button>
+    <Sheet onOpenChange={closeGuard.requestOpenChange} open={open}>
+      {closeGuard.dialog}
+      {initialValues ? (
+        <AdminActionButton
+          disabled={opening}
+          onClick={handleOpen}
+          label={trigger}
+          icon={opening ? LoaderCircle : Pencil}
+        />
+      ) : (
+        <Button disabled={opening} onClick={handleOpen}>
+          {opening ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
+          {trigger}
+        </Button>
+      )}
       <SheetContent className="w-[800px] max-w-full md:max-w-screen-md">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription className="sr-only">
+          <SheetDescription>
             {t(
               "form.dialogDescription",
               "Create or edit announcement content."
@@ -122,8 +151,8 @@ export default function AnnouncementForm<T extends object>({
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-48px-36px-36px-env(safe-area-inset-top))] px-6">
           <Form {...form}>
-            <form
-              className="space-y-4 pt-4"
+            <AdminForm
+              className="py-6"
               id="notice-form"
               onSubmit={form.handleSubmit(handleSubmit)}
             >
@@ -162,14 +191,14 @@ export default function AnnouncementForm<T extends object>({
                   </FormItem>
                 )}
               />
-            </form>
+            </AdminForm>
           </Form>
         </ScrollArea>
         <SheetFooter className="flex-row justify-end gap-2 pt-3">
           <Button
             disabled={loading}
             onClick={() => {
-              setOpen(false);
+              closeGuard.requestOpenChange(false);
             }}
             variant="outline"
           >

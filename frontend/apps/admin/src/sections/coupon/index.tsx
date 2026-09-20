@@ -1,7 +1,7 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Switch } from "@workspace/ui/components/switch";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   ProTable,
   type ProTableActions,
@@ -157,8 +157,9 @@ export default function Coupon() {
                   await deleteCoupon({ id: row.id });
                   toast.success(t("deleteSuccess", "Coupon deleted"));
                   tableRef.current?.refresh();
-                } catch {
+                } catch (error) {
                   toast.error(t("deleteFailed", "Delete failed"));
+                  throw error;
                 } finally {
                   setPending(row.id, false);
                 }
@@ -193,8 +194,9 @@ export default function Coupon() {
                   await batchDeleteCoupon({ ids: rows.map((item) => item.id) });
                   toast.success(t("deleteSuccess", "Coupons deleted"));
                   tableRef.current?.reset();
-                } catch {
+                } catch (error) {
                   toast.error(t("deleteFailed", "Delete failed"));
+                  throw error;
                 } finally {
                   setBatchLoading(false);
                 }

@@ -126,6 +126,7 @@
   "guestVisibleDescription": "允许未登录访客在公开商品页查看",
   "sortSuccess": "排序成功",
   "form": {
+    "nameRequired": "请输入商品名称",
     "annualReset": "年度重置",
     "allowRenewal": "允许续费",
     "allowRenewalDescription": "用户可以对该商品的订阅进行续费",

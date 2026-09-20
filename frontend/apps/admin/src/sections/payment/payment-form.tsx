@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
@@ -360,7 +361,7 @@ export default function PaymentForm<T extends { platform?: string }>({
               </div>
             ) : (
               <Form {...form}>
-                <form
+                <AdminForm
                   className="space-y-6 px-6 pt-4"
                   onSubmit={form.handleSubmit(handleSubmit)}
                 >
@@ -725,7 +726,7 @@ export default function PaymentForm<T extends { platform?: string }>({
                       )}
                     />
                   </div>
-                </form>
+                </AdminForm>
               </Form>
             )}
           </ScrollArea>

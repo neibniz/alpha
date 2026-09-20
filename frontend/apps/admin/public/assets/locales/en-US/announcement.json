@@ -31,5 +31,6 @@
   "togglePopup": "Toggle popup for {{title}}",
   "toggleShow": "Toggle visibility for {{title}}",
   "updatedAt": "Updated At",
-  "updateSuccess": "Updated successfully"
+  "updateSuccess": "Updated successfully",
+  "pageDescription": "Publish announcements and manage visibility, pinning, and popups."
 }

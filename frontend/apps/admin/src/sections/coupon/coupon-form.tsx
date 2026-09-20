@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -206,7 +207,7 @@ export default function CouponForm({
               </div>
             ) : (
               <Form {...form}>
-                <form
+                <AdminForm
                   className="space-y-5 py-5"
                   id={formId}
                   onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
@@ -585,7 +586,7 @@ export default function CouponForm({
                       </section>
                     </TabsContent>
                   </Tabs>
-                </form>
+                </AdminForm>
               </Form>
             )}
           </ScrollArea>

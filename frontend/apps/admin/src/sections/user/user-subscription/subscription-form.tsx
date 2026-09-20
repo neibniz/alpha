@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -111,7 +112,7 @@ export function SubscriptionForm({
         <ScrollArea className="h-[calc(100dvh-48px-36px-36px-env(safe-area-inset-top))] px-4">
           <div className="pr-4">
             <Form {...form}>
-              <form
+              <AdminForm
                 className="mt-4 space-y-4"
                 onSubmit={form.handleSubmit(handleSubmit)}
               >
@@ -254,7 +255,7 @@ export function SubscriptionForm({
                     </FormItem>
                   )}
                 />
-              </form>
+              </AdminForm>
             </Form>
           </div>
         </ScrollArea>

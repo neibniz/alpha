@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -82,7 +83,7 @@ export default function LoginForm({
 
   return (
     <Form {...form}>
-      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+      <AdminForm className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <FieldGroup className="gap-5">
           <FormField
             control={form.control}
@@ -163,7 +164,7 @@ export default function LoginForm({
           {loading ? <Spinner /> : null}
           {t("login.title", "Login")}
         </Button>
-      </form>
+      </AdminForm>
     </Form>
   );
 }

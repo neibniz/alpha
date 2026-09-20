@@ -20,7 +20,8 @@
     "tagsPlaceholder": "输入标签",
     "title": "标题",
     "titlePlaceholder": "输入文档标题",
-    "titleRequired": "请输入文档标题"
+    "titleRequired": "请输入文档标题",
+    "dialogDescription": "编辑帮助内容与标签，保存后可在列表中调整发布状态。"
   },
   "show": "显示",
   "tags": "标签",
@@ -29,5 +30,6 @@
   "updatedAt": "更新时间",
   "updateFailed": "更新失败",
   "updateSuccess": "更新成功",
-  "visibilityUpdateSuccess": "显示状态已更新"
+  "visibilityUpdateSuccess": "显示状态已更新",
+  "pageDescription": "组织帮助文档与标签，管理内容及发布状态。"
 }

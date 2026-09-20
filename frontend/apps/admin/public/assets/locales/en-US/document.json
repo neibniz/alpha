@@ -20,7 +20,8 @@
     "tagsPlaceholder": "Enter tags",
     "title": "Title",
     "titlePlaceholder": "Enter document title",
-    "titleRequired": "Document title is required"
+    "titleRequired": "Document title is required",
+    "dialogDescription": "Edit article content and tags. Manage publication status from the directory."
   },
   "show": "Show",
   "tags": "Tags",
@@ -29,5 +30,6 @@
   "updatedAt": "Updated At",
   "updateFailed": "Update failed",
   "updateSuccess": "Updated successfully",
-  "visibilityUpdateSuccess": "Visibility updated"
+  "visibilityUpdateSuccess": "Visibility updated",
+  "pageDescription": "Organize help articles, tags, and publication status."
 }

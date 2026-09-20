@@ -28,12 +28,14 @@
     "title": "标题",
     "type": "类型",
     "typeImage": "图片",
-    "typeVideo": "视频"
+    "typeVideo": "视频",
+    "dialogDescription": "配置广告素材、访问目标和生效时间。"
   },
   "status": "状态",
   "targetUrl": "目标链接",
   "title": "标题",
   "type": "类型",
   "updateSuccess": "更新成功",
-  "validityPeriod": "有效期"
+  "validityPeriod": "有效期",
+  "pageDescription": "管理广告素材、跳转地址与投放时间。"
 }

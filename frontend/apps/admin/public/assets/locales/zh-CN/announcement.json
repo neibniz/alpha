@@ -31,5 +31,6 @@
   "togglePopup": "切换“{{title}}”的弹窗状态",
   "toggleShow": "切换“{{title}}”的显示状态",
   "updatedAt": "更新时间",
-  "updateSuccess": "更新成功"
+  "updateSuccess": "更新成功",
+  "pageDescription": "管理公告内容、可见状态、置顶与弹窗展示。"
 }

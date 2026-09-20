@@ -9,7 +9,7 @@ import {
 } from "@workspace/ui/components/drawer";
 import { Input } from "@workspace/ui/components/input";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Icon } from "@workspace/ui/composed/icon";
 import { TicketImageGallery } from "@workspace/ui/composed/ticket-image-gallery";
 import { TicketImagePicker } from "@workspace/ui/composed/ticket-image-picker";

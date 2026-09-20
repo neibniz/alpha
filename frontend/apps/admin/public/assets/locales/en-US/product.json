@@ -126,6 +126,7 @@
   "guestVisibleDescription": "Allow signed-out visitors to view this product in the public catalog",
   "sortSuccess": "Sort completed successfully",
   "form": {
+    "nameRequired": "Enter a product name",
     "annualReset": "Annual Reset",
     "allowRenewal": "Allow Renewal",
     "allowRenewalDescription": "Users can renew subscriptions for this product",

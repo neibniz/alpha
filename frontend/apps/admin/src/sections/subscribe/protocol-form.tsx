@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@workspace/ui/components/badge";
@@ -44,7 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { GoTemplateEditor } from "@workspace/ui/composed/editor/index";
 import { EnhancedInput } from "@workspace/ui/composed/enhanced-input";
 import { Icon } from "@workspace/ui/composed/icon";
@@ -835,7 +836,7 @@ export function ProtocolForm() {
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1 px-6">
             <Form {...form}>
-              <form
+              <AdminForm
                 className="space-y-6 py-5"
                 id="subscribe-client-form"
                 onSubmit={form.handleSubmit(onSubmit, handleInvalidSubmit)}
@@ -1392,7 +1393,7 @@ export function ProtocolForm() {
                     </div>
                   </TabsContent>
                 </Tabs>
-              </form>
+              </AdminForm>
             </Form>
           </ScrollArea>
           <SheetFooter className="subscribe-client-footer flex-row justify-end gap-2">

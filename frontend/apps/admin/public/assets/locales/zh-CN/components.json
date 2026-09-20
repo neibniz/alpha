@@ -164,5 +164,16 @@
     "search": "搜索时区...",
     "server": "服务器"
   },
-  "unlimited": "无限制"
+  "unlimited": "无限制",
+  "form": {
+    "reviewErrors": "请检查并修正表单中的问题",
+    "discardTitle": "放弃尚未保存的修改？",
+    "discardDescription": "修改尚未保存。可以继续编辑，或放弃修改并关闭窗口。",
+    "keepEditing": "继续编辑",
+    "discard": "放弃修改"
+  },
+  "action": {
+    "failed": "操作未完成，请先检查当前状态，再决定是否重试。",
+    "processing": "正在处理"
+  }
 }

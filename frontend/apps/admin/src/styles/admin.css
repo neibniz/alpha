@@ -359,6 +359,29 @@ html[data-app="admin"] [data-slot="sheet-header"] {
   padding-bottom: 1rem;
   padding-right: 3rem;
   flex-shrink: 0;
+  padding-top: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+html[data-app="admin"] [data-slot="sheet-title"] {
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+html[data-app="admin"] [data-slot="sheet-content"] {
+  background: var(--card);
+}
+
+html[data-app="admin"]
+  .admin-form
+  > [data-slot="field-set"]
+  > [data-slot="field-legend"] {
+  color: var(--primary);
+  font-size: 0.875rem;
+}
+
+html[data-app="admin"] .admin-form [data-slot="form-message"] {
+  line-height: 1.5;
 }
 
 html[data-app="admin"] [data-slot="sheet-footer"] {

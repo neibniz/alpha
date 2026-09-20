@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import { FieldGroup } from "@workspace/ui/components/field";
@@ -83,7 +84,7 @@ export default function ResetForm({
   return (
     <>
       <Form {...form}>
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <AdminForm className="flex flex-col gap-5" onSubmit={handleSubmit}>
           <FieldGroup className="gap-5">
             <FormField
               control={form.control}
@@ -191,7 +192,7 @@ export default function ResetForm({
             {loading ? <Spinner /> : null}
             {t("reset.title", "Reset Password")}
           </Button>
-        </form>
+        </AdminForm>
       </Form>
       <Separator className="my-4" />
       <div className="flex items-center justify-center gap-1 text-muted-foreground text-sm">

@@ -35,7 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { ConfirmButton } from "@workspace/ui/composed/confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { SubscriptionTrafficDialog } from "@workspace/ui/composed/subscription-traffic-dialog";
 import { cn } from "@workspace/ui/lib/utils";
 import {

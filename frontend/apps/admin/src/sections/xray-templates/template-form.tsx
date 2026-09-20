@@ -1,3 +1,4 @@
+import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
@@ -2805,7 +2806,7 @@ export default function XrayTemplateForm({
 
             <ScrollArea className="xray-template-form-pane min-h-0">
               <Form {...form}>
-                <form
+                <AdminForm
                   className="space-y-5 py-4"
                   id="xray-template-form"
                   onSubmit={handleFormSubmit}
@@ -4560,7 +4561,7 @@ export default function XrayTemplateForm({
                       />
                     </TabsContent>
                   </Tabs>
-                </form>
+                </AdminForm>
               </Form>
             </ScrollArea>
           </div>

@@ -1,4 +1,6 @@
 {
+  "refreshDetail": "Refresh detail",
+  "closeDetail": "Close",
   "pageDescription": "Payments, fulfillment and order history.",
   "amount": "Amount",
   "basePrice": "List Price Total",

@@ -1,4 +1,6 @@
 {
+  "refreshDetail": "刷新详情",
+  "closeDetail": "关闭",
   "pageDescription": "查看支付记录、订单状态与订阅交付情况。",
   "amount": "金额",
   "basePrice": "标价合计",

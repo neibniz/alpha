@@ -33,10 +33,10 @@ function DetailValue({
   mono?: boolean;
 }) {
   return (
-    <div className="min-w-0 space-y-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className={mono ? "break-all font-mono text-sm" : "text-sm"}>
-        {children || "—"}
+        {children ?? "—"}
       </dd>
     </div>
   );
@@ -80,6 +80,7 @@ export function OrderDetailSheet({
   const loadDetail = useCallback(async () => {
     if (!orderId) return;
     const sequence = ++requestSequence.current;
+    setDetail(null);
     setLoading(true);
     setFailed(false);
     try {
@@ -88,8 +89,11 @@ export function OrderDetailSheet({
         { skipErrorHandler: true }
       );
       if (sequence !== requestSequence.current) return;
-      if (!response.data.data) throw new Error("Missing order detail");
-      setDetail(response.data.data);
+      const order = response.data.data;
+      if (order?.id !== orderId || !order.order_no) {
+        throw new Error("Missing or mismatched order detail");
+      }
+      setDetail(order);
     } catch {
       if (sequence === requestSequence.current) {
         setDetail(null);
@@ -107,6 +111,9 @@ export function OrderDetailSheet({
       setDetail(null);
       setFailed(false);
     }
+    return () => {
+      requestSequence.current += 1;
+    };
   }, [loadDetail, open, orderId]);
 
   const typeLabel = detail ? t(`type.${detail.type}`, String(detail.type)) : "";
@@ -125,7 +132,10 @@ export function OrderDetailSheet({
             <div className="min-w-0">
               <SheetTitle>{t("detailTitle", "Order detail")}</SheetTitle>
               <SheetDescription className="mt-1 break-all font-mono">
-                {detail?.order_no || t("detailLoading", "Loading order data")}
+                {detail?.order_no ||
+                  (failed
+                    ? t("detailLoadFailed", "Unable to load order detail")
+                    : t("detailLoading", "Loading order data"))}
               </SheetDescription>
             </div>
             {detail ? <Badge variant="secondary">{typeLabel}</Badge> : null}
@@ -135,7 +145,7 @@ export function OrderDetailSheet({
         <ScrollArea className="min-h-0 flex-1">
           <div className="px-6">
             {loading ? (
-              <div className="space-y-4 py-6">
+              <div aria-busy="true" className="flex flex-col gap-4 py-6">
                 {Array.from({ length: 7 }, (_, index) => (
                   <Skeleton className="h-12 w-full" key={index} />
                 ))}
@@ -174,11 +184,7 @@ export function OrderDetailSheet({
                       <UserDetail id={detail.user_id} />
                     </DetailValue>
                     <DetailValue label={t("status.0", "Status")}>
-                      {renderStatus(detail, (status) =>
-                        setDetail((current) =>
-                          current ? { ...current, status } : current
-                        )
-                      )}
+                      {renderStatus(detail, loadDetail)}
                     </DetailValue>
                     <DetailValue label={t("quantity", "Quantity")}>
                       <span className="tabular-nums">{detail.quantity}</span>
@@ -292,12 +298,23 @@ export function OrderDetailSheet({
           </div>
         </ScrollArea>
 
-        {loading ? (
-          <div className="flex items-center gap-2 border-t px-6 py-3 text-muted-foreground text-xs">
-            <LoaderCircle className="size-3.5 animate-spin" />
-            {t("detailLoading", "Loading order data")}
-          </div>
-        ) : null}
+        <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
+          <Button
+            disabled={loading || !orderId}
+            onClick={loadDetail}
+            variant="outline"
+          >
+            {loading ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <RefreshCw />
+            )}
+            {t("refreshDetail", "Refresh detail")}
+          </Button>
+          <Button onClick={() => onOpenChange(false)} variant="secondary">
+            {t("closeDetail", "Close")}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );

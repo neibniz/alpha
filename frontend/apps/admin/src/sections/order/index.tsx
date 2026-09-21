@@ -351,7 +351,12 @@ export default function Order() {
                 return (
                   <HoverCard>
                     <HoverCardTrigger asChild>
-                      <Button className="p-0" variant="link">
+                      <Button
+                        aria-label={t("viewDetail", "View order detail")}
+                        className="p-0"
+                        onClick={() => setDetailOrderId(order.id)}
+                        variant="link"
+                      >
                         <Display type="currency" value={order.amount} />
                       </Button>
                     </HoverCardTrigger>
@@ -521,6 +526,7 @@ export default function Order() {
         />
       </AdminPage>
       <OrderDetailSheet
+        key={detailOrderId}
         onOpenChange={(open) => {
           if (!open) setDetailOrderId(null);
         }}

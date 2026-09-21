@@ -1,4 +1,7 @@
 {
+  "trafficDetailsDescription": "按日期、服务器、用户和订阅核对流量明细。",
+  "serverTrafficDescription": "对比服务器每日用量，查看对应的原始流量记录。",
+  "subscribeTrafficDescription": "核对订阅每日用量，追查具体流量记录。",
   "refresh": "刷新",
   "retry": "重试",
   "workspace": "数据分析",

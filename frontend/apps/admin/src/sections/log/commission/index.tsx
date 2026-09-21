@@ -69,6 +69,7 @@ export default function CommissionLogPage() {
       ]}
       header={{ title: t("title.commission", "Commission Log") }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
         { key: "date", type: "date" },
         { key: "user_id", placeholder: t("column.userId", "User ID") },

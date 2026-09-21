@@ -91,6 +91,7 @@ export default function BalanceLogPage() {
       ]}
       header={{ title: t("title.balance", "Balance Log") }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
         { key: "date", type: "date" },
         { key: "user_id", placeholder: t("column.userId", "User ID") },

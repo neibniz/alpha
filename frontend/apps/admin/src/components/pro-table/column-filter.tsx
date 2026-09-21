@@ -67,7 +67,12 @@ export function ColumnFilter<TData>({
               }}
               options={param.options}
               placeholder={param.placeholder || t("filter.choose", "Choose...")}
-              value={typeof filterValue === "string" ? filterValue : ""}
+              value={
+                typeof filterValue === "string" ||
+                typeof filterValue === "number"
+                  ? String(filterValue)
+                  : ""
+              }
             />
           );
         }

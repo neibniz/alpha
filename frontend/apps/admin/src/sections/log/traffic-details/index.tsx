@@ -72,10 +72,17 @@ export default function TrafficDetailsPage() {
           cell: ({ row }) => formatDate(row.original.timestamp),
         },
       ]}
-      header={{ title: t("title.trafficDetails", "Traffic Details") }}
+      header={{
+        title: t("title.trafficDetails", "Traffic Details"),
+        description: t(
+          "trafficDetailsDescription",
+          "Inspect recorded traffic by date, server, user, and subscription."
+        ),
+      }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
-        { key: "date", type: "date" },
+        { key: "date", type: "date", placeholder: t("column.date", "Date") },
         { key: "server_id", placeholder: t("column.serverId", "Server ID") },
         { key: "user_id", placeholder: t("column.userId", "User ID") },
         {

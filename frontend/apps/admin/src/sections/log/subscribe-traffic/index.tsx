@@ -2,6 +2,7 @@
 
 import { Link, useSearch } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
+import { ArrowUpRight } from "lucide-react";
 import { ProTable } from "@/components/pro-table/pro-table";
 import { filterUserSubscribeTrafficLog } from "@workspace/ui/services/admin/log";
 import { formatBytes } from "@workspace/ui/utils/formatting";
@@ -31,7 +32,7 @@ export default function SubscribeTrafficLogPage() {
     <ProTable<API.UserSubscribeTrafficLog, SubscribeTrafficFilter>
       actions={{
         render: (row) => [
-          <Button asChild key="detail">
+          <Button asChild key="detail" size="sm" variant="outline">
             <Link
               search={{
                 date: row.date,
@@ -41,6 +42,7 @@ export default function SubscribeTrafficLogPage() {
               to="/dashboard/log/traffic-details"
             >
               {t("detail", "Detail")}
+              <ArrowUpRight />
             </Link>
           </Button>,
         ],
@@ -82,10 +84,17 @@ export default function SubscribeTrafficLogPage() {
           header: t("column.date", "Date"),
         },
       ]}
-      header={{ title: t("title.subscribeTraffic", "Subscribe Traffic Log") }}
+      header={{
+        title: t("title.subscribeTraffic", "Subscribe Traffic Log"),
+        description: t(
+          "subscribeTrafficDescription",
+          "Review daily subscription usage and inspect individual traffic records."
+        ),
+      }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
-        { key: "date", type: "date" },
+        { key: "date", type: "date", placeholder: t("column.date", "Date") },
         { key: "user_id", placeholder: t("column.userId", "User ID") },
         {
           key: "user_subscribe_id",

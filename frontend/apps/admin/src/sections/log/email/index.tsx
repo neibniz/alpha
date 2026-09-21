@@ -93,6 +93,7 @@ export default function EmailLogPage() {
         ),
       }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[{ key: "search" }, { key: "date", type: "date" }]}
       request={async (pagination, filter) => {
         const { data } = await filterEmailLog({

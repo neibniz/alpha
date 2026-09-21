@@ -127,6 +127,29 @@ describe("ProTable workspace states", () => {
     { accessorKey: "name", header: "Name" },
   ];
 
+  it("displays numeric route values in select filters", async () => {
+    render(
+      <ProTable
+        columns={columns}
+        initialFilters={{ status: 0 }}
+        params={[
+          {
+            key: "status",
+            placeholder: "Status",
+            options: [
+              { label: "Disabled", value: "0" },
+              { label: "Enabled", value: "1" },
+            ],
+          },
+        ]}
+        request={async () => ({ list: [], total: 0 })}
+      />
+    );
+    expect(
+      await screen.findByRole("combobox", { name: "Status" })
+    ).toHaveProperty("textContent", "Disabled");
+  });
+
   it("reloads when resetting already-default filters", async () => {
     const request = vi
       .fn()

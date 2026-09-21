@@ -1,4 +1,7 @@
 {
+  "trafficDetailsDescription": "Inspect recorded traffic by date, server, user, and subscription.",
+  "serverTrafficDescription": "Compare daily server usage and inspect the underlying traffic records.",
+  "subscribeTrafficDescription": "Review daily subscription usage and inspect individual traffic records.",
   "refresh": "Refresh",
   "retry": "Retry",
   "workspace": "Analytics",

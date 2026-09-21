@@ -105,6 +105,7 @@ export default function RegisterLogPage() {
         ),
       }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
         { key: "date", type: "date" },
         { key: "user_id", placeholder: t("column.userId", "User ID") },

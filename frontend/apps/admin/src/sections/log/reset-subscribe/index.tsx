@@ -74,6 +74,7 @@ export default function ResetSubscribeLogPage() {
       ]}
       header={{ title: t("title.resetSubscribe", "Reset Subscribe Log") }}
       initialFilters={initialFilters}
+      key={JSON.stringify(initialFilters)}
       params={[
         { key: "date", type: "date" },
         {

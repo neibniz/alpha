@@ -67,8 +67,15 @@ export function isUnauthorizedSessionError(error: unknown) {
     "code"
   );
 
-  return [directStatus, directCode, responseStatus, responseCode].some(
-    (value) => value === 401 || value === 403
+  // HTTP statuses and application codes use different namespaces: code 401 is rate limiting.
+  return (
+    [directStatus, responseStatus].some(
+      (value) => value === 401 || value === 403
+    ) ||
+    [directCode, responseCode].some(
+      (value) =>
+        value !== undefined && [40_002, 40_003, 40_004, 40_005].includes(value)
+    )
   );
 }
 

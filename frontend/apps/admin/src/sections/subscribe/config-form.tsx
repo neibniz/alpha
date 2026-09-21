@@ -75,6 +75,7 @@ import {
   normalizeLines,
   normalizeSubscribeConfig,
   normalizeSubscribePath,
+  parseSubscribeConfigResponse,
   SUBSCRIBE_CONFIG_QUERY_KEY,
   subscriptionEndpointPreview,
   type SubscribeConfigTab,
@@ -215,7 +216,7 @@ export default function ConfigForm() {
     queryKey: SUBSCRIBE_CONFIG_QUERY_KEY,
     queryFn: async () => {
       const { data: response } = await getSubscribeConfig();
-      return { ...DEFAULT_SUBSCRIBE_CONFIG, ...response.data };
+      return parseSubscribeConfigResponse(response.data);
     },
   });
 

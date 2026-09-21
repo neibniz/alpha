@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_SUBSCRIBE_CONFIG,
+  parseSubscribeConfigResponse,
   isValidDomainLine,
   isValidSubscribePath,
   isValidUserAgentLine,
@@ -12,6 +14,21 @@ import {
 } from "./subscription-config-data";
 
 describe("subscription configuration data", () => {
+  it("accepts the Admin string-based configuration contract", () => {
+    expect(parseSubscribeConfigResponse(DEFAULT_SUBSCRIBE_CONFIG)).toEqual(
+      DEFAULT_SUBSCRIBE_CONFIG
+    );
+  });
+
+  it.each([
+    undefined,
+    null,
+    {},
+    { ...DEFAULT_SUBSCRIBE_CONFIG, user_agent_list: [] },
+    { ...DEFAULT_SUBSCRIBE_CONFIG, subscribe_domain: null },
+  ])("rejects invalid responses before string operations: %j", (value) => {
+    expect(() => parseSubscribeConfigResponse(value)).toThrow();
+  });
   it("normalizes line lists without changing entry order", () => {
     expect(normalizeLines(" ClashX \r\nsing-box\nClashX\n\n")).toBe(
       "ClashX\nsing-box"

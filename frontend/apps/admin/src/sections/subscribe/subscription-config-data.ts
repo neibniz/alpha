@@ -26,6 +26,21 @@ export const DEFAULT_SUBSCRIBE_CONFIG: API.SubscribeConfig = {
   user_agent_list: "",
 };
 
+const subscribeConfigResponseSchema = z.object({
+  single_model: z.boolean(),
+  pan_domain: z.boolean(),
+  subscribe_path: z.string(),
+  subscribe_domain: z.string(),
+  user_agent_limit: z.boolean(),
+  user_agent_list: z.string(),
+});
+
+export function parseSubscribeConfigResponse(
+  value: unknown
+): API.SubscribeConfig {
+  return subscribeConfigResponseSchema.parse(value);
+}
+
 const SAFE_PATH_PATTERN = /^\/[A-Za-z0-9._~-]+(?:\/[A-Za-z0-9._~-]+)*$/;
 const DOMAIN_LABEL_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
 const CONTROL_CHARACTER_PATTERN = /\p{Cc}/u;
@@ -114,3 +129,4 @@ export function subscriptionEndpointPreview(values: API.SubscribeConfig) {
     normalizeSubscribePath(values.subscribe_path) || "/v1/subscribe/config";
   return `https://${host}${path}?token=••••••••`;
 }
+import { z } from "zod";

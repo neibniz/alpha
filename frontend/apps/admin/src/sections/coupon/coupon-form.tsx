@@ -2,6 +2,13 @@ import { AdminForm } from "@/components/admin-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
+import {
   Field,
   FieldContent,
   FieldLabel,
@@ -38,7 +45,6 @@ import {
 import { Combobox } from "@workspace/ui/composed/combobox";
 import { DatePicker } from "@workspace/ui/composed/date-picker";
 import { EnhancedInput } from "@workspace/ui/composed/enhanced-input";
-import { Icon } from "@workspace/ui/composed/icon";
 import { unitConversion } from "@workspace/ui/utils/unit-conversions";
 import {
   cloneElement,
@@ -48,6 +54,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -108,6 +115,8 @@ export default function CouponForm({
   const amountTypeId = `${formId}-amount`;
   const [open, setOpen] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const loadSequence = useRef(0);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CouponFormTab>("discount");
   const schema = useMemo(() => createCouponFormSchema(t), [t]);
@@ -118,6 +127,14 @@ export default function CouponForm({
   });
   const type = useWatch({ control: form.control, name: "type" });
   const usedCount = useWatch({ control: form.control, name: "used_count" });
+  const submitting = loading || form.formState.isSubmitting;
+
+  useEffect(
+    () => () => {
+      loadSequence.current += 1;
+    },
+    []
+  );
 
   useEffect(() => {
     if (!(open || form.formState.isDirty)) {
@@ -138,27 +155,36 @@ export default function CouponForm({
   }
 
   async function handleOpen() {
+    const sequence = ++loadSequence.current;
     setOpen(true);
     setOpening(true);
+    setLoadFailed(false);
     setActiveTab("discount");
     try {
       const values = loadInitialValues
         ? await loadInitialValues()
         : initialValues;
+      if (sequence !== loadSequence.current) return;
       if (loadInitialValues && !values) {
-        setOpen(false);
+        setLoadFailed(true);
         return;
       }
       form.reset(couponToFormValues(values ?? initialValues));
     } catch {
-      setOpen(false);
+      if (sequence === loadSequence.current) setLoadFailed(true);
     } finally {
-      setOpening(false);
+      if (sequence === loadSequence.current) setOpening(false);
     }
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen && (loading || opening)) return;
+    if (!nextOpen && submitting) return;
+    if (!nextOpen && (opening || loadFailed)) {
+      loadSequence.current += 1;
+      setOpening(false);
+      setOpen(false);
+      return;
+    }
     if (!nextOpen && form.formState.isDirty) {
       setDiscardOpen(true);
       return;
@@ -179,7 +205,7 @@ export default function CouponForm({
     }
     return (
       <Button disabled={opening} onClick={handleOpen} type="button">
-        {opening ? <Icon className="animate-spin" icon="mdi:loading" /> : null}
+        {opening ? <LoaderCircle className="animate-spin" /> : null}
         {trigger}
       </Button>
     );
@@ -201,14 +227,31 @@ export default function CouponForm({
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1 px-6">
             {opening ? (
-              <div className="flex h-56 items-center justify-center text-muted-foreground text-sm">
-                <Icon className="mr-2 animate-spin" icon="mdi:loading" />
-                {t("form.loading", "Loading coupon details")}
+              <div aria-busy="true" className="flex flex-col gap-4 py-5">
+                <p className="text-muted-foreground text-sm">
+                  {t("form.loading", "Loading coupon details")}
+                </p>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
               </div>
+            ) : loadFailed ? (
+              <Alert className="my-5" variant="destructive">
+                <AlertCircle />
+                <AlertTitle>
+                  {t("loadFailed", "Failed to load coupon details")}
+                </AlertTitle>
+                <AlertDescription>
+                  <Button onClick={handleOpen} size="sm" variant="outline">
+                    <RefreshCw />
+                    {t("retry", "Retry")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
             ) : (
               <Form {...form}>
                 <AdminForm
-                  className="space-y-5 py-5"
+                  className="flex flex-col gap-5 py-5"
                   id={formId}
                   onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
                 >
@@ -227,7 +270,10 @@ export default function CouponForm({
                       </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent className="space-y-5 pt-5" value="discount">
+                    <TabsContent
+                      className="flex flex-col gap-5 pt-5"
+                      value="discount"
+                    >
                       <section className="coupon-form-section">
                         <header>
                           <h3 className="font-semibold text-sm">
@@ -398,7 +444,7 @@ export default function CouponForm({
                                       : undefined
                                   }
                                   max={type === 1 ? 100 : undefined}
-                                  min={1}
+                                  min={type === 1 ? 1 : 0.01}
                                   onValueChange={field.onChange}
                                   step={type === 1 ? 1 : 0.01}
                                   suffix={type === 1 ? "%" : undefined}
@@ -458,7 +504,10 @@ export default function CouponForm({
                       </section>
                     </TabsContent>
 
-                    <TabsContent className="space-y-5 pt-5" value="limits">
+                    <TabsContent
+                      className="flex flex-col gap-5 pt-5"
+                      value="limits"
+                    >
                       <section className="coupon-form-section">
                         <header>
                           <h3 className="font-semibold text-sm">
@@ -547,6 +596,7 @@ export default function CouponForm({
                                 <FormControl>
                                   <EnhancedInput
                                     min={0}
+                                    preserveZero
                                     onValueChange={field.onChange}
                                     step={1}
                                     type="number"
@@ -572,6 +622,7 @@ export default function CouponForm({
                                 <FormControl>
                                   <EnhancedInput
                                     min={0}
+                                    preserveZero
                                     onValueChange={field.onChange}
                                     step={1}
                                     type="number"
@@ -598,7 +649,7 @@ export default function CouponForm({
             </span>
             <div className="flex gap-2">
               <Button
-                disabled={loading || opening}
+                disabled={submitting}
                 onClick={() => handleOpenChange(false)}
                 type="button"
                 variant="outline"
@@ -606,13 +657,13 @@ export default function CouponForm({
                 {t("form.cancel", "Cancel")}
               </Button>
               <Button
-                disabled={loading || opening || !form.formState.isDirty}
+                disabled={
+                  submitting || opening || loadFailed || !form.formState.isDirty
+                }
                 form={formId}
                 type="submit"
               >
-                {loading ? (
-                  <Icon className="animate-spin" icon="mdi:loading" />
-                ) : null}
+                {submitting ? <LoaderCircle className="animate-spin" /> : null}
                 {t("form.confirm", "Save coupon")}
               </Button>
             </div>

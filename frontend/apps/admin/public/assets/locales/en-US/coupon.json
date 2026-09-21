@@ -1,4 +1,5 @@
 {
+  "retry": "Retry",
   "workspace": "Commerce",
   "amount": "Amount",
   "batchDelete": "Delete selected",

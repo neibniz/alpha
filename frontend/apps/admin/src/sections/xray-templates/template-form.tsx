@@ -73,6 +73,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  TLS_CERTIFICATE_COLUMNS,
+  isTLSCertificatesJson,
+  isPinnedPeerCertSha256,
+} from "./tls-fields";
 import { DiscardChangesDialog } from "../../components/discard-changes-dialog";
 import {
   generateRealityKeyPair,
@@ -228,6 +233,7 @@ const formSchema = z.object({
   xhttp_extra_json: z.string().optional(),
   sni: z.string().optional(),
   allow_insecure: z.boolean().optional(),
+  tls_certificates_json: z.string().optional(),
   pinned_peer_cert_sha256: z.string().optional(),
   verify_peer_cert_by_name: z.string().optional(),
   fingerprint: z.string().optional(),
@@ -599,6 +605,7 @@ function defaultValues(type: XrayTemplateType = "inbound"): FormValues {
     network: "raw",
     security: "none",
     fingerprint: "chrome",
+    tls_certificates_json: "[]",
     pinned_peer_cert_sha256: "",
     verify_peer_cert_by_name: "",
     grpc_multi_mode: false,
@@ -2328,7 +2335,44 @@ export default function XrayTemplateForm({
       "reality_short_ids",
       "dns_servers_json",
       "vless_clients_json",
+      "tls_certificates_json",
+      "pinned_peer_cert_sha256",
     ]);
+
+    const tlsStream = isJsonObject(config.streamSettings)
+      ? config.streamSettings
+      : {};
+    if (tlsStream.security === "tls") {
+      const tls = isJsonObject(tlsStream.tlsSettings)
+        ? tlsStream.tlsSettings
+        : {};
+      if (
+        !isTLSCertificatesJson(
+          advancedTouched
+            ? JSON.stringify(tls.certificates || [])
+            : values.tls_certificates_json
+        )
+      ) {
+        setSubmitError(
+          advancedTouched ? "advanced_json" : "tls_certificates_json",
+          "证书必须包含 certificateFile 或证书 PEM；加密和签发用途还需要 keyFile 或私钥 PEM。OCSP 间隔必须为非负整数。"
+        );
+        return false;
+      }
+      if (
+        !isPinnedPeerCertSha256(
+          typeof tls.pinnedPeerCertSha256 === "string"
+            ? tls.pinnedPeerCertSha256
+            : undefined
+        )
+      ) {
+        setSubmitError(
+          advancedTouched ? "advanced_json" : "pinned_peer_cert_sha256",
+          "请输入 64 位 SHA-256 十六进制指纹（可带冒号），多个指纹用英文逗号分隔。"
+        );
+        return false;
+      }
+    }
 
     if (
       values.type === "inbound" &&
@@ -3718,7 +3762,7 @@ export default function XrayTemplateForm({
                                     )}
                                   />
                                 ) : null}
-                                {security === "tls" && type === "outbound" ? (
+                                {security === "tls" ? (
                                   <>
                                     <FormField
                                       control={form.control}
@@ -3773,6 +3817,18 @@ export default function XrayTemplateForm({
                                   </>
                                 ) : null}
                               </div>
+                              {security === "tls" ? (
+                                <JsonArrayObjectField
+                                  control={form.control}
+                                  name="tls_certificates_json"
+                                  label="TLS 证书与私钥"
+                                  addLabel="添加证书"
+                                  emptyText="暂未配置证书。TLS 服务端需要证书与私钥；TLS 客户端通常使用系统信任库。"
+                                  description="路径须位于 xray-agent / Xray 容器内，并配置对应挂载。也可粘贴 PEM，保存时转换为 certificate/key 行数组。文件路径优先于同项 PEM。verify 用于信任 CA，不需要私钥；encipherment 用于握手证书，issue 用于证书签发。"
+                                  columns={TLS_CERTIFICATE_COLUMNS}
+                                  defaultItem={{ usage: "encipherment" }}
+                                />
+                              ) : null}
                             </>
                           ) : null}
 

@@ -220,7 +220,7 @@ export const XRAY_FIELD_HELP: Record<string, XrayFieldHelpInfo> = {
   }),
   pinned_peer_cert_sha256: help("tls", {
     title: "Pinned Peer Cert SHA-256",
-    hint: "TLS 出站用于固定服务端证书的 SHA-256 指纹。",
+    hint: "TLS 客户端校验对端证书的 SHA-256 指纹；入站模板中也可提供给订阅客户端使用。",
     detail:
       "用于替代 allowInsecure。可通过 xray tls hash --cert cert.pem 或 openssl x509 -noout -fingerprint -sha256 -in cert.pem 获取。",
     warning: "仅在需要连接自签名或私有 CA 证书时填写。",
@@ -228,7 +228,7 @@ export const XRAY_FIELD_HELP: Record<string, XrayFieldHelpInfo> = {
   }),
   verify_peer_cert_by_name: help("tls", {
     title: "Verify Peer Cert By Name",
-    hint: "TLS 出站用于指定证书 SAN 校验名称。",
+    hint: "TLS 客户端用于指定证书 SAN 校验名称，不替代入站服务端的证书和私钥。",
     detail:
       "多个名称可用英文逗号分隔。普通公网证书通常只需要填写 SNI，不需要额外配置。",
     example: "example.com",

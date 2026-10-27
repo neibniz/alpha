@@ -16,6 +16,9 @@
 /build/
 /cache/
 /.bundled/
+/.cache/
+/assets/geoip/*.mmdb
+/assets/geoip/*.mmdb.gz
 /server
 *.p8
 *.crt

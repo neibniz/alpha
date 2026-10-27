@@ -13,5 +13,5 @@ The Alpha Server container includes the DB-IP City Lite database.
 
 IP geolocation results are derived from DB-IP data. The database is redistributed
 without modification other than decompression and file naming.
-The original compressed archive is included in `assets/geoip/` so rebuilding a
-release does not depend on the availability of a historical monthly download.
+The archive is downloaded and checksum-verified during image builds. Database
+files are included in the runtime image, not in the source repository.

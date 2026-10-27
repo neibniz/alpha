@@ -9,15 +9,18 @@ ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
 
-RUN apk add --no-cache tzdata ca-certificates
+RUN apk add --no-cache tzdata ca-certificates curl
 
 WORKDIR /build
 
-# Install the verified snapshot without network access. Old monthly download
-# URLs can expire; the checked-in archive keeps releases reproducible.
-COPY assets/geoip/ ./assets/geoip/
+# Download only during image builds, with a verified cache shared by both arches.
+COPY assets/geoip/dbip-city-lite.env ./assets/geoip/dbip-city-lite.env
 COPY script/install-geoip-database.sh ./script/install-geoip-database.sh
-RUN --network=none sh ./script/install-geoip-database.sh /build/.bundled/dbip-city-lite.mmdb
+ARG GEOIP_DATABASE_URL
+RUN --mount=type=cache,target=/root/.cache/alpha-geoip,sharing=locked \
+    ALPHA_GEOIP_CACHE_DIR=/root/.cache/alpha-geoip \
+    ALPHA_GEOIP_SOURCE_URL="${GEOIP_DATABASE_URL}" \
+    sh ./script/install-geoip-database.sh /build/.bundled/dbip-city-lite.mmdb
 
 # Copy go.mod and go.sum first to take advantage of Docker caching
 COPY go.mod go.sum ./

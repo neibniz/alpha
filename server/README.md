@@ -88,9 +88,9 @@ GitHub Actions publishes Linux AMD64 and ARM64 images to
 image already contains a checksum-verified GeoIP database and does not download
 it during container startup.
 
-The compressed snapshot is also tracked in `assets/geoip/`. Docker verifies and
-unpacks it offline, so image builds do not depend on expired monthly download
-URLs. See [GeoIP snapshot maintenance](assets/geoip/README.md) for updates.
+Only the GeoIP version, source URL and checksum are tracked in `assets/geoip/`.
+The archive is downloaded and cached during builds, never committed to Git.
+See [GeoIP build data maintenance](assets/geoip/README.md) for updates and mirrors.
 
 ## 📖 API Documentation
 

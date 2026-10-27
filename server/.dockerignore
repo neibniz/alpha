@@ -8,6 +8,9 @@
 /build
 /cache
 /.bundled
+/.cache
+/assets/geoip/*.mmdb
+/assets/geoip/*.mmdb.gz
 /generate
 /node_modules
 /etc/alpha.yaml

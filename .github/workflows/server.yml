@@ -67,7 +67,13 @@ jobs:
           cache: true
           cache-dependency-path: server/go.sum
 
-      - name: Verify bundled GeoIP database
+      - name: Cache GeoIP download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/.cache/geoip
+          key: geoip-dbip-${{ hashFiles('server/assets/geoip/dbip-city-lite.env') }}
+
+      - name: Download and verify GeoIP database
         run: sh script/install-geoip-database.sh "${RUNNER_TEMP}/alpha-geoip/dbip-city-lite.mmdb"
 
       - name: Run tests

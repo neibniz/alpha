@@ -99,9 +99,9 @@ GitHub Actions 会向 `ghcr.io/neibniz/alpha-server` 发布 Linux AMD64 和 ARM6
 生产环境应固定发布版本或镜像摘要。镜像已经包含经过校验的 GeoIP 数据库，启动时不会
 联网下载。
 
-压缩数据库快照也随源码保存在 `assets/geoip/`，Docker 构建时会离线校验并解压，
-不再依赖可能失效的历史月份下载地址。更新流程见
-[GeoIP 快照维护说明](assets/geoip/README.md)。
+`assets/geoip/` 只保存数据库版本、来源和校验和。压缩包仅在构建时下载并缓存，
+不提交到 Git，部署启动时也不会下载。版本更新与镜像源配置见
+[GeoIP 构建数据维护说明](assets/geoip/README.md)。
 
 ## 📖 API 文档
 

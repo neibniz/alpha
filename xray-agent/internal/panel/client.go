@@ -421,9 +421,12 @@ func (c *Client) postAccessEventsJSON(ctx context.Context, events []AccessEvent)
 		return AccessPostResult{}, err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxPanelResponseBytes+1))
 	if err != nil {
 		return AccessPostResult{}, err
+	}
+	if len(body) > maxPanelResponseBytes {
+		return AccessPostResult{}, fmt.Errorf("panel response exceeds %d bytes", maxPanelResponseBytes)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return AccessPostResult{}, fmt.Errorf("panel returned http %d: %s", resp.StatusCode, string(body))

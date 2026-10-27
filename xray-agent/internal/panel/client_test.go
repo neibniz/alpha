@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,67 @@ import (
 	agentv1 "github.com/neibniz/alpha/xray-agent/internal/protocol/alpha/agent/v1"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestAccessResponsesFitMaximumPolicyBatch(t *testing.T) {
+	for _, encoding := range []string{"protobuf", "json"} {
+		t.Run(encoding, func(t *testing.T) {
+			events := make([]AccessEvent, 2000)
+			response := AccessPostResult{Accepted: len(events)}
+			for i := range events {
+				eventID := fmt.Sprintf("00000000-0000-4000-8000-%012d", i+1)
+				events[i] = AccessEvent{EventID: eventID, UserSubscribeID: int64(i + 1), SourceIP: "203.0.113.7", Status: "accepted"}
+				response.IPLimitDecisions = append(response.IPLimitDecisions, IPLimitDecision{EventID: eventID, UserSubscribeID: int64(i + 1), SourceNetwork: "203.0.113.7/32", Blocked: true, ExpiresAt: time.Now().Add(time.Minute).UnixMilli(), Active: 2, Limit: 1})
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if encoding == "json" {
+					if r.URL.Path == "/v2/server/access-events" {
+						w.WriteHeader(http.StatusUnsupportedMediaType)
+						return
+					}
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 200, "data": response})
+					return
+				}
+				message := &agentv1.PushAccessEventsResponse{Accepted: uint32(len(events))}
+				for _, d := range response.IPLimitDecisions {
+					message.IpLimitDecisions = append(message.IpLimitDecisions, &agentv1.IPLimitDecision{EventId: d.EventID, UserSubscribeId: d.UserSubscribeID, SourceNetwork: d.SourceNetwork, Blocked: d.Blocked, ExpiresAtMs: d.ExpiresAt, Active: d.Active, Limit: d.Limit})
+				}
+				payload, err := proto.Marshal(message)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				w.Header().Set("Content-Type", agentProtobufContentType)
+				_, _ = w.Write(payload)
+			}))
+			defer server.Close()
+			client := NewClient(config.PanelConfig{BaseURL: server.URL, ServerID: 7, Token: "node-token"})
+			got, err := client.PostAccessEvents(context.Background(), events)
+			if err != nil || got.Accepted != len(events) || len(got.IPLimitDecisions) != len(events) {
+				t.Fatalf("accepted = %d, decisions = %d, err = %v", got.Accepted, len(got.IPLimitDecisions), err)
+			}
+		})
+	}
+}
+
+func TestAccessResponseSizeRemainsBounded(t *testing.T) {
+	for _, encoding := range []string{"protobuf", "json"} {
+		t.Run(encoding, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if encoding == "json" && r.URL.Path == "/v2/server/access-events" {
+					w.WriteHeader(http.StatusUnsupportedMediaType)
+					return
+				}
+				_, _ = io.WriteString(w, strings.Repeat("x", maxPanelResponseBytes+1))
+			}))
+			defer server.Close()
+			client := NewClient(config.PanelConfig{BaseURL: server.URL, ServerID: 7, Token: "node-token"})
+			_, err := client.PostAccessEvents(context.Background(), []AccessEvent{{EventID: "test"}})
+			if err == nil || !strings.Contains(err.Error(), "response exceeds") {
+				t.Fatalf("expected size limit error, got %v", err)
+			}
+		})
+	}
+}
 
 func TestPostAccessEventsUsesCompressedProtobuf(t *testing.T) {
 	events := make([]AccessEvent, 100)

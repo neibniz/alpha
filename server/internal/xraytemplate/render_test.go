@@ -1194,7 +1194,8 @@ func TestRenderSubscriptionProxySupportsHysteria2(t *testing.T) {
 					"hysteriaSettings": {
 						"version": 2,
 						"udpIdleTimeout": 60
-					}
+					},
+					"tlsSettings": {"certificates": [{"certificateFile": "/cert.pem", "keyFile": "/key.pem"}]}
 				}
 			}`,
 			DefaultVariables: "{}",
@@ -1270,6 +1271,40 @@ func TestValidateTemplateConfigRejectsInvalidHysteriaTransportVersion(t *testing
 	}, node.XrayTemplateInbound)
 	if err == nil || !strings.Contains(err.Error(), "hysteriaSettings.version must be 2") {
 		t.Fatalf("expected hysteria transport version validation error, got %v", err)
+	}
+}
+
+func TestHysteriaInboundRequiresServerCertificate(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		certificates []any
+		valid        bool
+	}{
+		{name: "missing"},
+		{name: "blank PEM", certificates: []any{ConfigObject{"certificate": []any{" "}, "key": []any{" "}}}},
+		{name: "certificate only", certificates: []any{ConfigObject{"certificateFile": "/cert.pem"}}},
+		{name: "trust only", certificates: []any{ConfigObject{"usage": "verify", "certificateFile": "/ca.pem", "keyFile": "/ca.key"}}},
+		{name: "separate entries", certificates: []any{ConfigObject{"certificateFile": "/cert.pem"}, ConfigObject{"keyFile": "/key.pem"}}},
+		{name: "file pair", certificates: []any{ConfigObject{"certificateFile": "/cert.pem", "keyFile": "/key.pem"}}, valid: true},
+		{name: "inline pair", certificates: []any{ConfigObject{"certificate": []any{"certificate PEM"}, "key": []any{"key PEM"}}}, valid: true},
+		{name: "issuing CA", certificates: []any{ConfigObject{"usage": "issue", "certificateFile": "/ca.pem", "keyFile": "/ca.key"}}, valid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := ConfigObject{
+				"protocol": "hysteria", "settings": ConfigObject{"version": 2},
+				"streamSettings": ConfigObject{
+					"network": "hysteria", "security": "tls",
+					"hysteriaSettings": ConfigObject{"version": 2},
+					"tlsSettings":      ConfigObject{"certificates": tc.certificates},
+				},
+			}
+			if err := normalizeAndValidateXrayConfig(data, node.XrayTemplateInbound); (err == nil) != tc.valid {
+				t.Fatalf("valid = %v, err = %v", tc.valid, err)
+			}
+			if err := normalizeAndValidateXrayConfig(data, node.XrayTemplateOutbound); err != nil {
+				t.Fatalf("client config does not require a server certificate: %v", err)
+			}
+		})
 	}
 }
 

@@ -39,6 +39,14 @@ func TestNormalizeIPNetwork(t *testing.T) {
 		{name: "ipv4", in: "203.0.113.42", want: "203.0.113.42/32", ok: true},
 		{name: "mapped ipv4", in: "::ffff:203.0.113.42", want: "203.0.113.42/32", ok: true},
 		{name: "ipv6", in: "2001:db8:85a3:8d3:1319:8a2e:370:7348", want: "2001:db8:85a3:8d3::/64", ok: true},
+		{name: "ipv4 scope", in: "203.0.113.42/32", want: "203.0.113.42/32", ok: true},
+		{name: "mapped ipv4 scope", in: "::ffff:203.0.113.42/128", want: "203.0.113.42/32", ok: true},
+		{name: "ipv6 scope", in: "2001:db8:85a3:8d3::/64", want: "2001:db8:85a3:8d3::/64", ok: true},
+		{name: "ipv6 host bits", in: " 2001:db8:85a3:8d3::42/64 ", want: "2001:db8:85a3:8d3::/64", ok: true},
+		{name: "wide ipv4 scope", in: "203.0.113.0/24", ok: false},
+		{name: "wide ipv6 scope", in: "2001:db8::/48", ok: false},
+		{name: "narrow ipv6 scope", in: "2001:db8::1/128", ok: false},
+		{name: "wide mapped scope", in: "::ffff:203.0.113.42/120", ok: false},
 		{name: "invalid", in: "not-an-ip", ok: false},
 	}
 	for _, tt := range tests {
@@ -46,6 +54,11 @@ func TestNormalizeIPNetwork(t *testing.T) {
 			got, ok := NormalizeIPNetwork(tt.in)
 			if got != tt.want || ok != tt.ok {
 				t.Fatalf("NormalizeIPNetwork(%q) = (%q, %v), want (%q, %v)", tt.in, got, ok, tt.want, tt.ok)
+			}
+			if ok {
+				if again, valid := NormalizeIPNetwork(got); !valid || again != got {
+					t.Fatalf("normalizing a scope twice changed %q to (%q, %v)", got, again, valid)
+				}
 			}
 		})
 	}

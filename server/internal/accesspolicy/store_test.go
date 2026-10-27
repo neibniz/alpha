@@ -75,3 +75,27 @@ func TestStoreDoesNotKeepPlaintextNetworks(t *testing.T) {
 		t.Fatal("Redis member contains plaintext source network")
 	}
 }
+
+func TestStoreAcceptsNormalizedAccessLogScopes(t *testing.T) {
+	mini := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mini.Addr()})
+	t.Cleanup(func() { _ = client.Close() })
+	store := NewStore(client, privacy.DisabledCodec())
+	ctx := context.Background()
+	for _, address := range []string{"203.0.113.10", "2001:db8:1:2::1"} {
+		t.Run(address, func(t *testing.T) {
+			network, ok := privacy.NormalizeIPNetwork(address)
+			if !ok {
+				t.Fatal("invalid test address")
+			}
+			first, err := store.Evaluate(ctx, 44, network, 2)
+			if err != nil || first.Blocked {
+				t.Fatalf("normalized scope decision = %+v, err = %v", first, err)
+			}
+			refreshed, err := store.Evaluate(ctx, 44, address, 2)
+			if err != nil || refreshed.Blocked || refreshed.Active != first.Active {
+				t.Fatalf("raw address and scope must share a member: %+v, err = %v", refreshed, err)
+			}
+		})
+	}
+}

@@ -3,6 +3,7 @@ package xray
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 const ipLimitOutboundTag = "alpha-ip-limit-block"
@@ -200,5 +201,42 @@ func ValidateRuntimeConfig(raw []byte) error {
 	if len(asSlice(cfg["inbounds"])) == 0 {
 		return fmt.Errorf("xray config has no inbounds")
 	}
+	for _, item := range asSlice(cfg["inbounds"]) {
+		inbound := asMap(item)
+		stream := asMap(inbound["streamSettings"])
+		if stream["network"] != "hysteria" {
+			continue
+		}
+		if stream["security"] != "tls" {
+			return fmt.Errorf("hysteria inbound %q requires TLS", stringValue(inbound["tag"]))
+		}
+		if !hasServerCertificate(asMap(stream["tlsSettings"])["certificates"]) {
+			return fmt.Errorf("hysteria inbound %q requires a TLS server certificate and private key in tlsSettings.certificates", stringValue(inbound["tag"]))
+		}
+	}
 	return nil
+}
+
+func hasServerCertificate(value interface{}) bool {
+	hasLines := func(value interface{}) bool {
+		for _, line := range asSlice(value) {
+			if strings.TrimSpace(stringValue(line)) != "" {
+				return true
+			}
+		}
+		return false
+	}
+	for _, item := range asSlice(value) {
+		certificate := asMap(item)
+		usage := strings.TrimSpace(stringValue(certificate["usage"]))
+		if usage != "" && usage != "encipherment" && usage != "issue" {
+			continue
+		}
+		hasCertificate := strings.TrimSpace(stringValue(certificate["certificateFile"])) != "" || hasLines(certificate["certificate"])
+		hasKey := strings.TrimSpace(stringValue(certificate["keyFile"])) != "" || hasLines(certificate["key"])
+		if hasCertificate && hasKey {
+			return true
+		}
+	}
+	return false
 }

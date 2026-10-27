@@ -17,10 +17,27 @@ const redactedValue = "***"
 
 // NormalizeIPNetwork returns the address scope used for concurrent-device
 // accounting: an exact IPv4 address and a /64 network for IPv6 privacy.
+// Already-normalized scopes are accepted without widening their range.
 func NormalizeIPNetwork(value string) (string, bool) {
-	addr, err := netip.ParseAddr(strings.TrimSpace(value))
+	value = strings.TrimSpace(value)
+	addr, err := netip.ParseAddr(value)
 	if err != nil {
-		return "", false
+		prefix, prefixErr := netip.ParsePrefix(value)
+		if prefixErr != nil {
+			return "", false
+		}
+		addr = prefix.Addr()
+		bits := prefix.Bits()
+		if addr.Is4In6() {
+			bits -= 96
+		}
+		wantBits := 64
+		if addr.Unmap().Is4() {
+			wantBits = 32
+		}
+		if bits != wantBits {
+			return "", false
+		}
 	}
 	addr = addr.Unmap()
 	prefixBits := 64

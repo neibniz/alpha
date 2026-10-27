@@ -17,7 +17,8 @@ import (
 const (
 	agentProtobufContentType = "application/vnd.alpha.agent.v1+protobuf"
 	protobufRetryInterval    = 5 * time.Minute
-	maxPanelResponseBytes    = 64 << 10
+	// A valid access batch can return up to 2,000 IP-limit decisions.
+	maxPanelResponseBytes = 2 << 20
 )
 
 type protocolCapability struct {

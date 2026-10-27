@@ -122,6 +122,12 @@ docker build --build-arg XRAY_DATA_IMAGE=ghcr.io/xtls/xray-core@sha256:<digest> 
 
 Before upgrading existing nodes, replace VMess `none` / `zero` and legacy Shadowsocks `none` configurations with supported encrypted methods. Xray-core 26.10.21 no longer supports these options; the agent rejects them rather than silently choosing a different cipher.
 
+REALITY clients must send an `X25519MLKEM768` key share before an optional `X25519` share. Some older clients and fingerprint profiles (including `edge` in the bundled uTLS version) no longer authenticate. Update the client core and use a compatible profile such as the current Xray `chrome`; changing the inbound's fingerprint does not change a client's handshake. Keep VLESS flow empty for gRPC + REALITY.
+
+Hysteria2 inbounds require a TLS certificate and its private key in `tlsSettings.certificates`, using inline PEM arrays or paths accessible inside the core container. `serverName`, ALPN and a certificate fingerprint do not supply a server certificate. With a self-signed certificate, configure the client's certificate pin and matching SNI; do not distribute the private key. The client auth must match the injected subscription credential, not the template's placeholder password. Expose the listener's UDP port.
+
+CI runs actual gRPC + REALITY (including multi mode) and Hysteria2 proxy requests, routing API updates and user hot reloads. To run them manually, build the core and set `ALPHA_TEST_XRAY_BIN` to its absolute path before running `go test ./...`. `ALPHA_TEST_XRAY_CLIENT_BIN` can select an older client binary for interoperability checks. All test listeners bind to loopback and need no external target.
+
 ## Next Milestones
 
 - Add hot update for inbound/outbound/routing when the Xray API can apply the change safely.

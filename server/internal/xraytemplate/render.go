@@ -1252,6 +1252,9 @@ func normalizeAndValidateXrayConfig(data ConfigObject, templateType string) erro
 	if templateType != node.XrayTemplateInbound {
 		return nil
 	}
+	if err := validateHysteriaServerCertificate(data); err != nil {
+		return err
+	}
 	stream, ok := data["streamSettings"].(ConfigObject)
 	if !ok || stringValue(stream, "security") != "reality" {
 		return nil
@@ -1320,6 +1323,39 @@ func validateHysteriaConfig(data ConfigObject) error {
 		return fmt.Errorf("hysteria streamSettings.hysteriaSettings.version must be 2")
 	}
 	return nil
+}
+
+func validateHysteriaServerCertificate(data ConfigObject) error {
+	stream, ok := data["streamSettings"].(ConfigObject)
+	if !ok || stringValue(stream, "network") != "hysteria" {
+		return nil
+	}
+	tls, _ := stream["tlsSettings"].(ConfigObject)
+	certificates, _ := tls["certificates"].([]any)
+	hasLines := func(value any) bool {
+		for _, line := range stringListValue(value) {
+			if strings.TrimSpace(line) != "" {
+				return true
+			}
+		}
+		return false
+	}
+	for _, item := range certificates {
+		certificate, ok := item.(ConfigObject)
+		if !ok {
+			continue
+		}
+		usage := strings.TrimSpace(stringValue(certificate, "usage"))
+		if usage != "" && usage != "encipherment" && usage != "issue" {
+			continue
+		}
+		hasCertificate := strings.TrimSpace(stringValue(certificate, "certificateFile")) != "" || hasLines(certificate["certificate"])
+		hasKey := strings.TrimSpace(stringValue(certificate, "keyFile")) != "" || hasLines(certificate["key"])
+		if hasCertificate && hasKey {
+			return nil
+		}
+	}
+	return fmt.Errorf("hysteria inbound requires a TLS server certificate and private key in tlsSettings.certificates")
 }
 
 func stringListValue(value any) []string {

@@ -67,7 +67,12 @@ jobs:
           cache: true
           cache-dependency-path: xray-agent/go.sum
 
+      - name: Build core for transport checks
+        run: go build -trimpath -o "${RUNNER_TEMP}/alpha-xray" github.com/xtls/xray-core/main
+
       - name: Run tests
+        env:
+          ALPHA_TEST_XRAY_BIN: ${{ runner.temp }}/alpha-xray
         run: go test ./...
 
       - name: Verify Protobuf contract

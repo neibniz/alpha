@@ -23,8 +23,27 @@ func TestBuildPolicyRoutingPlacesScopedBlocksBeforeBaseRules(t *testing.T) {
 	if block.GetTag() != ipLimitOutboundTag || len(block.UserEmail) != 1 || block.UserEmail[0] != "u_12" {
 		t.Fatalf("block rule = %+v", block)
 	}
-	if got := block.SourceGeoip[0].Cidr[0]; got.Prefix != 32 || netip.AddrFrom4([4]byte(got.Ip)) != prefix.Addr() {
+	if got := block.SourceIp[0].GetCustom().Cidr; got.Prefix != 32 || netip.AddrFrom4([4]byte(got.Ip)) != prefix.Addr() {
 		t.Fatalf("block CIDR = %+v", got)
+	}
+}
+
+func TestBuildPolicyRoutingPreservesIPv6SourceScope(t *testing.T) {
+	prefix := netip.MustParsePrefix("2001:db8:1:2::/64")
+	routing := buildPolicyRouting(&router.Config{}, map[string]blockedSource{
+		"blocked": {userSubscribeID: 12, email: "u_12", prefix: prefix},
+	})
+	block := routing.Rule[0]
+	if len(block.SourceIp) != 1 || block.SourceIp[0].GetCustom() == nil {
+		t.Fatalf("source IP rules = %+v", block.SourceIp)
+	}
+	got := block.SourceIp[0].GetCustom().Cidr
+	addr, ok := netip.AddrFromSlice(got.Ip)
+	if !ok || addr != prefix.Addr() || got.Prefix != 64 {
+		t.Fatalf("block CIDR = %+v", got)
+	}
+	if block.GetTag() != ipLimitOutboundTag || len(block.UserEmail) != 1 || block.UserEmail[0] != "u_12" {
+		t.Fatalf("block rule = %+v", block)
 	}
 }
 

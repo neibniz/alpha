@@ -16,6 +16,7 @@ import (
 	"github.com/neibniz/alpha/xray-agent/internal/panel"
 	router "github.com/xtls/xray-core/app/router"
 	routercmd "github.com/xtls/xray-core/app/router/command"
+	"github.com/xtls/xray-core/common/geodata"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/infra/conf"
 	"google.golang.org/grpc"
@@ -265,8 +266,10 @@ func buildPolicyRouting(base *router.Config, blocked map[string]blockedSource) *
 		config.Rule = append(config.Rule, &router.RoutingRule{
 			TargetTag: &router.RoutingRule_Tag{Tag: ipLimitOutboundTag},
 			RuleTag:   policyRuleTag(item.userSubscribeID, item.prefix),
-			SourceGeoip: []*router.GeoIP{{
-				Cidr: []*router.CIDR{{Ip: addr.AsSlice(), Prefix: uint32(item.prefix.Bits())}},
+			SourceIp: []*geodata.IPRule{{
+				Value: &geodata.IPRule_Custom{Custom: &geodata.CIDRRule{
+					Cidr: &geodata.CIDR{Ip: addr.AsSlice(), Prefix: uint32(item.prefix.Bits())},
+				}},
 			}},
 			UserEmail: []string{item.email},
 		})

@@ -140,10 +140,14 @@ func buildProtocolUser(protocolName string, runtimeUser RuntimeUser) (*protocol.
 		if id == "" {
 			return nil, fmt.Errorf("vmess user %s missing id", runtimeUser.Email)
 		}
+		security, err := vmessSecurityType(stringField(runtimeUser.Fields, "security"))
+		if err != nil {
+			return nil, err
+		}
 		user.Account = serial.ToTypedMessage(&vmess.Account{
 			Id: id,
 			SecuritySettings: &protocol.SecurityConfig{
-				Type: vmessSecurityType(stringField(runtimeUser.Fields, "security")),
+				Type: security,
 			},
 		})
 	case "trojan":
@@ -157,9 +161,13 @@ func buildProtocolUser(protocolName string, runtimeUser RuntimeUser) (*protocol.
 		if password == "" {
 			return nil, fmt.Errorf("shadowsocks user %s missing password", runtimeUser.Email)
 		}
+		cipher, err := shadowsocksCipherType(stringField(runtimeUser.Fields, "method"))
+		if err != nil {
+			return nil, err
+		}
 		user.Account = serial.ToTypedMessage(&ss.Account{
 			Password:   password,
-			CipherType: shadowsocksCipherType(stringField(runtimeUser.Fields, "method")),
+			CipherType: cipher,
 		})
 	case "hysteria":
 		auth := stringField(runtimeUser.Fields, "auth")
@@ -207,37 +215,31 @@ func uint32Field(fields map[string]interface{}, key string) uint32 {
 	return 0
 }
 
-func vmessSecurityType(value string) protocol.SecurityType {
+func vmessSecurityType(value string) (protocol.SecurityType, error) {
 	switch normalizeToken(value) {
 	case "", "auto":
-		return protocol.SecurityType_AUTO
+		return protocol.SecurityType_AUTO, nil
 	case "aes128gcm":
-		return protocol.SecurityType_AES128_GCM
+		return protocol.SecurityType_AES128_GCM, nil
 	case "chacha20poly1305":
-		return protocol.SecurityType_CHACHA20_POLY1305
-	case "none":
-		return protocol.SecurityType_NONE
-	case "zero":
-		return protocol.SecurityType_ZERO
+		return protocol.SecurityType_CHACHA20_POLY1305, nil
 	default:
-		return protocol.SecurityType_AUTO
+		return protocol.SecurityType_UNKNOWN, fmt.Errorf("unsupported VMess security %q in xray-core", value)
 	}
 }
 
-func shadowsocksCipherType(value string) ss.CipherType {
+func shadowsocksCipherType(value string) (ss.CipherType, error) {
 	switch normalizeToken(value) {
-	case "aes256gcm":
-		return ss.CipherType_AES_256_GCM
-	case "chacha20poly1305":
-		return ss.CipherType_CHACHA20_POLY1305
-	case "xchacha20poly1305":
-		return ss.CipherType_XCHACHA20_POLY1305
-	case "none":
-		return ss.CipherType_NONE
-	case "", "aes128gcm":
-		return ss.CipherType_AES_128_GCM
+	case "aes256gcm", "aeadaes256gcm":
+		return ss.CipherType_AES_256_GCM, nil
+	case "chacha20poly1305", "aeadchacha20poly1305", "chacha20ietfpoly1305":
+		return ss.CipherType_CHACHA20_POLY1305, nil
+	case "xchacha20poly1305", "aeadxchacha20poly1305", "xchacha20ietfpoly1305":
+		return ss.CipherType_XCHACHA20_POLY1305, nil
+	case "", "aes128gcm", "aeadaes128gcm":
+		return ss.CipherType_AES_128_GCM, nil
 	default:
-		return ss.CipherType_AES_128_GCM
+		return ss.CipherType_UNKNOWN, fmt.Errorf("unsupported Shadowsocks cipher %q in xray-core", value)
 	}
 }
 

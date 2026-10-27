@@ -114,11 +114,13 @@ docker run -d --name alpha-xray-agent --restart unless-stopped \
   alpha-xray-agent:local -config ""
 ```
 
-The image builds both `xray-agent` and `xray-core` from the versions pinned in `go.mod` with the pinned Go toolchain. The separate upstream image supplies only geodata and is pinned by digest. When updating that data image, use another immutable digest:
+The image and release archives build both `xray-agent` and `xray-core` from the versions pinned in `go.mod` with the pinned Go toolchain. The bundled core is Xray-core **26.10.21**, pinned to the upstream release commit `1b1647cd9ddf0abc34b981d4611fc03bcac1ca74`. Go represents this release as `v1.260327.1-0.20261021115930-1b1647cd9ddf` because the upstream `v26.10.21` tag does not match the module's major-version path. The separate upstream image supplies only geodata and is pinned by digest. When updating that data image, use another immutable digest:
 
 ```bash
 docker build --build-arg XRAY_DATA_IMAGE=ghcr.io/xtls/xray-core@sha256:<digest> -t alpha-xray-agent:local .
 ```
+
+Before upgrading existing nodes, replace VMess `none` / `zero` and legacy Shadowsocks `none` configurations with supported encrypted methods. Xray-core 26.10.21 no longer supports these options; the agent rejects them rather than silently choosing a different cipher.
 
 ## Next Milestones
 

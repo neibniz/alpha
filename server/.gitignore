@@ -15,6 +15,7 @@
 *.log*
 /build/
 /cache/
+/.bundled/
 /server
 *.p8
 *.crt

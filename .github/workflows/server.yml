@@ -67,7 +67,12 @@ jobs:
           cache: true
           cache-dependency-path: server/go.sum
 
+      - name: Verify bundled GeoIP database
+        run: sh script/install-geoip-database.sh "${RUNNER_TEMP}/alpha-geoip/dbip-city-lite.mmdb"
+
       - name: Run tests
+        env:
+          ALPHA_TEST_GEOIP_DATABASE: ${{ runner.temp }}/alpha-geoip/dbip-city-lite.mmdb
         run: go test ./...
 
       - name: Verify Protobuf contract

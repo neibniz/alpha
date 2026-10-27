@@ -9,15 +9,15 @@ ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
 
-RUN apk add --no-cache tzdata ca-certificates curl
+RUN apk add --no-cache tzdata ca-certificates
 
 WORKDIR /build
 
-# Download and verify the versioned IP database before copying application source
-# so BuildKit can reuse this layer independently from normal code changes.
-COPY assets/geoip/dbip-city-lite.env ./assets/geoip/dbip-city-lite.env
-COPY script/fetch-geoip-database.sh ./script/fetch-geoip-database.sh
-RUN sh ./script/fetch-geoip-database.sh /build/.bundled/dbip-city-lite.mmdb
+# Install the verified snapshot without network access. Old monthly download
+# URLs can expire; the checked-in archive keeps releases reproducible.
+COPY assets/geoip/ ./assets/geoip/
+COPY script/install-geoip-database.sh ./script/install-geoip-database.sh
+RUN --network=none sh ./script/install-geoip-database.sh /build/.bundled/dbip-city-lite.mmdb
 
 # Copy go.mod and go.sum first to take advantage of Docker caching
 COPY go.mod go.sum ./

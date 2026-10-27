@@ -7,6 +7,7 @@
 *.log.*
 /build
 /cache
+/.bundled
 /generate
 /node_modules
 /etc/alpha.yaml

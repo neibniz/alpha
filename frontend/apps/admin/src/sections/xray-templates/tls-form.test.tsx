@@ -117,6 +117,7 @@ test.each([
   );
   fireEvent.click(screen.getByRole("button", { name: "Edit TLS" }));
   await screen.findByText("TLS 证书与私钥");
+  expect(screen.getByRole("textbox", { name: /^ALPN$/ })).toBeTruthy();
   expect(screen.getByPlaceholderText("AA:BB:CC:...")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "添加证书" }));
   expect(screen.getByPlaceholderText("/etc/ssl/fullchain.pem")).toBeTruthy();
@@ -124,4 +125,69 @@ test.each([
   expect(
     screen.getByPlaceholderText(/-----BEGIN CERTIFICATE-----/)
   ).toBeTruthy();
+});
+
+test.each([
+  "inbound",
+  "outbound",
+] as const)("edits and saves HY2 ALPN values for %s TLS", async (type) => {
+  const onSubmit = vi.fn();
+  render(
+    <XrayTemplateForm
+      title="HY2 template"
+      trigger={<button type="button">Edit HY2</button>}
+      initialValues={{
+        type,
+        name: "HY2",
+        config: {
+          tag: "hy2",
+          protocol: "hysteria",
+          ...(type === "inbound" ? { port: 38_003 } : {}),
+          settings:
+            type === "inbound"
+              ? { version: 2, users: [{ auth: "test-password" }] }
+              : { version: 2, address: "edge.example.com", port: 38_003 },
+          streamSettings: {
+            network: "hysteria",
+            security: "tls",
+            hysteriaSettings: { version: 2, auth: "test-password" },
+            tlsSettings: {
+              alpn: ["h3"],
+              minVersion: "1.3",
+              certificates: [
+                { certificateFile: "/cert.pem", keyFile: "/key.pem" },
+              ],
+            },
+          },
+        },
+      }}
+      onSubmit={onSubmit}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Edit HY2" }));
+  const alpn = await screen.findByRole("textbox", { name: /^ALPN$/ });
+  expect((alpn as HTMLInputElement).value).toBe("h3");
+  fireEvent.change(alpn, { target: { value: "h3, custom-protocol" } });
+  const preview = screen.getByRole("complementary").querySelector("textarea")!;
+  await waitFor(() =>
+    expect(JSON.parse(preview.value).streamSettings.tlsSettings.alpn).toEqual([
+      "h3",
+      "custom-protocol",
+    ])
+  );
+  fireEvent.change(alpn, { target: { value: "" } });
+  await waitFor(() =>
+    expect(
+      JSON.parse(preview.value).streamSettings.tlsSettings
+    ).not.toHaveProperty("alpn")
+  );
+  fireEvent.change(alpn, { target: { value: "h3, custom-protocol" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
+  await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+  expect(
+    onSubmit.mock.calls[0]?.[0].config.streamSettings.tlsSettings
+  ).toMatchObject({
+    alpn: ["h3", "custom-protocol"],
+    minVersion: "1.3",
+  });
 });

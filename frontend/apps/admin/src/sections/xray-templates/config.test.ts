@@ -9,6 +9,57 @@ import {
 } from "./config";
 
 describe("Xray template config compatibility", () => {
+  it.each([
+    { alpn: ["h3"] },
+    { alpn: ["http/1.1", "h2"] },
+    { alpn: ["acme-tls/1", "custom-protocol"] },
+  ])("round-trips ordered TLS ALPN values: $alpn", ({ alpn }) => {
+    const values = configToFormValues("inbound", {
+      protocol: "hysteria",
+      settings: { version: 2 },
+      streamSettings: {
+        network: "hysteria",
+        security: "tls",
+        tlsSettings: { alpn, minVersion: "1.3" },
+      },
+    });
+    expect(values.tls_alpn).toBe(alpn.join(", "));
+    expect(JSON.parse(values.stream_extra_json || "{}").tlsSettings).toEqual({
+      minVersion: "1.3",
+    });
+    expect(buildStreamSettings(values)?.tlsSettings).toMatchObject({
+      alpn,
+      minVersion: "1.3",
+    });
+  });
+
+  it("edits and clears ALPN without reviving stale advanced JSON values", () => {
+    const values = {
+      network: "raw",
+      security: "tls",
+      stream_extra_json: JSON.stringify({
+        tlsSettings: { alpn: ["h2"], minVersion: "1.3" },
+      }),
+    };
+    expect(
+      buildStreamSettings({ ...values, tls_alpn: " http/1.1, h2, , " })
+        ?.tlsSettings
+    ).toMatchObject({
+      alpn: ["http/1.1", "h2"],
+      minVersion: "1.3",
+    });
+    expect(
+      buildStreamSettings({ ...values, tls_alpn: "" })?.tlsSettings
+    ).toEqual({ minVersion: "1.3" });
+    expect(
+      buildStreamSettings({
+        network: "hysteria",
+        security: "tls",
+        tls_alpn: "",
+      })?.tlsSettings
+    ).not.toHaveProperty("alpn");
+  });
+
   it("normalizes legacy protocol and transport aliases", () => {
     expect(normalizeInboundProtocol("dokodemo-door")).toBe("tunnel");
     expect(normalizeInboundProtocol("vless")).toBe("vless");

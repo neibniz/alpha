@@ -314,6 +314,7 @@ function streamSettingsExtra(stream: JsonObject) {
   ]);
   const tlsExtra = omitKeys(objectValue(stream.tlsSettings), [
     "certificates",
+    "alpn",
     "serverName",
     "allowInsecure",
     "fingerprint",
@@ -892,6 +893,9 @@ export function buildStreamSettings(values: XrayFormValues) {
   if (security === "tls") {
     stream.tlsSettings = compactObject({
       ...objectValue(streamExtra.tlsSettings),
+      ...(values.tls_alpn !== undefined
+        ? { alpn: splitCsv(formString(values.tls_alpn)) }
+        : {}),
       ...(values.tls_certificates_json !== undefined
         ? {
             certificates: safeJsonParse(
@@ -1421,6 +1425,7 @@ export function configToFormValues(
     sni: formString(tls.serverName) || formString(reality.serverName),
     allow_insecure: formBool(tls.allowInsecure),
     tls_certificates_json: formatJson(tls.certificates || []),
+    tls_alpn: joinCsv(tls.alpn),
     pinned_peer_cert_sha256: formString(tls.pinnedPeerCertSha256),
     verify_peer_cert_by_name: formString(tls.verifyPeerCertByName),
     fingerprint:

@@ -235,6 +235,7 @@ const formSchema = z.object({
   sni: z.string().optional(),
   allow_insecure: z.boolean().optional(),
   tls_certificates_json: z.string().optional(),
+  tls_alpn: z.string().optional(),
   pinned_peer_cert_sha256: z.string().optional(),
   verify_peer_cert_by_name: z.string().optional(),
   fingerprint: z.string().optional(),
@@ -607,6 +608,7 @@ function defaultValues(type: XrayTemplateType = "inbound"): FormValues {
     security: "none",
     fingerprint: "chrome",
     tls_certificates_json: "[]",
+    tls_alpn: "",
     pinned_peer_cert_sha256: "",
     verify_peer_cert_by_name: "",
     grpc_multi_mode: false,
@@ -3734,6 +3736,34 @@ export default function XrayTemplateForm({
                                     </FormItem>
                                   )}
                                 />
+                                {security === "tls" ? (
+                                  <FormField
+                                    control={form.control}
+                                    name="tls_alpn"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          <XrayFieldLabel fieldKey="tls_alpn">
+                                            {t("form.alpn", "ALPN")}
+                                          </XrayFieldLabel>
+                                        </FormLabel>
+                                        <XrayFieldDescription fieldKey="tls_alpn" />
+                                        <FormControl>
+                                          <EnhancedInput
+                                            onValueChange={field.onChange}
+                                            placeholder={
+                                              network === "hysteria"
+                                                ? "h3"
+                                                : "h2, http/1.1"
+                                            }
+                                            value={field.value || ""}
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                ) : null}
                                 {security === "tls" ||
                                 (security === "reality" &&
                                   type === "outbound") ? (

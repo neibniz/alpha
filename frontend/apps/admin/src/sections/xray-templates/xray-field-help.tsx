@@ -226,6 +226,14 @@ export const XRAY_FIELD_HELP: Record<string, XrayFieldHelpInfo> = {
     warning: "仅在需要连接自签名或私有 CA 证书时填写。",
     example: "AA:BB:CC:DD:...",
   }),
+  tls_alpn: help("tls", {
+    title: "ALPN",
+    hint: "TLS 应用层协议协商列表，使用英文逗号分隔，按填写顺序保存。",
+    detail:
+      "留空使用核心默认配置。HY2 / HTTP/3 通常使用 h3；HTTP/2 使用 h2；支持自定义协议名。",
+    warning: "实际协商行为取决于传输方式和核心实现，连接双方需要有兼容的协议。",
+    example: "h3 或 h2, http/1.1",
+  }),
   verify_peer_cert_by_name: help("tls", {
     title: "Verify Peer Cert By Name",
     hint: "TLS 客户端用于指定证书 SAN 校验名称，不替代入站服务端的证书和私钥。",

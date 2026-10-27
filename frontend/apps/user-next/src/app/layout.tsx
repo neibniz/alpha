@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { getServerSiteConfig } from "@/lib/server/api";
-import {
-  DEFAULT_SITE_DESCRIPTION,
-  DEFAULT_SITE_NAME,
-} from "@/lib/site-brand";
+import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_NAME } from "@/lib/site-brand";
 import "@workspace/ui/globals.css";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -30,9 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
             url: "/apple-touch-icon.png",
           },
         ],
-        icon: [
-          { sizes: "256x256", type: "image/png", url: "/favicon.png" },
-        ],
+        icon: [{ sizes: "256x256", type: "image/png", url: "/favicon.png" }],
         shortcut: "/favicon.ico",
       };
 

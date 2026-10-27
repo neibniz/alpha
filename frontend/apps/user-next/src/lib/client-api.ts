@@ -31,10 +31,7 @@ import type {
   WalletLog,
 } from "@/lib/models";
 import { isClientDemoMode } from "@/lib/runtime";
-import {
-  DEFAULT_SITE_DESCRIPTION,
-  DEFAULT_SITE_NAME,
-} from "@/lib/site-brand";
+import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_NAME } from "@/lib/site-brand";
 export { createOrderRequestId } from "@/lib/request-id";
 export {
   buildSubscriptionUrl,
@@ -793,8 +790,7 @@ export async function getSiteConfigWith(
     keywords: data?.site?.keywords?.trim() || "",
     oauthMethods: data?.oauth_methods || [],
     panDomain: Boolean(data?.subscribe?.pan_domain),
-    siteDescription:
-      data?.site?.site_desc?.trim() || DEFAULT_SITE_DESCRIPTION,
+    siteDescription: data?.site?.site_desc?.trim() || DEFAULT_SITE_DESCRIPTION,
     siteLogo: data?.site?.site_logo?.trim() || "",
     siteName: data?.site?.site_name?.trim() || DEFAULT_SITE_NAME,
     subscribeDomain: data?.subscribe?.subscribe_domain || "",

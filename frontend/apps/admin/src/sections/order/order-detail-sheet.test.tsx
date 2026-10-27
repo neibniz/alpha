@@ -91,16 +91,16 @@ test("reloads authoritative detail after a status update", async () => {
   expect(request).toHaveBeenCalledTimes(2);
 });
 
-test.each([{}, { id: 2, order_no: "OTHER-ORDER" }])(
-  "rejects incomplete or mismatched order detail: %j",
-  async (data) => {
-    request.mockResolvedValue({ data: { data } } as Response);
-    render(<OrderDetailSheet {...props} />);
-    await screen.findByRole("alert");
-    expect(screen.queryByText("OTHER-ORDER")).toBeNull();
-    expect(screen.queryByText("Financial breakdown")).toBeNull();
-  }
-);
+test.each([
+  {},
+  { id: 2, order_no: "OTHER-ORDER" },
+])("rejects incomplete or mismatched order detail: %j", async (data) => {
+  request.mockResolvedValue({ data: { data } } as Response);
+  render(<OrderDetailSheet {...props} />);
+  await screen.findByRole("alert");
+  expect(screen.queryByText("OTHER-ORDER")).toBeNull();
+  expect(screen.queryByText("Financial breakdown")).toBeNull();
+});
 
 test("shows an error instead of a loading title and supports retry and close", async () => {
   request

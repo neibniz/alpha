@@ -13,9 +13,7 @@ describe("subscription proxy routing", () => {
 
   test("uses filesystem routes for the standard subscription paths", () => {
     expect(buildSubscriptionProxyRewrites("/api/subscribe/")).toEqual([]);
-    expect(buildSubscriptionProxyRewrites("/v1/subscribe/config")).toEqual(
-      []
-    );
+    expect(buildSubscriptionProxyRewrites("/v1/subscribe/config")).toEqual([]);
   });
 
   test("builds one exact rewrite for a custom path without allowing a loop", () => {

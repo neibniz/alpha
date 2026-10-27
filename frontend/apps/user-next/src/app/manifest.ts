@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getServerSiteConfig } from "@/lib/server/api";
-import {
-  DEFAULT_SITE_DESCRIPTION,
-  DEFAULT_SITE_NAME,
-} from "@/lib/site-brand";
+import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_NAME } from "@/lib/site-brand";
 
 export const dynamic = "force-dynamic";
 

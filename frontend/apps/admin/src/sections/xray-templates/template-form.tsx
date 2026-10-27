@@ -73,6 +73,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
+import { GenerateTLSCertificateDialog } from "./generate-tls-certificate-dialog";
 import {
   TLS_CERTIFICATE_COLUMNS,
   isTLSCertificatesJson,
@@ -3817,6 +3818,62 @@ export default function XrayTemplateForm({
                                   </>
                                 ) : null}
                               </div>
+                              {security === "tls" ? (
+                                <div className="flex justify-end">
+                                  <GenerateTLSCertificateDialog
+                                    serverName={form.watch("sni")}
+                                    onGenerated={(generated) => {
+                                      const existing: unknown = JSON.parse(
+                                        form.getValues(
+                                          "tls_certificates_json"
+                                        ) || "[]"
+                                      );
+                                      if (
+                                        !(
+                                          Array.isArray(existing) &&
+                                          existing.every(isJsonObject)
+                                        )
+                                      )
+                                        throw new Error(
+                                          "现有证书配置不是有效列表，请先修正。"
+                                        );
+                                      const pins = (
+                                        form.getValues(
+                                          "pinned_peer_cert_sha256"
+                                        ) || ""
+                                      )
+                                        .split(",")
+                                        .map((value) => value.trim())
+                                        .filter(Boolean);
+                                      form.setValue(
+                                        "tls_certificates_json",
+                                        formatJson([
+                                          ...existing,
+                                          {
+                                            certificate: generated.certificate,
+                                            key: generated.key,
+                                            usage: "encipherment",
+                                          },
+                                        ]),
+                                        { shouldDirty: true }
+                                      );
+                                      form.setValue(
+                                        "pinned_peer_cert_sha256",
+                                        [
+                                          ...new Set([
+                                            ...pins,
+                                            generated.pinnedPeerCertSha256,
+                                          ]),
+                                        ].join(","),
+                                        { shouldDirty: true }
+                                      );
+                                      toast.success(
+                                        "证书、私钥和 SHA-256 指纹已填入草稿。"
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              ) : null}
                               {security === "tls" ? (
                                 <JsonArrayObjectField
                                   control={form.control}

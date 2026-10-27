@@ -58,9 +58,7 @@ export function JSONEditor(props: JSONEditorProps) {
         if (props.onChange && typeof value === "string") {
           try {
             props.onChange(
-              props.value && typeof props.value === "string"
-                ? value
-                : JSON.parse(value)
+              typeof props.value === "string" ? value : JSON.parse(value)
             );
           } catch (e) {
             console.log("Invalid JSON input:", e);

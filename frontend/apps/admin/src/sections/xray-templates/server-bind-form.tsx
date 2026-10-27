@@ -1860,9 +1860,9 @@ export default function ServerXrayTemplateBindForm({
   return (
     <Sheet onOpenChange={setOpen} open={open}>
       {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
-      <SheetContent className="w-[min(1180px,calc(100vw-24px))] max-w-full md:max-w-6xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+      <SheetContent className="h-dvh w-[min(1180px,calc(100vw-24px))] max-w-full gap-0 overflow-hidden p-0 pb-[env(safe-area-inset-bottom)] md:max-w-6xl">
+        <SheetHeader className="shrink-0 border-b px-6 py-4 pr-12">
+          <SheetTitle className="flex flex-wrap items-center gap-2 break-words">
             {t("bind.title", "绑定 Xray 模板")} · {server.name}
             <Badge variant="secondary">{selectedBindings.length} 个模板</Badge>
             <Badge variant={previewIssues.length ? "outline" : "secondary"}>
@@ -1880,8 +1880,11 @@ export default function ServerXrayTemplateBindForm({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="grid max-h-[calc(100dvh-132px)] grid-cols-1 gap-4 overflow-hidden px-6 pt-4 lg:grid-cols-[310px_minmax(0,1fr)]">
-          <aside className="min-h-0 space-y-4 overflow-y-auto rounded-md border bg-muted/20 p-3">
+        <div
+          className="grid min-h-0 flex-1 auto-rows-max grid-cols-1 gap-4 overflow-y-auto overscroll-contain px-6 py-4 lg:grid-cols-[310px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden"
+          data-testid="xray-binding-scroll"
+        >
+          <aside className="min-w-0 space-y-4 rounded-md border bg-muted/20 p-3 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
             <div
               className={cn(
                 "space-y-3 rounded-md border bg-background p-3",
@@ -1987,12 +1990,12 @@ export default function ServerXrayTemplateBindForm({
             )}
           </aside>
 
-          <div className="min-h-0 min-w-0 overflow-y-auto rounded-md border bg-background p-4">
+          <div className="min-w-0 rounded-md border bg-background p-4 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
             <Tabs
               onValueChange={(value) => setActiveTab(value as BindTab)}
               value={activeTab}
             >
-              <TabsList className="grid w-full grid-cols-7">
+              <TabsList className="w-full justify-start overflow-x-auto">
                 <TabsTrigger value="inbound">
                   {t("type.inbound", "Inbound")}
                 </TabsTrigger>
@@ -2059,7 +2062,7 @@ export default function ServerXrayTemplateBindForm({
           </div>
         </div>
 
-        <SheetFooter className="flex-row justify-end gap-2 pt-3">
+        <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t px-6 py-4">
           <Button
             onClick={() => setOpen(false)}
             type="button"

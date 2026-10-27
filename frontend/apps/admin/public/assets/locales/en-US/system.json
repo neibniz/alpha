@@ -79,6 +79,13 @@
     "year": "Year(s)"
   },
   "site": {
+    "editorDescription": "Site identity, public metadata and custom extensions.",
+    "identityTab": "Identity",
+    "extensionsTab": "Domain & extensions",
+    "loadFailed": "Unable to load site settings",
+    "retry": "Retry",
+    "unsaved": "Unsaved changes",
+    "saved": "No unsaved changes",
     "customData": "Custom Data",
     "customDataFields": {
       "address": "Address",

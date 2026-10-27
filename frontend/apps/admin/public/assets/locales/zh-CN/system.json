@@ -79,6 +79,13 @@
     "year": "年"
   },
   "site": {
+    "editorDescription": "管理站点标识、公开信息与自定义扩展。",
+    "identityTab": "展示信息",
+    "extensionsTab": "域名与扩展",
+    "loadFailed": "无法加载站点设置",
+    "retry": "重试",
+    "unsaved": "有未保存的更改",
+    "saved": "没有未保存的更改",
     "customData": "自定义数据",
     "customDataFields": {
       "address": "地址",

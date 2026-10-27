@@ -1,8 +1,6 @@
 module github.com/neibniz/alpha/server
 
-go 1.26.0
-
-toolchain go1.26.5
+go 1.27.3
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.39.0

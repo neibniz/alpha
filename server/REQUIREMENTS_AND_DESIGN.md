@@ -15,7 +15,7 @@ Alpha Server 是 Alpha 开源代理面板的后端服务组件，基于 Go 语�
 
 | 层级 | 技术选型 |
 |------|---------|
-| 语言 | Go 1.26.5 |
+| 语言 | Go 1.27.3 |
 | Web 框架 | Gin |
 | ORM | GORM（PostgreSQL 驱动） |
 | 数据库 | PostgreSQL |

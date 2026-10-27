@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/github/license/neibniz/alpha)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.26.5-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.27.3-blue)](https://go.dev/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/neibniz/alpha/server)](https://goreportcard.com/report/github.com/neibniz/alpha/server)
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/neibniz/alpha/server.yml)](../.github/workflows/server.yml)
@@ -48,7 +48,7 @@ Alpha 服务端是 Alpha 项目的后端组件，为代理服务提供强大的 
 
 ### 前提条件
 
-- **Go**：1.26.5（以 `go.mod` 固定的工具链为准）
+- **Go**：1.27.3（以 `go.mod` 固定的工具链为准）
 - **Docker**：可选，用于容器化部署
 - **Git**：用于克隆仓库
 

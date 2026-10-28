@@ -1,0 +1,1 @@
+-- Intentionally irreversible: removing certificate trust would break clients or weaken verification.

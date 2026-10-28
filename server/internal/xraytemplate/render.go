@@ -694,6 +694,7 @@ func renderSubscriptionProxyWithConfigAndVariables(server *node.Server, binding 
 		AllowInsecure:           boolValue(data, "allow_insecure"),
 		Fingerprint:             stringValue(data, "fingerprint"),
 		PinnedPeerCertSha256:    stringValue(data, "pinned_peer_cert_sha256"),
+		TLSCertificate:          stringListValue(data["tls_certificate"]),
 		VerifyPeerCertByName:    stringValue(data, "verify_peer_cert_by_name"),
 		RealityPublicKey:        firstString(data, "public_key", stringValue(data, "reality_public_key")),
 		RealityShortId:          firstString(data, "short_id", stringValue(data, "reality_short_id")),
@@ -861,6 +862,26 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		meta["tls"] = security == "tls" || security == "reality"
 	}
 	if tls, ok := stream["tlsSettings"].(ConfigObject); ok {
+		if stringValue(data, "protocol") == "hysteria" {
+			certificates := make([]string, 0)
+			entries, _ := tls["certificates"].([]any)
+			for _, entry := range entries {
+				value, ok := entry.(ConfigObject)
+				if !ok {
+					continue
+				}
+				usage := stringValue(value, "usage")
+				if usage != "" && usage != "encipherment" {
+					continue
+				}
+				if lines := stringListValue(value["certificate"]); len(lines) > 0 {
+					certificates = append(certificates, strings.Join(lines, "\n"))
+				}
+			}
+			if len(certificates) > 0 {
+				meta["tls_certificate"] = certificates
+			}
+		}
 		if serverName := stringValue(tls, "serverName"); serverName != "" {
 			meta["sni"] = serverName
 		}

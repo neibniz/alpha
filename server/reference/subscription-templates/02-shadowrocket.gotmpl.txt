@@ -273,10 +273,13 @@ vless://{{ $password }}@{{ $server }}:{{ $proxy.Port }}?{{ join "&" $params }}#{
 trojan://{{ $password }}@{{ $server }}:{{ $proxy.Port }}?{{ join "&" $params }}#{{ $proxy.Name }}
   {{- else if or (eq $proxy.Type "hysteria2") (eq $proxy.Type "hysteria") }}
   {{- $params := list -}}
+  {{- if $proxy.PinnedPeerCertSha256 -}}
+    {{- $params = append $params (printf "pinSHA256=%s" (first (splitList "," $proxy.PinnedPeerCertSha256) | urlquery)) -}}
+  {{- end -}}
   {{- if ne (default "" $proxy.SNI) "" -}}
     {{- $params = append $params (printf "sni=%s" $proxy.SNI) -}}
   {{- end -}}
-  {{- if $proxy.AllowInsecure -}}
+  {{- if or $proxy.AllowInsecure $proxy.PinnedPeerCertSha256 -}}
     {{- $params = append $params "insecure=1" -}}
   {{- end -}}
   {{- if ne (default "" $proxy.ObfsPassword) "" -}}

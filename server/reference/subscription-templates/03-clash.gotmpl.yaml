@@ -371,12 +371,15 @@ proxies:
   server: {{ $server }}
   port: {{ $proxy.Port }}
   password: {{ $password }}
+  {{- if $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- end }}
   udp: true
   tfo: true
   {{- if ne (default "" $proxy.SNI) "" }}
   sni: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $proxy.AllowInsecure }}
+  {{- if and $proxy.AllowInsecure (not $proxy.PinnedPeerCertSha256) }}
   skip-cert-verify: true
   {{- end }}
   {{- if ne (default "" $proxy.ObfsPassword) "" }}

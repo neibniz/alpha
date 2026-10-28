@@ -23,16 +23,17 @@ type Proxy struct {
 
 	// Security Options
 	Security             string
-	SNI                  string // Server Name Indication for TLS
-	AllowInsecure        bool   // Allow insecure connections (skip certificate verification)
-	Fingerprint          string // Client fingerprint for TLS connections
-	PinnedPeerCertSha256 string // TLS peer certificate SHA-256 pin for Xray-core
-	VerifyPeerCertByName string // TLS certificate name verification override for Xray-core
-	RealityServerAddr    string // Reality server address
-	RealityServerPort    int    // Reality server port
-	RealityPrivateKey    string // Reality private key for authentication
-	RealityPublicKey     string // Reality public key for authentication
-	RealityShortId       string // Reality short ID for authentication
+	SNI                  string   // Server Name Indication for TLS
+	AllowInsecure        bool     // Allow insecure connections (skip certificate verification)
+	Fingerprint          string   // Client fingerprint for TLS connections
+	PinnedPeerCertSha256 string   // TLS peer certificate SHA-256 pin for Xray-core
+	TLSCertificate       []string // Public PEM certificates for clients without certificate pin support
+	VerifyPeerCertByName string   // TLS certificate name verification override for Xray-core
+	RealityServerAddr    string   // Reality server address
+	RealityServerPort    int      // Reality server port
+	RealityPrivateKey    string   // Reality private key for authentication
+	RealityPublicKey     string   // Reality public key for authentication
+	RealityShortId       string   // Reality short ID for authentication
 	// Transport Options
 	Transport               string // Transport protocol (e.g., ws, http, grpc)
 	Host                    string // For WebSocket/HTTP/HTTPS
@@ -142,6 +143,13 @@ func (c *Client) Build() ([]byte, error) {
 
 	proxies := make([]ProxyTemplateData, len(c.Proxies))
 	for i, proxy := range c.Proxies {
+		if isHysteria2Type(proxy.Type) {
+			normalized, err := normalizeHysteriaCertificateTrust(proxy)
+			if err != nil {
+				return nil, fmt.Errorf("HY2 certificate trust for %q: %w", proxy.Name, err)
+			}
+			proxy = normalized
+		}
 		proxies[i] = proxyTemplateData(proxy)
 	}
 
@@ -179,6 +187,7 @@ func proxyTemplateData(proxy Proxy) ProxyTemplateData {
 		"AllowInsecure":           proxy.AllowInsecure,
 		"Fingerprint":             proxy.Fingerprint,
 		"PinnedPeerCertSha256":    proxy.PinnedPeerCertSha256,
+		"TLSCertificate":          proxy.TLSCertificate,
 		"VerifyPeerCertByName":    proxy.VerifyPeerCertByName,
 		"RealityServerAddr":       proxy.RealityServerAddr,
 		"RealityServerPort":       proxy.RealityServerPort,

@@ -850,8 +850,15 @@ func loadEffectiveMigrationTemplates(t *testing.T) []migrationTemplate {
 	}
 	sort.Ints(ids)
 	out := make([]migrationTemplate, 0, len(ids))
+	patches := hysteriaTrustMigrationPatches(t)
 	for _, id := range ids {
-		out = append(out, byID[id])
+		item := byID[id]
+		for _, patch := range patches {
+			if item.outputFormat == patch.format {
+				item.templateText = strings.ReplaceAll(item.templateText, patch.old, patch.updated)
+			}
+		}
+		out = append(out, item)
 	}
 	return out
 }

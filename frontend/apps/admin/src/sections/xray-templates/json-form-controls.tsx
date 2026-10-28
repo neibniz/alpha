@@ -16,8 +16,9 @@ import {
 import { Switch } from "@workspace/ui/components/switch";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { EnhancedInput } from "@workspace/ui/composed/enhanced-input";
+import { Input } from "@workspace/ui/components/input";
 import { Braces, TriangleAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type JsonObject = Record<string, unknown>;
 
@@ -176,7 +177,7 @@ function MultilineCsvTextarea({
 function inferValueType(value: unknown): JsonValueType {
   if (typeof value === "number") return "number";
   if (typeof value === "boolean") return "boolean";
-  if (value && typeof value === "object") return "json";
+  if (value === null || (value && typeof value === "object")) return "json";
   return "string";
 }
 
@@ -184,22 +185,6 @@ function valueToText(value: unknown, type: JsonValueType) {
   if (value === undefined || value === null) return "";
   if (type === "json") return formatEditorJson(value);
   return String(value);
-}
-
-function parseTypedValue(text: string, type: JsonValueType) {
-  if (type === "number") {
-    const value = Number(text);
-    return Number.isNaN(value) ? undefined : value;
-  }
-  if (type === "boolean") return text === "true";
-  if (type === "json") {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return text;
-    }
-  }
-  return text;
 }
 
 function nextUniqueKey(source: JsonObject, prefix = "key") {
@@ -210,6 +195,50 @@ function nextUniqueKey(source: JsonObject, prefix = "key") {
     key = `${prefix}_${index}`;
   }
   return key;
+}
+
+type JsonFieldDraft = {
+  id: number;
+  key: string;
+  type: JsonValueType;
+  text: string;
+};
+
+function draftError(row: JsonFieldDraft, rows: JsonFieldDraft[]) {
+  if (!row.key.trim()) return "字段名不能为空。";
+  if (rows.some((other) => other.id !== row.id && other.key === row.key)) {
+    return "字段名不能重复。";
+  }
+  if (row.type === "json") {
+    try {
+      JSON.parse(row.text);
+    } catch {
+      return "请输入完整、有效的 JSON。";
+    }
+  }
+  if (
+    row.type === "number" &&
+    !(row.text.trim() && Number.isFinite(Number(row.text)))
+  ) {
+    return "请输入有效的有限数字。";
+  }
+  return undefined;
+}
+
+function serializeDrafts(rows: JsonFieldDraft[]) {
+  // Invalid drafts must reach form validation, not silently become valid strings.
+  if (rows.some((row) => draftError(row, rows))) return "{";
+  return `{\n${rows
+    .map((row) => {
+      const text =
+        row.type === "string"
+          ? JSON.stringify(row.text)
+          : row.type === "number"
+            ? JSON.stringify(Number(row.text))
+            : row.text;
+      return `  ${JSON.stringify(row.key)}: ${text}`;
+    })
+    .join(",\n")}\n}`;
 }
 
 export function JsonObjectEditor({
@@ -225,11 +254,40 @@ export function JsonObjectEditor({
   value?: string;
   valuePlaceholder?: string;
 }) {
-  const objectValue = parseJsonObjectText(value);
-  const entries = Object.entries(objectValue);
+  const nextId = useRef(0);
+  const editorId = useId();
+  const emittedValue = useRef(value);
+  const externalValue = useRef(value);
+  const readRows = useCallback((source?: string): JsonFieldDraft[] => {
+    return Object.entries(parseJsonObjectText(source)).map(([key, current]) => {
+      const type = inferValueType(current);
+      return {
+        id: nextId.current++,
+        key,
+        type,
+        text:
+          type === "json" && current === null
+            ? "null"
+            : valueToText(current, type),
+      };
+    });
+  }, []);
+  const [rows, setRows] = useState(() => readRows(value));
 
-  function commit(next: JsonObject) {
-    onChange(formatEditorJson(next));
+  useEffect(() => {
+    if (value === externalValue.current) return;
+    externalValue.current = value;
+    if (value !== emittedValue.current) setRows(readRows(value));
+  }, [readRows, value]);
+
+  function commit(next: JsonFieldDraft[]) {
+    setRows(next);
+    emittedValue.current = serializeDrafts(next);
+    onChange(emittedValue.current);
+  }
+
+  function update(id: number, patch: Partial<JsonFieldDraft>) {
+    commit(rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   }
 
   return (
@@ -238,45 +296,46 @@ export function JsonObjectEditor({
         <Alert>
           <TriangleAlert />
           <AlertDescription>
-            当前内容不是合法 JSON 对象，表单暂时按空对象处理。
+            存在未完成或无效的 JSON，请修正后保存。
           </AlertDescription>
         </Alert>
       ) : null}
-      {entries.length ? (
-        entries.map(([key, currentValue]) => {
-          const type = inferValueType(currentValue);
+      {rows.length ? (
+        rows.map((row) => {
+          const { id, key, type, text } = row;
+          const error = draftError(row, rows);
+          const errorId = `${editorId}-${id}-error`;
           return (
             <div
               className="space-y-2 rounded-md border bg-background p-2"
-              key={key}
+              key={id}
             >
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px]">
-                <EnhancedInput
-                  onValueChange={(nextKey) => {
-                    const normalized = nextKey.trim();
-                    if (!normalized || normalized === key) return;
-                    const next = { ...objectValue };
-                    delete next[key];
-                    next[normalized] = currentValue;
-                    commit(next);
-                  }}
+                <Input
+                  aria-label="字段名"
+                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={!!error}
+                  onChange={(event) => update(id, { key: event.target.value })}
                   placeholder="字段名"
                   value={key}
                 />
                 <Select
                   onValueChange={(nextType) => {
-                    const next = {
-                      ...objectValue,
-                      [key]: parseTypedValue(
-                        valueToText(currentValue, type),
-                        nextType as JsonValueType
-                      ),
-                    };
-                    commit(next);
+                    const selected = nextType as JsonValueType;
+                    let nextText = text;
+                    if (selected === "json" && !text.trim()) nextText = "{}";
+                    if (selected === "number") {
+                      nextText = Number.isFinite(Number(text))
+                        ? String(Number(text))
+                        : "0";
+                    }
+                    if (selected === "boolean")
+                      nextText = String(text === "true");
+                    update(id, { type: selected, text: nextText });
                   }}
                   value={type}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="字段类型">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -291,43 +350,42 @@ export function JsonObjectEditor({
                 {type === "boolean" ? (
                   <div className="flex h-9 items-center rounded-md border px-3">
                     <Switch
-                      checked={!!currentValue}
+                      aria-label={`${key} 开关`}
+                      checked={text === "true"}
                       onCheckedChange={(checked) =>
-                        commit({ ...objectValue, [key]: checked })
+                        update(id, { text: String(checked) })
                       }
                     />
                   </div>
                 ) : type === "json" ? (
                   <Textarea
+                    aria-label={`${key} JSON`}
+                    aria-describedby={error ? errorId : undefined}
+                    aria-invalid={!!error}
                     className="min-h-20 font-mono text-xs"
                     onChange={(event) =>
-                      commit({
-                        ...objectValue,
-                        [key]: parseTypedValue(event.target.value, "json"),
-                      })
+                      update(id, { text: event.target.value })
                     }
                     placeholder='{"enabled":true}'
-                    value={valueToText(currentValue, type)}
+                    value={text}
                   />
                 ) : (
-                  <EnhancedInput
-                    onValueChange={(text) =>
-                      commit({
-                        ...objectValue,
-                        [key]: parseTypedValue(text, type),
-                      })
+                  <Input
+                    aria-label={`${key} 值`}
+                    aria-describedby={error ? errorId : undefined}
+                    aria-invalid={!!error}
+                    inputMode={type === "number" ? "decimal" : undefined}
+                    onChange={(event) =>
+                      update(id, { text: event.target.value })
                     }
                     placeholder={valuePlaceholder}
-                    type={type === "number" ? "number" : "text"}
-                    value={valueToText(currentValue, type)}
+                    value={text}
                   />
                 )}
                 <Button
                   className="h-9 sm:px-3"
                   onClick={() => {
-                    const next = { ...objectValue };
-                    delete next[key];
-                    commit(next);
+                    commit(rows.filter((current) => current.id !== id));
                   }}
                   type="button"
                   variant="outline"
@@ -335,6 +393,15 @@ export function JsonObjectEditor({
                   删除
                 </Button>
               </div>
+              {error ? (
+                <p
+                  className="text-sm text-destructive"
+                  id={errorId}
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
             </div>
           );
         })
@@ -349,9 +416,18 @@ export function JsonObjectEditor({
         </Empty>
       )}
       <Button
-        onClick={() =>
-          commit({ ...objectValue, [nextUniqueKey(objectValue)]: "" })
-        }
+        onClick={() => {
+          const keys = Object.fromEntries(rows.map((row) => [row.key, true]));
+          commit([
+            ...rows,
+            {
+              id: nextId.current++,
+              key: nextUniqueKey(keys),
+              type: "string",
+              text: "",
+            },
+          ]);
+        }}
         size="sm"
         type="button"
         variant="outline"

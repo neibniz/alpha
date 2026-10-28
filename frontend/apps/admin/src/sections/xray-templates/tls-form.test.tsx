@@ -33,6 +33,66 @@ beforeEach(() => {
   );
 });
 
+test("blocks invalid Settings JSON and saves a finalRules array without losing freedom fields", async () => {
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn(() => false);
+  Element.prototype.setPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+  const onSubmit = vi.fn(async (_value: unknown) => false);
+  render(
+    <XrayTemplateForm
+      title="Outbound template"
+      trigger={<button type="button">Edit Outbound</button>}
+      initialValues={{
+        type: "outbound",
+        name: "Interdiction",
+        config: {
+          tag: "interdiction-out",
+          protocol: "freedom",
+          settings: {
+            domainStrategy: "AsIs",
+            redirect: "127.0.0.1:5080",
+            userLevel: 0,
+          },
+        },
+      }}
+      onSubmit={onSubmit}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Edit Outbound" }));
+  fireEvent.click(await screen.findByRole("button", { name: "添加覆盖字段" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "字段名" }), {
+    target: { value: "finalRules" },
+  });
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "字段类型" }), {
+    key: " ",
+  });
+  fireEvent.click(screen.getByRole("option", { name: "JSON" }));
+  const input = screen.getByRole("textbox", { name: "finalRules JSON" });
+  fireEvent.change(input, { target: { value: "[" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
+  await screen.findAllByText("Settings JSON 不是合法 JSON。");
+  expect(onSubmit).not.toHaveBeenCalled();
+  const rules = [
+    { action: "allow", network: "tcp", ip: ["127.0.0.1/32"], port: "5080" },
+  ];
+  fireEvent.change(input, { target: { value: JSON.stringify(rules) } });
+  fireEvent.click(screen.getByRole("button", { name: "Save template" }));
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
+  expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
+    config: {
+      tag: "interdiction-out",
+      protocol: "freedom",
+      settings: {
+        domainStrategy: "AsIs",
+        redirect: "127.0.0.1:5080",
+        userLevel: 0,
+        finalRules: rules,
+      },
+    },
+  });
+});
+
 test("appends the generated pair and fingerprint without overwriting existing certificate files", async () => {
   const oldPin = "cd".repeat(32);
   render(

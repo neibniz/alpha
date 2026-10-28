@@ -123,20 +123,23 @@ This file is a reference copy of the built-in subscription template. Runtime use
 
 {{- $tlsOpts := "" -}}
 {{- $hy2Trust := or (eq $proxy.Type "hysteria2") (eq $proxy.Type "hy2") -}}
-{{- if and $hy2Trust $proxy.PinnedPeerCertSha256 (not $proxy.TLSCertificate) -}}
-  {{- fail "HY2 certificate pin requires a matching inline public PEM certificate for sing-box 1.12" -}}
+{{- $certificateTrust := ne $proxy.Security "reality" -}}
+{{- if and $certificateTrust $proxy.PinnedPeerCertSha256 (not $proxy.TLSCertificate) -}}
+  {{- fail "TLS certificate pin requires a matching inline public PEM certificate for legacy sing-box" -}}
 {{- end -}}
 {{- if or $tlsEnabled $proxy.AllowInsecure $proxy.Fingerprint -}}
   {{- $tlsOpts = "\"tls\": {\"enabled\": true" -}}
   {{- if $sni -}}
     {{- $tlsOpts = printf "%s, \"server_name\": \"%s\"" $tlsOpts $sni -}}
   {{- end -}}
-  {{- if and $hy2Trust $proxy.TLSCertificate -}}
+  {{- if and $certificateTrust $proxy.TLSCertificate -}}
     {{- $tlsOpts = printf "%s, \"certificate\": %s" $tlsOpts (toJson $proxy.TLSCertificate) -}}
   {{- else if $proxy.AllowInsecure -}}
     {{- $tlsOpts = printf "%s, \"insecure\": true" $tlsOpts -}}
   {{- end -}}
-  {{- if and $proxy.Fingerprint (not $hy2Trust) -}}
+  {{- if eq $proxy.Security "reality" -}}
+    {{- $tlsOpts = printf "%s, \"utls\": {\"enabled\": true, \"fingerprint\": \"chrome\"}" $tlsOpts -}}
+  {{- else if and $proxy.Fingerprint (not $hy2Trust) -}}
     {{- $tlsOpts = printf "%s, \"utls\": {\"enabled\": true, \"fingerprint\": \"%s\"}" $tlsOpts ($proxy.Fingerprint) -}}
   {{- end -}}
   {{- if and (eq $proxy.Security "reality") $proxy.RealityPublicKey -}}

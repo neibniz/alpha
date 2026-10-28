@@ -1,0 +1,1 @@
+-- Intentionally irreversible: do not restore insecure or incompatible TLS defaults.

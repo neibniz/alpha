@@ -203,11 +203,21 @@ proxies:
   {{- if ne (default "" $proxy.SNI) "" }}
   servername: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $SkipVerify }}
+  {{- if and (ne $proxy.Security "reality") $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- else if $SkipVerify }}
   skip-cert-verify: true
   {{- end }}
-  {{- if ne (default "" $proxy.Fingerprint) "" }}
+  {{- if eq $proxy.Security "reality" }}
+  client-fingerprint: chrome
+  {{- else if ne (default "" $proxy.Fingerprint) "" }}
   client-fingerprint: {{ $proxy.Fingerprint }}
+  {{- end }}
+  {{- if and (eq $proxy.Security "reality") $proxy.RealityPublicKey }}
+  reality-opts:
+    support-x25519mlkem768: true
+    public-key: {{ $proxy.RealityPublicKey | quote }}
+    short-id: {{ default "" $proxy.RealityShortId | quote }}
   {{- end }}
   {{- if $proxy.EchEnable }}
   ech-opts:
@@ -289,14 +299,19 @@ proxies:
   {{- if ne (default "" $proxy.SNI) "" }}
   servername: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $proxy.AllowInsecure }}
+  {{- if and (ne $proxy.Security "reality") $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- else if $proxy.AllowInsecure }}
   skip-cert-verify: true
   {{- end }}
-  {{- if ne (default "" $proxy.Fingerprint) "" }}
+  {{- if eq $proxy.Security "reality" }}
+  client-fingerprint: chrome
+  {{- else if ne (default "" $proxy.Fingerprint) "" }}
   client-fingerprint: {{ $proxy.Fingerprint }}
   {{- end }}
   {{- if and (eq $proxy.Security "reality") (ne (default "" $proxy.RealityPublicKey) "") }}
   reality-opts:
+    support-x25519mlkem768: true
     public-key: {{ $proxy.RealityPublicKey }}
     {{- if ne (default "" $proxy.RealityShortId) "" }}
     short-id: {{ $proxy.RealityShortId }}
@@ -323,14 +338,19 @@ proxies:
   {{- if ne (default "" $proxy.SNI) "" }}
   sni: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $SkipVerify }}
+  {{- if and (ne $proxy.Security "reality") $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- else if $SkipVerify }}
   skip-cert-verify: true
   {{- end }}
-  {{- if ne (default "" $proxy.Fingerprint) "" }}
+  {{- if eq $proxy.Security "reality" }}
+  client-fingerprint: chrome
+  {{- else if ne (default "" $proxy.Fingerprint) "" }}
   client-fingerprint: {{ $proxy.Fingerprint }}
   {{- end }}
   {{- if and (eq $proxy.Security "reality") (ne (default "" $proxy.RealityPublicKey) "") }}
   reality-opts:
+    support-x25519mlkem768: true
     public-key: {{ $proxy.RealityPublicKey }}
     {{- if ne (default "" $proxy.RealityShortId) "" }}
     short-id: {{ $proxy.RealityShortId }}
@@ -417,7 +437,9 @@ proxies:
   {{- if ne (default "" $proxy.SNI) "" }}
   sni: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $proxy.AllowInsecure }}
+  {{- if and (ne $proxy.Security "reality") $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- else if $proxy.AllowInsecure }}
   skip-cert-verify: true
   {{- end }}
   {{- if $proxy.DisableSNI }}
@@ -468,10 +490,14 @@ proxies:
   {{- if ne (default "" $proxy.SNI) "" }}
   sni: {{ $proxy.SNI }}
   {{- end }}
-  {{- if $proxy.AllowInsecure }}
+  {{- if and (ne $proxy.Security "reality") $proxy.PinnedPeerCertSha256 }}
+  fingerprint: {{ first (splitList "," $proxy.PinnedPeerCertSha256) | quote }}
+  {{- else if $proxy.AllowInsecure }}
   skip-cert-verify: true
   {{- end }}
-  {{- if ne (default "" $proxy.Fingerprint) "" }}
+  {{- if eq $proxy.Security "reality" }}
+  client-fingerprint: chrome
+  {{- else if ne (default "" $proxy.Fingerprint) "" }}
   client-fingerprint: {{ $proxy.Fingerprint }}
   {{- end }}
   {{- if $proxy.EchEnable }}

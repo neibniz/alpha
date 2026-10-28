@@ -1308,28 +1308,30 @@ func TestHysteriaInboundRequiresServerCertificate(t *testing.T) {
 	}
 }
 
-func TestHysteriaSubscriptionExportsOnlyInlineServingCertificates(t *testing.T) {
-	meta := inferSubscriptionMeta(&node.Server{Address: "192.0.2.1"}, ConfigObject{
-		"protocol": "hysteria", "port": 443,
-		"streamSettings": ConfigObject{"network": "hysteria", "security": "tls",
-			"tlsSettings": ConfigObject{"certificates": []any{
-				ConfigObject{"certificate": []any{"public-line-1", "public-line-2"}, "key": []any{"private-key-never-export"}},
-				ConfigObject{"usage": "verify", "certificate": []any{"trust-anchor-not-server"}},
-				ConfigObject{"certificateFile": "/private/server.pem", "keyFile": "/private/server.key"},
-			}},
-		},
-	}, UserInfo{UUID: "test-user"})
-	certificates := stringListValue(meta["tls_certificate"])
-	if len(certificates) != 1 || certificates[0] != "public-line-1\npublic-line-2" {
-		t.Fatalf("unexpected public certificates: %#v", certificates)
-	}
-	encoded, err := json.Marshal(meta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, secret := range []string{"private-key-never-export", "/private/", "trust-anchor-not-server"} {
-		if strings.Contains(string(encoded), secret) {
-			t.Fatalf("subscription metadata contains %q", secret)
+func TestTLSSubscriptionExportsOnlyInlineServingCertificates(t *testing.T) {
+	for _, protocol := range []string{"hysteria", "vless", "vmess", "trojan"} {
+		meta := inferSubscriptionMeta(&node.Server{Address: "192.0.2.1"}, ConfigObject{
+			"protocol": protocol, "port": 443,
+			"streamSettings": ConfigObject{"network": "hysteria", "security": "tls",
+				"tlsSettings": ConfigObject{"certificates": []any{
+					ConfigObject{"certificate": []any{"public-line-1", "public-line-2"}, "key": []any{"private-key-never-export"}},
+					ConfigObject{"usage": "verify", "certificate": []any{"trust-anchor-not-server"}},
+					ConfigObject{"certificateFile": "/private/server.pem", "keyFile": "/private/server.key"},
+				}},
+			},
+		}, UserInfo{UUID: "test-user"})
+		certificates := stringListValue(meta["tls_certificate"])
+		if len(certificates) != 1 || certificates[0] != "public-line-1\npublic-line-2" {
+			t.Fatalf("unexpected public certificates: %#v", certificates)
+		}
+		encoded, err := json.Marshal(meta)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, secret := range []string{"private-key-never-export", "/private/", "trust-anchor-not-server"} {
+			if strings.Contains(string(encoded), secret) {
+				t.Fatalf("subscription metadata contains %q", secret)
+			}
 		}
 	}
 }

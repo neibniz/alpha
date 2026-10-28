@@ -862,7 +862,7 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		meta["tls"] = security == "tls" || security == "reality"
 	}
 	if tls, ok := stream["tlsSettings"].(ConfigObject); ok {
-		if stringValue(data, "protocol") == "hysteria" {
+		if stringValue(stream, "security") == "tls" {
 			certificates := make([]string, 0)
 			entries, _ := tls["certificates"].([]any)
 			for _, entry := range entries {

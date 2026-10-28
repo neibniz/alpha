@@ -26,7 +26,7 @@ type Proxy struct {
 	SNI                  string   // Server Name Indication for TLS
 	AllowInsecure        bool     // Allow insecure connections (skip certificate verification)
 	Fingerprint          string   // Client fingerprint for TLS connections
-	PinnedPeerCertSha256 string   // TLS peer certificate SHA-256 pin for Xray-core
+	PinnedPeerCertSha256 string   // Whole DER certificate SHA-256 pins, not ClientHello or SPKI fingerprints
 	TLSCertificate       []string // Public PEM certificates for clients without certificate pin support
 	VerifyPeerCertByName string   // TLS certificate name verification override for Xray-core
 	RealityServerAddr    string   // Reality server address
@@ -143,10 +143,10 @@ func (c *Client) Build() ([]byte, error) {
 
 	proxies := make([]ProxyTemplateData, len(c.Proxies))
 	for i, proxy := range c.Proxies {
-		if isHysteria2Type(proxy.Type) {
-			normalized, err := normalizeHysteriaCertificateTrust(proxy)
+		if proxy.PinnedPeerCertSha256 != "" || len(proxy.TLSCertificate) > 0 {
+			normalized, err := normalizeCertificateTrust(proxy)
 			if err != nil {
-				return nil, fmt.Errorf("HY2 certificate trust for %q: %w", proxy.Name, err)
+				return nil, fmt.Errorf("TLS certificate trust for %q: %w", proxy.Name, err)
 			}
 			proxy = normalized
 		}

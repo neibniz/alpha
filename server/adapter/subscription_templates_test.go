@@ -283,7 +283,7 @@ func TestXrayCoreTemplateUsesTLSVerificationPins(t *testing.T) {
 			Path:                 "/ws",
 			AllowInsecure:        true,
 			Fingerprint:          "chrome",
-			PinnedPeerCertSha256: "AA:BB:CC",
+			PinnedPeerCertSha256: strings.Repeat("AA:", 31) + "AA",
 			VerifyPeerCertByName: "vmess.example.com",
 		},
 	}, User{
@@ -309,7 +309,7 @@ func TestXrayCoreTemplateUsesTLSVerificationPins(t *testing.T) {
 	}
 	tls := rendered.Outbounds[0].StreamSettings.TLSSettings
 	assertJSONField(t, tls, "serverName", "vmess.example.com")
-	assertJSONField(t, tls, "pinnedPeerCertSha256", "AA:BB:CC")
+	assertJSONField(t, tls, "pinnedPeerCertSha256", strings.Repeat("aa", 32))
 	assertJSONField(t, tls, "verifyPeerCertByName", "vmess.example.com")
 	assertJSONField(t, tls, "fingerprint", "chrome")
 }
@@ -851,10 +851,16 @@ func loadEffectiveMigrationTemplates(t *testing.T) []migrationTemplate {
 	sort.Ints(ids)
 	out := make([]migrationTemplate, 0, len(ids))
 	patches := hysteriaTrustMigrationPatches(t)
+	cryptoPatches := clientCryptoMigrationPatches(t)
 	for _, id := range ids {
 		item := byID[id]
 		for _, patch := range patches {
 			if item.outputFormat == patch.format {
+				item.templateText = strings.ReplaceAll(item.templateText, patch.old, patch.updated)
+			}
+		}
+		for _, patch := range cryptoPatches {
+			if item.outputFormat == patch.format && strings.Contains(item.templateText, patch.marker) {
 				item.templateText = strings.ReplaceAll(item.templateText, patch.old, patch.updated)
 			}
 		}

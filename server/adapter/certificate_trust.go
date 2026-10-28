@@ -9,16 +9,7 @@ import (
 	"strings"
 )
 
-func isHysteria2Type(value string) bool {
-	switch strings.ToLower(value) {
-	case "hysteria", "hysteria2", "hy2":
-		return true
-	default:
-		return false
-	}
-}
-
-func normalizeHysteriaCertificateTrust(proxy Proxy) (Proxy, error) {
+func normalizeCertificateTrust(proxy Proxy) (Proxy, error) {
 	pins := make(map[string]bool)
 	ordered := make([]string, 0)
 	for _, value := range strings.FieldsFunc(proxy.PinnedPeerCertSha256, func(r rune) bool {

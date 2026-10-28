@@ -57,7 +57,7 @@ This file is a reference copy of the built-in subscription template. Runtime use
     {{- else if eq $security "reality" }},
     "security": "reality",
     "realitySettings": {
-      "serverName": {{ $sni | quote }}{{ if $proxy.Fingerprint }}, "fingerprint": {{ $proxy.Fingerprint | quote }}{{ end }}{{ if $proxy.RealityPublicKey }}, "password": {{ $proxy.RealityPublicKey | quote }}{{ end }}{{ if $proxy.RealityShortId }}, "shortId": {{ $proxy.RealityShortId | quote }}{{ end }}{{ if $proxy.Path }}, "spiderX": {{ $proxy.Path | quote }}{{ end }}
+      "serverName": {{ $sni | quote }}, "fingerprint": "chrome"{{ if $proxy.RealityPublicKey }}, "password": {{ $proxy.RealityPublicKey | quote }}{{ end }}{{ if $proxy.RealityShortId }}, "shortId": {{ $proxy.RealityShortId | quote }}{{ end }}{{ if $proxy.Path }}, "spiderX": {{ $proxy.Path | quote }}{{ end }}
     }
     {{- end }}
     {{- if or (eq $network "ws") (eq $network "websocket") }},

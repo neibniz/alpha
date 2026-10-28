@@ -62,7 +62,7 @@ func trustTestCertificate(t *testing.T) (string, string, string) {
 func TestHysteriaTrustNormalizesPinsAndNeverExposesKeys(t *testing.T) {
 	certificate, private, pin := trustTestCertificate(t)
 	colon := strings.Join(regexp.MustCompile(`..`).FindAllString(strings.ToUpper(pin), -1), ":")
-	proxy, err := normalizeHysteriaCertificateTrust(Proxy{PinnedPeerCertSha256: colon + "," + pin, TLSCertificate: []string{certificate + private, certificate}})
+	proxy, err := normalizeCertificateTrust(Proxy{PinnedPeerCertSha256: colon + "," + pin, TLSCertificate: []string{certificate + private, certificate}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestHysteriaTrustNormalizesPinsAndNeverExposesKeys(t *testing.T) {
 		t.Fatal("untrusted replacement certificate was accepted")
 	}
 	for _, invalid := range []string{"chrome", "AA:BB:CC", ",;", strings.Repeat("a", 63), strings.Repeat("g", 64)} {
-		if _, err := normalizeHysteriaCertificateTrust(Proxy{PinnedPeerCertSha256: invalid}); err == nil {
+		if _, err := normalizeCertificateTrust(Proxy{PinnedPeerCertSha256: invalid}); err == nil {
 			t.Fatalf("accepted invalid pin %q", invalid)
 		}
 	}

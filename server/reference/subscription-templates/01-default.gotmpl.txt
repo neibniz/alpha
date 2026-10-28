@@ -127,7 +127,9 @@ STATUS=Traffic: {{ $used }} GiB/{{ $total }} GiB | Expires: {{ $ExpiredAt }}
   {{- if $SkipVerify -}}
     {{- $_ := set $buildSecurityParams "allowInsecure" "1" -}}
   {{- end -}}
-  {{- if ne (default "" $proxy.Fingerprint) "" -}}
+  {{- if eq $proxy.Security "reality" -}}
+    {{- $_ := set $buildSecurityParams "fp" "chrome" -}}
+  {{- else if ne (default "" $proxy.Fingerprint) "" -}}
     {{- $_ := set $buildSecurityParams "fp" $proxy.Fingerprint -}}
   {{- end -}}
   {{- if and (eq $proxy.Security "reality") (ne (default "" $proxy.RealityPublicKey) "") -}}

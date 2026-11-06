@@ -174,3 +174,54 @@ func setupQueryServerXrayTemplateListTest(t *testing.T) (*gorm.DB, node.Model) {
 	}
 	return db, node.NewModel(db, nil)
 }
+
+func TestDesiredXrayConfigHashTracksAllRuntimeSections(t *testing.T) {
+	enabled, disabled := true, false
+	srv := &node.Server{Id: 1, Name: "test", Address: "node.example.com"}
+	for _, tc := range []struct {
+		name, kind, before, after string
+	}{
+		{"outbound settings", node.XrayTemplateOutbound, `{"tag":"proxy","protocol":"socks","settings":{"address":"old.example.com","port":1080}}`, `{"tag":"proxy","protocol":"socks","settings":{"address":"new.example.com","port":1081}}`},
+		{"outbound transport", node.XrayTemplateOutbound, `{"tag":"proxy","protocol":"socks","streamSettings":{"network":"raw"}}`, `{"tag":"proxy","protocol":"socks","streamSettings":{"network":"ws","wsSettings":{"path":"/new"}}}`},
+		{"inbound", node.XrayTemplateInbound, `{"tag":"main","port":443,"protocol":"vless","settings":{"clients":[]}}`, `{"tag":"main","port":8443,"protocol":"vless","settings":{"clients":[]}}`},
+		{"DNS", node.XrayTemplateDNS, `{"servers":["1.1.1.1"]}`, `{"servers":["8.8.8.8"]}`},
+		{"routing", node.XrayTemplateRouting, `{"rules":[]}`, `{"rules":[{"type":"field","domain":["example.com"],"outboundTag":"direct"}]}`},
+		{"geodata", node.XrayTemplateGeodata, `{"cron":"0 4 * * *"}`, `{"cron":"0 5 * * *"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			binding := &node.ServerXrayTemplate{
+				TemplateId: 2, Alias: "main", Enabled: &enabled,
+				Template: &node.XrayTemplate{Id: 2, Type: tc.kind, Config: tc.before, Enabled: &enabled},
+			}
+			bindings := []*node.ServerXrayTemplate{
+				{TemplateId: 1, Alias: "direct", Enabled: &enabled, Template: &node.XrayTemplate{Id: 1, Type: node.XrayTemplateOutbound, Config: `{"tag":"direct","protocol":"freedom"}`, Enabled: &enabled}},
+				binding,
+			}
+			before, err := desiredXrayConfigHash(srv, enabledXrayTemplateBindings(bindings))
+			if err != nil {
+				t.Fatal(err)
+			}
+			binding.Template.Config = tc.after
+			after, err := desiredXrayConfigHash(srv, enabledXrayTemplateBindings(bindings))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if before == after {
+				t.Fatal("runtime config edit did not change desired hash")
+			}
+			binding.Template.Enabled = &disabled
+			disabledHash, err := desiredXrayConfigHash(srv, enabledXrayTemplateBindings(bindings))
+			if err != nil {
+				t.Fatal(err)
+			}
+			binding.Template.Config = tc.before
+			unchanged, err := desiredXrayConfigHash(srv, enabledXrayTemplateBindings(bindings))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if disabledHash != unchanged {
+				t.Fatal("disabled template changed runtime config")
+			}
+		})
+	}
+}

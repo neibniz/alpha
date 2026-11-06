@@ -55,18 +55,18 @@ export function findBindingIndexByTemplateId<T extends TemplateBindingKeyed>(
 
 export function selectEnabledTemplateBindings<
   TBinding extends SortableTemplateBinding,
-  TTemplate,
+  TTemplate extends { enabled?: boolean },
 >(
   bindings: TBinding[],
   templateById: ReadonlyMap<number, TTemplate>
 ): Array<{ binding: TBinding; template: TTemplate }> {
   const selected: Array<{ binding: TBinding; template: TTemplate }> = [];
   for (const binding of bindings) {
-    if (!binding.enabled) {
+    if (binding.enabled === false) {
       continue;
     }
     const template = templateById.get(binding.template_id);
-    if (template) {
+    if (template && template.enabled !== false) {
       selected.push({ binding, template });
     }
   }

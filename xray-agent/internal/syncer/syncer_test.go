@@ -2,8 +2,10 @@ package syncer
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/neibniz/alpha/xray-agent/internal/panel"
 	"github.com/neibniz/alpha/xray-agent/internal/status"
 	"github.com/neibniz/alpha/xray-agent/internal/supervisor"
+	"github.com/neibniz/alpha/xray-agent/internal/xray"
 )
 
 func TestReportStatusWSSendsInitialStatusImmediately(t *testing.T) {
@@ -89,6 +92,48 @@ func TestEffectiveUsersUsesCacheForUnchangedVersion(t *testing.T) {
 	users[0].Inbounds[0] = "mutated"
 	if runner.userCache[0].Inbounds[0] != "main" {
 		t.Fatalf("effectiveUsers() returned mutable cache reference")
+	}
+}
+
+func TestRuntimeStructureHashTracksOutboundChangesWithUnchangedUsers(t *testing.T) {
+	cfg := config.Default()
+	runner := &Runner{cfg: cfg}
+	var previousHash string
+	for _, address := range []string{"old.example.com", "new.example.com"} {
+		raw, err := json.Marshal(map[string]any{
+			"inbounds":  []any{map[string]any{"tag": "main", "protocol": "vless", "settings": map[string]any{"clients": []any{}}}},
+			"outbounds": []any{map[string]any{"tag": "proxy", "protocol": "socks", "settings": map[string]any{"address": address, "port": 1080}}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		structure, err := runner.buildRuntimeConfig(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		currentHash := hash(structure)
+		if previousHash == currentHash {
+			t.Fatal("outbound-only edit would skip config application")
+		}
+		previousHash = currentHash
+		withUsers, err := xray.InjectUsers(raw, []panel.XrayUser{{Email: "u_1", UUID: "test-id", Enabled: true}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		runtime, err := runner.buildRuntimeConfig(withUsers)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var original, applied map[string]any
+		if err := json.Unmarshal(structure, &original); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(runtime, &applied); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(original["outbounds"], applied["outbounds"]) {
+			t.Fatal("user injection overwrote outbounds")
+		}
 	}
 }
 

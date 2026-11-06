@@ -501,6 +501,11 @@ func renderBindingConfigWithVariables(server *node.Server, binding *node.ServerX
 		return nil, fmt.Errorf("xray template config must be a JSON object")
 	}
 	overridden := applyConfigVariableOverrides(data, vars, binding.Template.Type)
+	// Reapply the highest-priority layer so nested binding JSON is not shadowed by
+	// managed fields extracted from the template (for example settings.address).
+	if bindingVars := jsonObject(binding.Variables); len(bindingVars) > 0 {
+		overridden = applyConfigVariableOverrides(overridden, bindingVars, binding.Template.Type)
+	}
 	if err := normalizeAndValidateXrayConfig(overridden, binding.Template.Type); err != nil {
 		return nil, err
 	}
@@ -1100,6 +1105,21 @@ func applyConfigVariableOverrides(data ConfigObject, vars ConfigObject, template
 		return data
 	}
 
+	_, hasSettingsOverrides := lookupVar(vars,
+		"address", "out_address", "out_port", "dokodemo_address", "dokodemo_port",
+		"method", "ss_method", "password", "out_password", "ss_password", "out_user", "out_pass",
+		"id", "out_id", "out_encryption", "out_security", "flow", "out_flow", "hysteria_version")
+	if templateType == node.XrayTemplateOutbound {
+		if _, ok := lookupVar(vars, "port"); ok {
+			hasSettingsOverrides = true
+		}
+	}
+	if raw, ok := vars["settings"].(ConfigObject); ok && raw != nil {
+		hasSettingsOverrides = true
+	}
+	if hasSettingsOverrides {
+		ensureMap(data, "settings")
+	}
 	if settings, ok := data["settings"].(ConfigObject); ok {
 		if templateType == node.XrayTemplateInbound {
 			normalizeInboundUserList(settings, stringValue(data, "protocol"))
@@ -1142,6 +1162,9 @@ func applyConfigVariableOverrides(data ConfigObject, vars ConfigObject, template
 	if raw, ok := vars["streamSettings"].(ConfigObject); ok {
 		stream := ensureMap(data, "streamSettings")
 		merge(stream, raw)
+	}
+	if _, ok := lookupVar(vars, "network", "transport", "security"); ok {
+		ensureMap(data, "streamSettings")
 	}
 	stream, ok := data["streamSettings"].(ConfigObject)
 	if !ok {

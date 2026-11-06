@@ -867,6 +867,100 @@ func TestRenderBindingConfigAppliesOutboundVariableOverrides(t *testing.T) {
 	}
 }
 
+func TestConfigVariableOverridesCreateMissingSections(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		templateType string
+		vars         ConfigObject
+		want         ConfigObject
+	}{
+		{
+			name: "raw outbound settings", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"settings": ConfigObject{"redirect": "127.0.0.1:5080", "fragment": ConfigObject{"packets": "tlshello"}}},
+			want: ConfigObject{"settings": ConfigObject{"redirect": "127.0.0.1:5080", "fragment": ConfigObject{"packets": "tlshello"}}},
+		},
+		{
+			name: "managed outbound settings", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"out_address": "proxy.example.com", "out_port": 1080, "out_user": "test", "out_pass": "test-password"},
+			want: ConfigObject{"settings": ConfigObject{"address": "proxy.example.com", "port": 1080, "user": "test", "pass": "test-password"}},
+		},
+		{
+			name: "outbound port alias", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"port": 1080}, want: ConfigObject{"settings": ConfigObject{"port": 1080}},
+		},
+		{
+			name: "inbound port stays top level", templateType: node.XrayTemplateInbound,
+			vars: ConfigObject{"port": 443}, want: ConfigObject{"port": 443},
+		},
+		{
+			name: "managed transport and false boolean", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"transport": "grpc", "grpc_service_name": "new-service", "grpc_multi_mode": false},
+			want: ConfigObject{"streamSettings": ConfigObject{"network": "grpc", "grpcSettings": ConfigObject{"serviceName": "new-service", "multiMode": false}}},
+		},
+		{
+			name: "managed TLS", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"security": "tls", "sni": "proxy.example.com"},
+			want: ConfigObject{"streamSettings": ConfigObject{"security": "tls", "tlsSettings": ConfigObject{"serverName": "proxy.example.com"}}},
+		},
+		{
+			name: "raw transport", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"streamSettings": ConfigObject{"sockopt": ConfigObject{"tcpFastOpen": true}}},
+			want: ConfigObject{"streamSettings": ConfigObject{"sockopt": ConfigObject{"tcpFastOpen": true}}},
+		},
+		{
+			name: "unrelated variable does not change runtime config", templateType: node.XrayTemplateOutbound,
+			vars: ConfigObject{"display_name": "Only display"}, want: ConfigObject{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := applyConfigVariableOverrides(ConfigObject{}, tc.vars, tc.templateType)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("overrides = %#v, want %#v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestConfigVariableOverridesPreserveOtherSettings(t *testing.T) {
+	got := applyConfigVariableOverrides(ConfigObject{
+		"settings": ConfigObject{"domainStrategy": "UseIP", "redirect": "old.example.com:80"},
+	}, ConfigObject{"settings": ConfigObject{"redirect": "new.example.com:443"}}, node.XrayTemplateOutbound)
+	want := ConfigObject{"settings": ConfigObject{"domainStrategy": "UseIP", "redirect": "new.example.com:443"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("overrides = %#v, want %#v", got, want)
+	}
+}
+
+func TestNestedBindingOverridesTakePrecedenceOverTemplateFields(t *testing.T) {
+	for _, tc := range []struct {
+		name, variables, wantAddress string
+	}{
+		{"nested override", `{"settings":{"address":"new.example.com","port":8443},"streamSettings":{"tlsSettings":{"serverName":"new.example.com"}}}`, "new.example.com"},
+		{"explicit managed field wins within binding", `{"settings":{"address":"new.example.com","port":8443},"out_address":"explicit.example.com","streamSettings":{"tlsSettings":{"serverName":"new.example.com"}}}`, "explicit.example.com"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			binding := &node.ServerXrayTemplate{
+				Template: &node.XrayTemplate{Type: node.XrayTemplateOutbound, Config: `{
+					"tag":"proxy","protocol":"socks","settings":{"address":"old.example.com","port":1080},
+					"streamSettings":{"security":"tls","tlsSettings":{"serverName":"old.example.com"}}
+				}`}, Variables: tc.variables,
+			}
+			got, err := RenderBindingConfig(&node.Server{Id: 1}, binding, Ref{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			settings := got["settings"].(ConfigObject)
+			if settings["address"] != tc.wantAddress || settings["port"] != float64(8443) {
+				t.Fatalf("binding settings were shadowed: %#v", settings)
+			}
+			tls := got["streamSettings"].(ConfigObject)["tlsSettings"].(ConfigObject)
+			if tls["serverName"] != "new.example.com" {
+				t.Fatalf("binding TLS was shadowed: %#v", tls)
+			}
+		})
+	}
+}
+
 func TestRenderSubscriptionProxyDerivesRealityPublicKey(t *testing.T) {
 	enabled := true
 	proxy, err := RenderSubscriptionProxy(&node.Server{Id: 1, Name: "hk", Address: "node.example.com"}, &node.ServerXrayTemplate{

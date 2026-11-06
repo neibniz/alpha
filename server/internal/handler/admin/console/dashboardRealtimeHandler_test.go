@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/neibniz/alpha/server/internal/model/log"
+	"github.com/neibniz/alpha/server/internal/model/node"
 	"github.com/neibniz/alpha/server/internal/model/order"
 	trafficModel "github.com/neibniz/alpha/server/internal/model/traffic"
 	"github.com/neibniz/alpha/server/internal/model/user"
 	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/neibniz/alpha/server/internal/viewutil"
-	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -739,6 +740,54 @@ func TestQueryDashboardTrafficKeepsEmptyRankingsAsEmptySlices(t *testing.T) {
 	}
 	if got.ServerRankingToday == nil || got.UserRankingToday == nil || got.ServerRankingMonthly == nil || got.UserRankingMonthly == nil {
 		t.Fatalf("traffic rankings should be non-nil empty slices: %#v", got)
+	}
+}
+
+func TestDashboardTrafficUsesUTCPartitionsAcrossMidnightAndMonthBoundary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&trafficModel.DailyTrafficStat{}, &trafficModel.DailyServerTraffic{}, &trafficModel.DailyUserTraffic{}, &node.Server{}); err != nil {
+		t.Fatal(err)
+	}
+	for i, date := range []string{"2026-10-01", "2026-10-31", "2026-11-01", "2026-11-02"} {
+		amount := int64((i + 1) * 100)
+		for _, row := range []any{
+			&trafficModel.DailyTrafficStat{Date: date, Upload: amount, Download: amount * 2, Total: amount * 3},
+			&trafficModel.DailyServerTraffic{Date: date, ServerId: 1, Upload: amount, Download: amount * 2, Total: amount * 3},
+			&trafficModel.DailyUserTraffic{Date: date, UserId: 10, SubscribeId: 20, Upload: amount, Download: amount * 2, Total: amount * 3},
+		} {
+			if err := db.Create(row).Error; err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest("GET", "/dashboard/realtime", nil)
+	svcCtx := &svc.ServiceContext{DB: db, TrafficLogModel: trafficModel.NewModel(db)}
+	for _, tc := range []struct {
+		name         string
+		now          time.Time
+		today, month int64
+	}{
+		{"local midnight before UTC midnight", time.Date(2026, 11, 1, 0, 5, 0, 0, time.FixedZone("UTC+8", 8*3600)), 200, 300},
+		{"local evening after UTC midnight", time.Date(2026, 10, 31, 20, 5, 0, 0, time.FixedZone("UTC-5", -5*3600)), 300, 300},
+		{"exact UTC midnight", time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), 300, 300},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := queryDashboardTrafficAt(c, svcCtx, tc.now)
+			if got.TodayUpload != tc.today || got.TodayDownload != tc.today*2 || got.MonthlyUpload != tc.month || got.MonthlyDownload != tc.month*2 {
+				t.Fatalf("inconsistent UTC totals: %#v", got)
+			}
+			if len(got.ServerRankingToday) != 1 || got.ServerRankingToday[0].Upload != tc.today || len(got.UserRankingToday) != 1 || got.UserRankingToday[0].Upload != tc.today {
+				t.Fatalf("daily rankings do not match totals: %#v", got)
+			}
+			if len(got.ServerRankingMonthly) != 1 || got.ServerRankingMonthly[0].Upload != tc.month || len(got.UserRankingMonthly) != 1 || got.UserRankingMonthly[0].Upload != tc.month {
+				t.Fatalf("monthly rankings do not match totals: %#v", got)
+			}
+		})
 	}
 }
 

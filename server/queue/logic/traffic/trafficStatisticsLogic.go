@@ -19,14 +19,14 @@ import (
 	"github.com/neibniz/alpha/server/internal/viewutil"
 	"github.com/neibniz/alpha/server/pkg/logger"
 
+	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
+	"github.com/lib/pq"
 	trafficModel "github.com/neibniz/alpha/server/internal/model/traffic"
 	"github.com/neibniz/alpha/server/internal/realtime"
 	"github.com/neibniz/alpha/server/internal/svc"
 	"github.com/neibniz/alpha/server/pkg/nodeMultiplier"
 	"github.com/neibniz/alpha/server/queue/types"
-	"github.com/google/uuid"
-	"github.com/hibiken/asynq"
-	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -869,7 +869,7 @@ func subscribeTrafficDeltaExpr(column string, rows []subscribeTrafficDeltaRow, v
 }
 
 func buildDailyTrafficBatch(now time.Time, serverID int64, subscribes trafficSubscribeIndex, totals trafficStatisticsTotals) dailyTrafficBatch {
-	date := now.Format(time.DateOnly)
+	date := now.UTC().Format(time.DateOnly)
 	ids := totals.SortedSubscribeIDs()
 
 	batch := dailyTrafficBatch{

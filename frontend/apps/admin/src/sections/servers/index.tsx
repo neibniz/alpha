@@ -376,6 +376,12 @@ function HealthCell({ status }: { status: Partial<API.ServerStatus> }) {
     if (config === "warning") {
       return t("health.configPending", "Configuration waiting to apply");
     }
+    if (config === "unknown") {
+      return t(
+        "health.configUnknown",
+        "Configuration application not confirmed"
+      );
+    }
     if (resources !== "ok") {
       return t("health.resourcePressure", "Resource pressure detected");
     }

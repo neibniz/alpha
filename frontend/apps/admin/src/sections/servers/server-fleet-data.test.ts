@@ -56,6 +56,32 @@ describe("server fleet health", () => {
     expect(resourceHealth(status({ disk: 97 }))).toBe("error");
   });
 
+  it("recognizes agent failure codes without relying on error text", () => {
+    for (const value of ["validate_failed", "sync_failed", "apply_failed"]) {
+      expect(configHealth(status({ config_apply_status: value }))).toBe(
+        "error"
+      );
+      expect(configHealth(status({ config_sync_status: value }))).toBe("error");
+    }
+  });
+
+  it("does not mark missing or unrecognized acknowledgements as applied", () => {
+    expect(
+      configHealth(status({ config_sync_status: "", config_apply_status: "" }))
+    ).toBe("unknown");
+    expect(configHealth(status({ config_apply_status: "starting" }))).toBe(
+      "unknown"
+    );
+    expect(getOverallHealth(status({ config_apply_status: "" }), NOW)).toBe(
+      "attention"
+    );
+    expect(
+      configHealth(
+        status({ config_sync_status: "ok", config_apply_status: "ok" })
+      )
+    ).toBe("ok");
+  });
+
   it("builds fleet summaries without double-counting categories", () => {
     const statuses = [
       status(),

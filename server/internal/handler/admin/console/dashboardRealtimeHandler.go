@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/neibniz/alpha/server/internal/config"
 	"github.com/neibniz/alpha/server/internal/middleware"
 	"github.com/neibniz/alpha/server/internal/model/log"
@@ -24,8 +26,6 @@ import (
 	"github.com/neibniz/alpha/server/internal/viewutil"
 	"github.com/neibniz/alpha/server/pkg/jwt"
 	"github.com/neibniz/alpha/server/pkg/logger"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -659,19 +659,29 @@ func queryDashboardBusiness(c *gin.Context, svcCtx *svc.ServiceContext) dashboar
 }
 
 func queryDashboardTraffic(c *gin.Context, svcCtx *svc.ServiceContext) dashboardRealtimeTraffic {
-	result := queryDashboardTrafficTotals(c, svcCtx)
+	return queryDashboardTrafficAt(c, svcCtx, time.Now())
+}
+
+func queryDashboardTrafficAt(c *gin.Context, svcCtx *svc.ServiceContext, now time.Time) dashboardRealtimeTraffic {
+	// Daily aggregates are partitioned by the sample's UTC date, not the host's timezone.
+	now = now.UTC()
+	today := now.Format(time.DateOnly)
+	monthStart := startOfMonth(now).Format(time.DateOnly)
+	result := queryDashboardTrafficTotalsForDates(c, svcCtx, today, monthStart)
 	result.TodaySeries = []dashboardRealtimeTrafficPoint{}
 	result.ServerRankingToday = []dashboardRealtimeServerTraffic{}
 	result.UserRankingToday = []dashboardRealtimeUserTraffic{}
 	result.ServerRankingMonthly = []dashboardRealtimeServerTraffic{}
 	result.UserRankingMonthly = []dashboardRealtimeUserTraffic{}
-	today := time.Now().Format(time.DateOnly)
-	monthStart := startOfMonth(time.Now()).Format(time.DateOnly)
 	if servers, err := svcCtx.TrafficLogModel.TopDailyServerTraffic(c.Request.Context(), today, 10); err == nil {
 		result.ServerRankingToday = buildServerTrafficRanking(c, svcCtx, servers)
+	} else {
+		logger.WithContext(c.Request.Context()).Errorf("[DashboardRealtimeHandler] query daily server traffic ranking error: %v", err)
 	}
 	if users, err := svcCtx.TrafficLogModel.TopDailyUserTraffic(c.Request.Context(), today, 10); err == nil {
 		result.UserRankingToday = buildUserTrafficRanking(users)
+	} else {
+		logger.WithContext(c.Request.Context()).Errorf("[DashboardRealtimeHandler] query daily user traffic ranking error: %v", err)
 	}
 	result.ServerRankingMonthly = queryMonthlyServerTrafficRanking(c, svcCtx, monthStart, today, 10)
 	result.UserRankingMonthly = queryMonthlyUserTrafficRanking(c, svcCtx, monthStart, today, 10)
@@ -679,7 +689,7 @@ func queryDashboardTraffic(c *gin.Context, svcCtx *svc.ServiceContext) dashboard
 }
 
 func queryDashboardTrafficTotals(c *gin.Context, svcCtx *svc.ServiceContext) dashboardRealtimeTraffic {
-	now := time.Now()
+	now := time.Now().UTC()
 	today := now.Format(time.DateOnly)
 	monthStart := startOfMonth(now).Format(time.DateOnly)
 	return queryDashboardTrafficTotalsForDates(c, svcCtx, today, monthStart)
@@ -812,7 +822,7 @@ func buildDashboardOnlineUserSeries(points []dashboardRealtimeValuePoint, now ti
 }
 
 func queryDashboardTrafficTodaySeries(c *gin.Context, svcCtx *svc.ServiceContext) []dashboardRealtimeTrafficPoint {
-	now := time.Now()
+	now := time.Now().UTC()
 	points := queryDashboardTrafficSamples(c, svcCtx, dashboardTrafficSeriesIndexKey, dashboardTrafficSeriesValuesKey, startOfDay(now), now)
 	return compactTrafficPoints(points, 5*time.Minute)
 }

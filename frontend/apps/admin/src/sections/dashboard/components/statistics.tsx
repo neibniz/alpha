@@ -431,7 +431,7 @@ function HealthSummary({
         <StatusMetric
           icon={Wifi}
           tone="usage"
-          label={t("trafficToday", "Traffic today")}
+          label={`${t("trafficToday", "Traffic today")} · UTC`}
           secondary={`${t("uploadShort", "Up")} ${formatBytes(todayUpload)} · ${t("downloadShort", "Down")} ${formatBytes(todayDownload)}`}
           value={realtime ? formatBytes(todayUpload + todayDownload) : "--"}
         />
@@ -1040,6 +1040,7 @@ function TrafficRankingCard({
           </CardTitle>
           <p className="mt-1 truncate text-muted-foreground text-xs">
             {t("cumulativeTraffic", "Cumulative upload and download")}
+            {" · UTC"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

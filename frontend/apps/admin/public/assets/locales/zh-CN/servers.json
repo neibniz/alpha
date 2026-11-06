@@ -137,7 +137,8 @@
     "configFailed": "配置应用失败",
     "configPending": "配置等待应用",
     "resourcePressure": "检测到资源压力",
-    "healthyDetail": "节点、Xray 与配置均正常"
+    "configUnknown": "尚未确认配置应用状态",
+    "healthyDetail": "节点与 Xray 正常，上次配置应用成功"
   },
   "table": {
     "server": "服务器",

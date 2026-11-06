@@ -47,8 +47,8 @@ describe("server bind form data helpers", () => {
       { template_id: 4, enabled: true, sort: 0, alias: "missing-template" },
     ];
     const templates = new Map([
-      [1, { id: 1, name: "Late" }],
-      [3, { id: 3, name: "Early" }],
+      [1, { id: 1, name: "Late", enabled: true }],
+      [3, { id: 3, name: "Early", enabled: true }],
     ]);
 
     const result = selectEnabledTemplateBindings(bindings, templates);
@@ -85,5 +85,21 @@ describe("server bind form data helpers", () => {
     expect(result.routingItems).toEqual([routing]);
     expect(result.geodataItems).toEqual([geodata]);
     expect(result.errors).toEqual([broken]);
+  });
+
+  it("excludes globally disabled templates even when their server binding is on", () => {
+    const result = selectEnabledTemplateBindings(
+      [
+        { template_id: 1, enabled: true, sort: 1 },
+        { template_id: 2, sort: 2 },
+        { template_id: 3, enabled: false, sort: 3 },
+      ],
+      new Map([
+        [1, { enabled: false }],
+        [2, { enabled: true }],
+        [3, { enabled: true }],
+      ])
+    );
+    expect(result.map(({ binding }) => binding.template_id)).toEqual([2]);
   });
 });

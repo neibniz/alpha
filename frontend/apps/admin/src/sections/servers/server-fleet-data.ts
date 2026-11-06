@@ -20,6 +20,8 @@ export function configHealth(status: Partial<API.ServerStatus>): HealthState {
   const failed =
     status.config_apply_status === "failed" ||
     status.config_sync_status === "failed" ||
+    status.config_apply_status?.endsWith("_failed") ||
+    status.config_sync_status?.endsWith("_failed") ||
     Boolean(status.last_apply_error || status.last_config_error);
   if (failed) return "error";
   if (
@@ -29,7 +31,13 @@ export function configHealth(status: Partial<API.ServerStatus>): HealthState {
   ) {
     return "warning";
   }
-  return "ok";
+  if (
+    ["ok", "synced"].includes(status.config_sync_status || "") &&
+    ["ok", "applied"].includes(status.config_apply_status || "")
+  ) {
+    return "ok";
+  }
+  return "unknown";
 }
 
 export function nodeHealth(
@@ -65,7 +73,7 @@ export function serverNeedsAttention(
   return (
     nodeHealth(status, now) === "error" ||
     xrayHealth(status, now) === "error" ||
-    ["warning", "error"].includes(configHealth(status)) ||
+    configHealth(status) !== "ok" ||
     ["warning", "error"].includes(resourceHealth(status))
   );
 }
@@ -102,7 +110,7 @@ export function buildAttentionBreakdown(
     (result, status) => {
       if (statusIsOffline(status, now)) result.offline += 1;
       else if (xrayHealth(status, now) === "error") result.xray += 1;
-      if (["warning", "error"].includes(configHealth(status))) {
+      if (configHealth(status) !== "ok") {
         result.config += 1;
       }
       if (["warning", "error"].includes(resourceHealth(status))) {

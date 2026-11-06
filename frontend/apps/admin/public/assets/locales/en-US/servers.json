@@ -137,7 +137,8 @@
     "configFailed": "Configuration failed to apply",
     "configPending": "Configuration waiting to apply",
     "resourcePressure": "Resource pressure detected",
-    "healthyDetail": "Agent, Xray, and config are healthy"
+    "configUnknown": "Configuration application not confirmed",
+    "healthyDetail": "Agent and Xray healthy; last configuration applied successfully"
   },
   "table": {
     "server": "Server",

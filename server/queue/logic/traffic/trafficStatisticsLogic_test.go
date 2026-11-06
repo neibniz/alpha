@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/neibniz/alpha/server/internal/config"
 	"github.com/neibniz/alpha/server/internal/model/node"
 	modelSubscribe "github.com/neibniz/alpha/server/internal/model/subscribe"
@@ -17,7 +18,6 @@ import (
 	"github.com/neibniz/alpha/server/internal/viewutil"
 	"github.com/neibniz/alpha/server/pkg/nodeMultiplier"
 	"github.com/neibniz/alpha/server/queue/types"
-	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -740,6 +740,15 @@ func TestBuildDailyTrafficBatchesUsesSampleDates(t *testing.T) {
 	}
 	if batches[1].Stat.Date != "2026-07-10" || batches[1].Stat.Total != 220 {
 		t.Fatalf("second daily batch = %#v", batches[1])
+	}
+}
+
+func TestBuildDailyTrafficBatchUsesUTCDate(t *testing.T) {
+	now := time.Date(2026, 11, 1, 0, 5, 0, 0, time.FixedZone("UTC+8", 8*60*60))
+	batch := buildDailyTrafficBatch(now, 9, indexTrafficSubscribes([]*user.Subscribe{{Id: 1, UserId: 10}}),
+		trafficStatisticsTotalsFromMap(map[int64]trafficStatisticsTotal{1: {Download: 100, Upload: 10}}))
+	if batch.Server.Date != "2026-10-31" || batch.Stat.Date != "2026-10-31" || batch.UserRows[0].Date != "2026-10-31" {
+		t.Fatalf("daily partitions must all use UTC: %#v", batch)
 	}
 }
 

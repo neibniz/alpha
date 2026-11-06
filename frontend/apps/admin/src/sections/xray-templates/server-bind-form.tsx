@@ -595,7 +595,7 @@ function deriveConfigStatus({
     return {
       key: "effective",
       label: "已生效",
-      description: "节点运行中的 Xray 配置与当前绑定配置一致。",
+      description: "节点运行配置与已启用的模板及绑定一致；停用项不参与下发。",
     };
   }
   if (desiredHash && status?.running_config_hash !== desiredHash) {
@@ -617,11 +617,19 @@ function deriveBindingStatus(
   binding: BindingRow,
   configStatus: BindingStatusView
 ): BindingStatusView {
-  if (binding.enabled === false || template.enabled === false) {
+  if (template.enabled === false) {
     return {
       key: "disabled",
-      label: "未启用",
-      description: "该绑定或模板已停用，不会进入节点运行配置。",
+      label: "模板已停用",
+      description:
+        "全局模板已停用，即使服务器绑定开启也不会下发。请先在 Xray 模板管理中启用。",
+    };
+  }
+  if (binding.enabled === false) {
+    return {
+      key: "disabled",
+      label: "绑定已停用",
+      description: "此服务器上的绑定已停用，不会进入节点运行配置。",
     };
   }
   return configStatus;
@@ -1769,6 +1777,7 @@ export default function ServerXrayTemplateBindForm({
                   </p>
                 </div>
                 <Switch
+                  aria-label={`${template.name} 服务器绑定`}
                   checked={selected && binding?.enabled !== false}
                   onCheckedChange={(checked) => {
                     if (!checked) {
@@ -1781,6 +1790,16 @@ export default function ServerXrayTemplateBindForm({
               </div>
               {selected ? (
                 <div className="space-y-4 rounded-md border bg-background/80 p-3">
+                  {template.enabled === false ? (
+                    <Alert>
+                      <TriangleAlert />
+                      <AlertTitle>全局模板已停用</AlertTitle>
+                      <AlertDescription>
+                        当前修改可以保存，但不会下发到节点。请先在 Xray
+                        模板管理中启用此模板；此处的开关仅控制服务器绑定。
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
                       <div className="text-muted-foreground text-xs">

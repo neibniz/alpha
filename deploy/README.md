@@ -521,14 +521,25 @@ forwared_control_token: "<same-dedicated-forwarder-secret>"
 
 The bootstrap secret is used only to register a persistent forwarder instance. The server returns an instance-bound runtime token used for configuration, status and connection-event APIs. Public HTTPS is terminated by Caddy.
 
-The GeoIP database can live in this deploy repository:
+Forwared automatically downloads and updates IP2Location in its persistent data
+directory. Configure the provider's download token in Ansible Vault (it is not
+the Server bootstrap secret):
 
-```text
-assets/geoip/IP2LOCATION-LITE-DB3.BIN
+```yaml
+forwared_ip2location_token: "<your-IP2Location-download-token>"
+forwared_ip2location_code: DB3LITEBINIPV6
+forwared_geoip_update_interval: 86400
 ```
 
-Ansible copies the configured controller file on every run and restarts the process only when its
-content changes. You can override the source or use a checksum-protected download:
+Alternatively, set `forwared_geoip_download_url` to a trusted HTTPS ZIP/BIN URL.
+The container keeps one writable data-directory mount and one read-only config
+file mount; logs go to stdout. The data directory contains the database cache,
+instance identity, and pending connection events. Existing valid cache files
+allow startup without network downloads; invalid updates never replace the cache.
+Without any usable cache, the first download must succeed before traffic starts.
+
+An optional existing database can seed an empty data directory. Keep database
+files outside Git; set a controller source or checksum-protected seed download:
 
 ```yaml
 forwared_geoip_src: "/path/on/semaphore-runner/IP2LOCATION-LITE-DB3.BIN"
@@ -538,6 +549,12 @@ forwared_geoip_checksum: "sha256:<64 lowercase or uppercase hexadecimal characte
 
 `forwared_geoip_checksum` is mandatory when `forwared_geoip_url` is set. This prevents a mutable
 remote file from being installed without integrity verification.
+
+Seeds are installed only if the database does not already exist, so a repeated
+deployment cannot overwrite a newer automatically downloaded database. Legacy
+state and database files are copied into `data/` only if the destination is
+missing; original files are not deleted. For environment-only Docker Compose
+with just one named volume, see [Forwared deployment](../forwared/README.md).
 
 The forwarder container runs as UID/GID `10001` with all Linux capabilities removed. Configure
 listen ports at `1024` or above; expose lower public ports through a host firewall redirect or

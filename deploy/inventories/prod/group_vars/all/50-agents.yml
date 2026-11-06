@@ -19,6 +19,9 @@ forwared_ansible_user: root
 forwared_geoip_url: ""
 forwared_geoip_src: ""
 forwared_geoip_checksum: ""
+forwared_geoip_download_url: ""
+forwared_ip2location_code: DB3LITEBINIPV6
+forwared_geoip_update_interval: 86400
 forwared_status_interval: 5
 forwared_event_batch_size: 500
 forwared_event_flush_interval: 5

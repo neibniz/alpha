@@ -15,3 +15,4 @@ server_privacy_keyring_json: >-
   {"active_key_id":"v1","encryption_keys":{"v1":"replace-with-base64-encoded-32-byte-key"},"index_key":"replace-with-a-different-base64-encoded-32-byte-key"}
 xray_agent_deploy_token: replace-with-server-deployment-token
 forwared_control_token: replace-with-the-forwarder-bootstrap-secret
+forwared_ip2location_token: replace-with-the-ip2location-download-token

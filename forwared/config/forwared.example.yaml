@@ -5,10 +5,13 @@ public_ip: ""
 public_ip_url: "https://checkip.amazonaws.com"
 fetch_ip_interval: 120
 fetch_forward_table_interval: 10
-logfile: "/app/log/forwared.log"
-geoipfile: "/app/config/IP2LOCATION-LITE-DB3.BIN"
-state_file: "/app/state/identity.json"
-spool_file: "/app/state/connection-events.jsonl"
+data_dir: "/app/data"
+# Empty logfile sends logs only to stdout; Docker handles rotation.
+logfile: ""
+# Set ALPHA_FORWARED_IP2LOCATION_TOKEN or a trusted HTTPS mirror URL.
+geoip_download_code: "DB3LITEBINIPV6"
+geoip_download_url: ""
+geoip_update_interval: 86400
 status_interval: 5
 event_batch_size: 500
 event_flush_interval: 5

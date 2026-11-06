@@ -8,10 +8,10 @@ import (
 
 // 判断是否允许连入
 func IsIPAllowed(ip string) bool {
-	if IP2Location_db == nil {
+	if geoIPDatabase == nil {
 		return true
 	}
-	recored, err := IP2Location_db.Get_all(ip)
+	recored, err := geoIPDatabase.Lookup(ip)
 	if err != nil {
 		logger.Logger.Warn("GeoIP lookup failed", slog.Any("error", err))
 		return true // 如果查询失败，默认允许连接

@@ -11,6 +11,8 @@
       - forwared_event_flush_interval | int > 0
       - forwared_max_spool_bytes | int >= 1048576
       - forwared_pids_limit | default(300) | int > 0
+      - forwared_geoip_update_interval | default(86400) | int >= 3600
+      - forwared_geoip_update_interval | default(86400) | int <= 2592000
       - >-
         forwared_geoip_url | default("") | length == 0
         or (
@@ -40,8 +42,22 @@
     group: "10001"
   loop:
     - "{{ deploy_root }}/forwared/config"
-    - "{{ deploy_root }}/forwared/log"
-    - "{{ deploy_root }}/forwared/state"
+    - "{{ deploy_root }}/forwared/data"
+    - "{{ deploy_root }}/forwared/data/geoip"
+
+- name: Preserve existing forwared identity, spool, and GeoIP cache
+  ansible.builtin.include_tasks: migrate-data.yml
+  loop:
+    - { source: state/identity.json, destination: data/identity.json }
+    - { source: state/connection-events.jsonl, destination: data/connection-events.jsonl }
+    - { source: config/IP2LOCATION-LITE-DB3.BIN, destination: data/geoip/IP2LOCATION-LITE-DB3.BIN }
+  loop_control:
+    loop_var: forwared_legacy_file
+
+- name: Check persisted forwared GeoIP cache
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/forwared/data/geoip/IP2LOCATION-LITE-DB3.BIN"
+  register: forwared_cached_geoip
 
 - name: Resolve forwared GeoIP source
   ansible.builtin.set_fact:
@@ -68,44 +84,54 @@
     fail_msg: >-
       The configured forwared GeoIP source does not exist on the Ansible controller:
       {{ forwared_geoip_source_effective }}
-  when: forwared_geoip_url | default("") | length == 0
+  when:
+    - forwared_geoip_url | default("") | length == 0
+    - forwared_geoip_src | default("") | length > 0
+    - not forwared_cached_geoip.stat.exists
 
 - name: Download forwared GeoIP database
   ansible.builtin.get_url:
     url: "{{ forwared_geoip_url }}"
-    dest: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+    dest: "{{ deploy_root }}/forwared/data/geoip/IP2LOCATION-LITE-DB3.BIN"
     checksum: "{{ forwared_geoip_checksum }}"
     mode: "0644"
     owner: "10001"
     group: "10001"
-  when: forwared_geoip_url | default("") | length > 0
+  when:
+    - forwared_geoip_url | default("") | length > 0
+    - not forwared_cached_geoip.stat.exists
   register: forwared_geoip_download
 
 - name: Copy forwared GeoIP database from controller
   ansible.builtin.copy:
     src: "{{ forwared_geoip_source_effective }}"
-    dest: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+    dest: "{{ deploy_root }}/forwared/data/geoip/IP2LOCATION-LITE-DB3.BIN"
     mode: "0644"
     owner: "10001"
     group: "10001"
-  when: forwared_geoip_url | default("") | length == 0
+  when:
+    - forwared_geoip_url | default("") | length == 0
+    - forwared_controller_geoip_database.stat.exists | default(false)
+    - not forwared_cached_geoip.stat.exists
   register: forwared_geoip_copy
 
 - name: Verify forwared GeoIP database exists
   ansible.builtin.stat:
-    path: "{{ deploy_root }}/forwared/config/IP2LOCATION-LITE-DB3.BIN"
+    path: "{{ deploy_root }}/forwared/data/geoip/IP2LOCATION-LITE-DB3.BIN"
   register: forwared_geoip_database_after
 
 - name: Stop when forwared GeoIP database is missing
   ansible.builtin.fail:
     msg: >-
-      IP2LOCATION-LITE-DB3.BIN is required. Put it at
-      assets/geoip/IP2LOCATION-LITE-DB3.BIN, set forwared_geoip_url or
-      forwared_geoip_src.
+      Configure forwared_ip2location_token or forwared_geoip_download_url for
+      automatic downloads, or provide an existing IP2Location BIN cache/seed.
   when:
-    - not forwared_geoip_database_after.stat.exists
+    - forwared_ip2location_token | default("") | length == 0
+    - forwared_geoip_download_url | default("") | length == 0
+    - >-
+      not forwared_geoip_database_after.stat.exists
       or not forwared_geoip_database_after.stat.isreg
-      or forwared_geoip_database_after.stat.size < 1048576
+      or forwared_geoip_database_after.stat.size < 64
 
 - name: Render forwared config
   ansible.builtin.template:

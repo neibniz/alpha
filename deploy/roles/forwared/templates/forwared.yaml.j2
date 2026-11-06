@@ -5,10 +5,12 @@ public_ip: {{ forwared_public_ip | default("") | quote }}
 public_ip_url: {{ forwared_public_ip_url | default("https://checkip.amazonaws.com") | quote }}
 fetch_ip_interval: {{ forwared_fetch_ip_interval | default(120) }}
 fetch_forward_table_interval: {{ forwared_fetch_forward_table_interval | default(10) }}
-logfile: "/app/log/forwared.log"
-geoipfile: "/app/config/IP2LOCATION-LITE-DB3.BIN"
-state_file: "/app/state/identity.json"
-spool_file: "/app/state/connection-events.jsonl"
+data_dir: "/app/data"
+logfile: ""
+geoip_download_url: {{ forwared_geoip_download_url | default("") | quote }}
+geoip_download_token: {{ forwared_ip2location_token | default("") | quote }}
+geoip_download_code: {{ forwared_ip2location_code | default("DB3LITEBINIPV6") | quote }}
+geoip_update_interval: {{ forwared_geoip_update_interval | default(86400) }}
 status_interval: {{ forwared_status_interval | default(5) }}
 event_batch_size: {{ forwared_event_batch_size | default(500) }}
 event_flush_interval: {{ forwared_event_flush_interval | default(5) }}

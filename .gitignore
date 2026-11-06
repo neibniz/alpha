@@ -12,3 +12,12 @@ deploy/.venv/
 deploy/inventories/**/vault.yml
 deploy/lan-docker/.env
 frontend/apps/*/design/
+forwared/.env*
+!forwared/.env.example
+forwared/config/forwared.yaml
+forwared/forwared.yaml
+forwared/data/
+forwared/state/
+forwared/log/
+forwared/config/*.BIN
+forwared/config/*.ZIP

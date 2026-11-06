@@ -1,0 +1,38 @@
+---
+- name: Check legacy forwared data file
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/forwared/{{ forwared_legacy_file.source }}"
+  register: forwared_legacy_source
+
+- name: Check unified forwared data file
+  ansible.builtin.stat:
+    path: "{{ deploy_root }}/forwared/{{ forwared_legacy_file.destination }}"
+  register: forwared_legacy_destination
+
+- name: Stop managed forwared before migrating live files
+  ansible.builtin.command:
+    argv: [docker, stop, --time, "30", "{{ item }}"]
+  loop: [alpha-forwared, m200-forwared]
+  register: forwared_migration_stop
+  changed_when: forwared_migration_stop.rc == 0
+  failed_when: >-
+    forwared_migration_stop.rc != 0
+    and 'No such container' not in forwared_migration_stop.stderr
+  when:
+    - forwared_legacy_source.stat.isreg | default(false)
+    - not forwared_legacy_destination.stat.exists
+
+- name: Copy legacy forwared data without replacing persistent state
+  no_log: true
+  diff: false
+  ansible.builtin.copy:
+    src: "{{ deploy_root }}/forwared/{{ forwared_legacy_file.source }}"
+    dest: "{{ deploy_root }}/forwared/{{ forwared_legacy_file.destination }}"
+    remote_src: true
+    owner: "10001"
+    group: "10001"
+    mode: "0600"
+    force: false
+  when:
+    - forwared_legacy_source.stat.isreg | default(false)
+    - not forwared_legacy_destination.stat.exists

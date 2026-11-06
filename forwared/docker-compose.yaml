@@ -2,9 +2,30 @@ services:
   forwared:
     image: ghcr.io/neibniz/alpha-forwared:latest
     container_name: alpha-forwared
+    init: true
     network_mode: host
+    read_only: true
+    environment:
+      ALPHA_FORWARED_BASE_URL: ${ALPHA_FORWARED_BASE_URL:?Set the server API origin}
+      ALPHA_FORWARED_SECRET_KEY: ${ALPHA_FORWARED_SECRET_KEY:?Set the forwarder bootstrap secret}
+      ALPHA_FORWARED_NAME: ${ALPHA_FORWARED_NAME:-edge-forwarder}
+      ALPHA_FORWARED_PUBLIC_IP: ${ALPHA_FORWARED_PUBLIC_IP:-}
+      ALPHA_FORWARED_IP2LOCATION_TOKEN: ${ALPHA_FORWARED_IP2LOCATION_TOKEN:-}
+      ALPHA_FORWARED_IP2LOCATION_CODE: ${ALPHA_FORWARED_IP2LOCATION_CODE:-DB3LITEBINIPV6}
+      ALPHA_FORWARED_GEOIP_URL: ${ALPHA_FORWARED_GEOIP_URL:-}
+      ALPHA_FORWARED_GEOIP_UPDATE_INTERVAL: ${ALPHA_FORWARED_GEOIP_UPDATE_INTERVAL:-86400}
     volumes:
-      - ./config/:/app/config/:ro
-      - ./log/:/app/log/
-      - ./state/:/app/state/
+      - forwared-data:/app/data
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     restart: unless-stopped
+volumes:
+  forwared-data:
+    name: alpha-forwared-data

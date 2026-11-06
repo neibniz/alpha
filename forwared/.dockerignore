@@ -1,6 +1,11 @@
 .git
 .github
 log
+data
+state
+.env*
+**/*.BIN
+**/*.ZIP
 forwared
 config/*.crt
 config/*.key

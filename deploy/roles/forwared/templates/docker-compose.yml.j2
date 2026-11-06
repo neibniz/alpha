@@ -8,9 +8,8 @@ services:
     read_only: true
     network_mode: host
     volumes:
-      - {{ deploy_root }}/forwared/config:/app/config:ro
-      - {{ deploy_root }}/forwared/log:/app/log
-      - {{ deploy_root }}/forwared/state:/app/state
+      - {{ deploy_root }}/forwared/config/forwared.yaml:/app/config/forwared.yaml:ro
+      - {{ deploy_root }}/forwared/data:/app/data
     tmpfs:
       - /tmp:size=32m,mode=1777
     mem_limit: {{ forwared_memory_limit | default("512m") }}

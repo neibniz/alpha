@@ -98,6 +98,7 @@ import { NotifySettingsForm } from "./user-profile/notify-settings-form";
 import UserSubscription from "./user-subscription";
 import { TrafficResetDialog } from "./traffic-reset-dialog";
 import { PrivateIdentityDialog } from "./private-identity-dialog";
+import { RegistrationBadge } from "./registration-badge";
 
 type UserListRow = API.UserListItem;
 type UserListStatus = NonNullable<API.GetUserListParams["status"]>;
@@ -220,12 +221,13 @@ function UserIdentityCell({ user }: { user: UserListRow }) {
         <PrivateIdentityDialog
           trigger={
             <Button
-              aria-label={t("revealPrivateData", "Reveal private data")}
-              size="icon-sm"
+              aria-label={t("viewFullEmail", "查看完整邮箱")}
+              size="sm"
               type="button"
               variant="ghost"
             >
               <Eye />
+              {t("fullEmail", "完整邮箱")}
             </Button>
           }
           userId={user.id}
@@ -525,8 +527,16 @@ export default function User() {
             {
               accessorKey: "primary_auth_method",
               header: t("identity", "Identity"),
-              size: 260,
+              size: 340,
               cell: ({ row }) => <UserIdentityCell user={row.original} />,
+            },
+            {
+              accessorKey: "registration_method",
+              header: t("registrationMethod", "注册方式"),
+              size: 155,
+              cell: ({ row }) => (
+                <RegistrationBadge method={row.original.registration_method} />
+              ),
             },
             {
               accessorKey: "is_member",

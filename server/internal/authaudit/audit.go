@@ -74,6 +74,7 @@ func RecordRegister(ctx context.Context, model Inserter, event RegisterEvent) er
 		Type:     modelLog.TypeRegister.Uint8(),
 		Date:     event.At.Format(time.DateOnly),
 		ObjectID: event.UserID,
+		Success:  true,
 		Content:  string(content),
 	})
 }

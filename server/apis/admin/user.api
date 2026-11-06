@@ -133,6 +133,7 @@ type (
 	RevealUserPrivateIdentityRequest {
 		UserId int64  `json:"user_id" validate:"required,gt=0"`
 		Reason string `json:"reason" validate:"required,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+		DurationMinutes int `json:"duration_minutes,omitempty" validate:"omitempty,oneof=5 15 30"`
 	}
 	RevealUserPrivateIdentityResponse {
 		UserId      int64            `json:"user_id"`

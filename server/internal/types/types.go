@@ -1040,8 +1040,9 @@ type GetUserAuthMethodResponse struct {
 }
 
 type RevealUserPrivateIdentityRequest struct {
-	UserId int64  `json:"user_id" validate:"required,gt=0"`
-	Reason string `json:"reason" validate:"required,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+	UserId          int64  `json:"user_id" validate:"required,gt=0"`
+	Reason          string `json:"reason" validate:"required,oneof=customer_support account_verification security_incident billing_dispute compliance"`
+	DurationMinutes int    `json:"duration_minutes,omitempty" validate:"omitempty,oneof=5 15 30"`
 }
 
 type RevealUserPrivateIdentityResponse struct {
@@ -3183,18 +3184,19 @@ type User struct {
 }
 
 type UserListItem struct {
-	Id                int64          `json:"id"`
-	Balance           int64          `json:"balance"`
-	Commission        int64          `json:"commission"`
-	GiftAmount        int64          `json:"gift_amount"`
-	MemberExpiredAt   int64          `json:"member_expired_at"`
-	IsMember          bool           `json:"is_member"`
-	ReferCode         string         `json:"refer_code"`
-	RefererId         int64          `json:"referer_id"`
-	Enable            bool           `json:"enable"`
-	PrimaryAuthMethod UserAuthMethod `json:"primary_auth_method"`
-	CreatedAt         int64          `json:"created_at"`
-	DeletedAt         int64          `json:"deleted_at,omitempty"`
+	Id                 int64          `json:"id"`
+	RegistrationMethod string         `json:"registration_method"`
+	Balance            int64          `json:"balance"`
+	Commission         int64          `json:"commission"`
+	GiftAmount         int64          `json:"gift_amount"`
+	MemberExpiredAt    int64          `json:"member_expired_at"`
+	IsMember           bool           `json:"is_member"`
+	ReferCode          string         `json:"refer_code"`
+	RefererId          int64          `json:"referer_id"`
+	Enable             bool           `json:"enable"`
+	PrimaryAuthMethod  UserAuthMethod `json:"primary_auth_method"`
+	CreatedAt          int64          `json:"created_at"`
+	DeletedAt          int64          `json:"deleted_at,omitempty"`
 }
 
 type UserAffiliate struct {

@@ -319,6 +319,7 @@ const smallUserOrderLookupLimit = 8
 
 var userListColumns = []string{
 	"id",
+	"registration_method",
 	"balance",
 	"refer_code",
 	"referer_id",

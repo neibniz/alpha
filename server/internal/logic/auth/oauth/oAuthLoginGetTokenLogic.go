@@ -196,7 +196,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, invite
 			logger.Field("request_id", requestID),
 		)
 
-		userInfo = &user.User{Avatar: avatar, OnlyFirstPurchase: &inviteConfig.OnlyFirstPurchase}
+		userInfo = &user.User{RegistrationMethod: method, Avatar: avatar, OnlyFirstPurchase: &inviteConfig.OnlyFirstPurchase}
 		if referer != nil {
 			userInfo.RefererId = referer.Id
 		}

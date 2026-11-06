@@ -25,10 +25,11 @@ func CreateAdminUser(email, password string, tx *gorm.DB) error {
 		}
 
 		u := user.User{
-			Password:  passwordHash,
-			Algo:      tool.PasswordAlgo,
-			IsAdmin:   &enable,
-			ReferCode: uuidx.UserInviteCode(time.Now().Unix()),
+			RegistrationMethod: "admin",
+			Password:           passwordHash,
+			Algo:               tool.PasswordAlgo,
+			IsAdmin:            &enable,
+			ReferCode:          uuidx.UserInviteCode(time.Now().Unix()),
 		}
 		if err := tx.Model(&user.User{}).Save(&u).Error; err != nil {
 			return err

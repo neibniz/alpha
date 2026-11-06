@@ -1304,6 +1304,7 @@ declare namespace API {
 
   type RevealUserPrivateIdentityRequest = {
     user_id: number;
+    duration_minutes?: 5 | 15 | 30;
     reason:
       | "customer_support"
       | "account_verification"
@@ -3064,6 +3065,7 @@ declare namespace API {
 
   type UserListItem = {
     id: number;
+    registration_method: string;
     balance: number;
     commission: number;
     gift_amount: number;

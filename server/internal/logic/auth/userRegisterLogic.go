@@ -89,9 +89,10 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "password does not meet policy")
 	}
 	userInfo := &user.User{
-		Password:          pwd,
-		Algo:              tool.PasswordAlgo,
-		OnlyFirstPurchase: &invite.OnlyFirstPurchase,
+		RegistrationMethod: "email",
+		Password:           pwd,
+		Algo:               tool.PasswordAlgo,
+		OnlyFirstPurchase:  &invite.OnlyFirstPurchase,
 	}
 	if referer != nil {
 		userInfo.RefererId = referer.Id

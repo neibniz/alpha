@@ -22,16 +22,17 @@ func userListItemFromModel(item *userModel.User, now time.Time) types.UserListIt
 		return types.UserListItem{}
 	}
 	resp := types.UserListItem{
-		Id:              item.Id,
-		Balance:         item.Balance,
-		Commission:      item.Commission,
-		GiftAmount:      item.GiftAmount,
-		MemberExpiredAt: timex.UnixMilliOrZero(item.MemberExpiredAt),
-		IsMember:        !item.MemberExpiredAt.IsZero() && item.MemberExpiredAt.After(now),
-		ReferCode:       item.ReferCode,
-		RefererId:       item.RefererId,
-		Enable:          userBoolValue(item.Enable),
-		CreatedAt:       timex.UnixMilliOrZero(item.CreatedAt),
+		RegistrationMethod: item.RegistrationMethod,
+		Id:                 item.Id,
+		Balance:            item.Balance,
+		Commission:         item.Commission,
+		GiftAmount:         item.GiftAmount,
+		MemberExpiredAt:    timex.UnixMilliOrZero(item.MemberExpiredAt),
+		IsMember:           !item.MemberExpiredAt.IsZero() && item.MemberExpiredAt.After(now),
+		ReferCode:          item.ReferCode,
+		RefererId:          item.RefererId,
+		Enable:             userBoolValue(item.Enable),
+		CreatedAt:          timex.UnixMilliOrZero(item.CreatedAt),
 	}
 	if item.DeletedAt.Valid {
 		resp.DeletedAt = timex.UnixMilliOrZero(item.DeletedAt.Time)

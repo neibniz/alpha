@@ -65,7 +65,9 @@
   },
   "search": "Search",
   "sensitive": {
-    "description": "Complete fields remain visible for 60 seconds. This access records the administrator, source IP, reason, and result count.",
+    "description": "Full fields remain visible for the selected duration (15 minutes by default), then are masked automatically. This access records the administrator, source IP, reason, and result count.",
+    "duration": "Viewing duration",
+    "minutes": "{{count}} minutes",
     "fullInformation": "Complete information",
     "reason": "Access reason",
     "reveal": "Show complete information",

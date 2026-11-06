@@ -25,6 +25,7 @@ func TestUserListColumnsStayLightweight(t *testing.T) {
 
 	required := []string{
 		"id",
+		"registration_method",
 		"balance",
 		"commission",
 		"gift_amount",

@@ -1,11 +1,13 @@
 package migrate
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	modelLog "github.com/neibniz/alpha/server/internal/model/log"
 	"github.com/neibniz/alpha/server/internal/model/node"
 	"github.com/neibniz/alpha/server/pkg/orm"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -13,6 +15,16 @@ import (
 func TestEmbeddedMigrationVersionsAreUnique(t *testing.T) {
 	if _, err := iofs.New(sqlFiles, "database"); err != nil {
 		t.Fatalf("embedded migrations are invalid: %v", err)
+	}
+}
+
+func TestRegistrationMethodMigrationUsesExistingAuditTable(t *testing.T) {
+	data, err := sqlFiles.ReadFile("database/02221_user_registration_method.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `FROM "`+(modelLog.SystemLog{}).TableName()+`"`) {
+		t.Fatal("registration backfill must use the existing audit table")
 	}
 }
 

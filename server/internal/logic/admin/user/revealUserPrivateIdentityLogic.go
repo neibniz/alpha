@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const privateIdentityRevealTTL = time.Minute
+const privateIdentityRevealTTL = 15 * time.Minute
 
 type RevealUserPrivateIdentityLogic struct {
 	logger.Logger
@@ -38,6 +38,10 @@ func (l *RevealUserPrivateIdentityLogic) RevealUserPrivateIdentity(
 ) (*types.RevealUserPrivateIdentityResponse, error) {
 	if req == nil || req.UserId <= 0 || !validPrivateIdentityRevealReason(req.Reason) {
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "invalid private identity reveal request")
+	}
+	ttl, err := privateIdentityRevealDuration(req.DurationMinutes)
+	if err != nil {
+		return nil, err
 	}
 	operator, ok := l.ctx.Value(constant.CtxKeyUser).(*modelUser.User)
 	if !ok || operator == nil || operator.Id <= 0 || operator.IsAdmin == nil || !*operator.IsAdmin {
@@ -87,8 +91,19 @@ func (l *RevealUserPrivateIdentityLogic) RevealUserPrivateIdentity(
 		Email:       email,
 		AuthMethods: authMethods,
 		RevealedAt:  now.UnixMilli(),
-		ExpiresAt:   now.Add(privateIdentityRevealTTL).UnixMilli(),
+		ExpiresAt:   now.Add(ttl).UnixMilli(),
 	}, nil
+}
+
+func privateIdentityRevealDuration(minutes int) (time.Duration, error) {
+	switch minutes {
+	case 0:
+		return privateIdentityRevealTTL, nil
+	case 5, 15, 30:
+		return time.Duration(minutes) * time.Minute, nil
+	default:
+		return 0, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "invalid private identity reveal duration")
+	}
 }
 
 func validPrivateIdentityRevealReason(reason string) bool {

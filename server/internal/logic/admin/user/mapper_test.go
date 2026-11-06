@@ -83,6 +83,20 @@ func TestUserListItemFromModelHandlesNilBooleansAndExpiredMember(t *testing.T) {
 	}
 }
 
+func TestUserListRegistrationMethodIsIndependentOfLinkedEmail(t *testing.T) {
+	got := userListItemFromModel(&userModel.User{
+		Id: 9, RegistrationMethod: "github",
+		AuthMethods: []userModel.AuthMethods{{AuthType: "email", AuthIdentifier: "us***@example.test"}},
+	}, time.Now())
+	if got.RegistrationMethod != "github" || got.PrimaryAuthMethod.AuthType != "email" {
+		t.Fatalf("registration source must not follow preferred identity: %#v", got)
+	}
+	unknown := userListItemFromModel(&userModel.User{Id: 10, AuthMethods: []userModel.AuthMethods{{AuthType: "github"}}}, time.Now())
+	if unknown.RegistrationMethod != "" {
+		t.Fatal("linked GitHub is not evidence of registration origin")
+	}
+}
+
 func TestUserListRowsFromModelsSkipsNilAndKeepsEmptySlice(t *testing.T) {
 	now := time.UnixMilli(1700000000000)
 	got := userListRowsFromModels([]*userModel.User{

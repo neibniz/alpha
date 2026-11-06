@@ -9,6 +9,7 @@ import {
 function user(overrides: Partial<API.UserListItem> = {}): API.UserListItem {
   return {
     id: 1,
+    registration_method: "email",
     balance: 1200,
     commission: 300,
     gift_amount: 500,

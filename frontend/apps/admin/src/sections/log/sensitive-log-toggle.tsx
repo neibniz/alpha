@@ -11,6 +11,7 @@ import { Label } from "@workspace/ui/components/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -18,10 +19,16 @@ import {
 import { Switch } from "@workspace/ui/components/switch";
 import type { ProTableActions } from "@/components/pro-table/pro-table";
 import { Eye, ShieldCheck } from "lucide-react";
+import { PrivacyRevealDuration } from "@/components/privacy-reveal-duration";
+import {
+  DEFAULT_REVEAL_DURATION_MINUTES,
+  type RevealDurationMinutes,
+} from "@/lib/privacy-reveal-policy";
 import {
   type RefObject,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -34,13 +41,13 @@ export type SensitiveLogReason = NonNullable<
 export type SensitiveLogVisibility = {
   enabled: boolean;
   reason?: SensitiveLogReason;
+  expiresAt?: number;
 };
 
 export const MASKED_LOG_VISIBILITY: SensitiveLogVisibility = {
   enabled: false,
 };
 
-const REVEAL_DURATION_MS = 60_000;
 const REVEAL_REASONS: SensitiveLogReason[] = [
   "customer_support",
   "account_verification",
@@ -86,19 +93,34 @@ export function SensitiveLogToggle({
   value: SensitiveLogVisibility;
 }) {
   const { t } = useTranslation("log");
+  const id = useId();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState<SensitiveLogReason>();
+  const [duration, setDuration] = useState<RevealDurationMinutes>(
+    DEFAULT_REVEAL_DURATION_MINUTES
+  );
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
   useEffect(() => {
     if (!value.enabled) return;
+    const expiresAt =
+      value.expiresAt ?? Date.now() + DEFAULT_REVEAL_DURATION_MINUTES * 60_000;
+    const checkExpiry = () => {
+      if (Date.now() >= expiresAt) onChangeRef.current(MASKED_LOG_VISIBILITY);
+    };
     const timer = window.setTimeout(
       () => onChangeRef.current(MASKED_LOG_VISIBILITY),
-      REVEAL_DURATION_MS
+      Math.max(0, expiresAt - Date.now())
     );
-    return () => window.clearTimeout(timer);
-  }, [value.enabled]);
+    window.addEventListener("focus", checkExpiry);
+    document.addEventListener("visibilitychange", checkExpiry);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", checkExpiry);
+      document.removeEventListener("visibilitychange", checkExpiry);
+    };
+  }, [value.enabled, value.expiresAt]);
 
   const handleCheckedChange = (checked: boolean) => {
     if (!checked) {
@@ -111,7 +133,11 @@ export function SensitiveLogToggle({
 
   const reveal = () => {
     if (!reason) return;
-    onChange({ enabled: true, reason });
+    onChange({
+      enabled: true,
+      reason,
+      expiresAt: Date.now() + duration * 60_000,
+    });
     setDialogOpen(false);
   };
 
@@ -119,16 +145,13 @@ export function SensitiveLogToggle({
     <>
       <div className="flex h-8 items-center gap-2 rounded-md border bg-background px-2.5">
         <ShieldCheck className="size-3.5 text-muted-foreground" />
-        <Label
-          className="cursor-pointer text-xs"
-          htmlFor="sensitive-log-toggle"
-        >
+        <Label className="cursor-pointer text-xs" htmlFor={`${id}-toggle`}>
           {t("sensitive.fullInformation", "完整信息")}
         </Label>
         <Switch
           aria-label={t("sensitive.fullInformation", "完整信息")}
           checked={value.enabled}
-          id="sensitive-log-toggle"
+          id={`${id}-toggle`}
           onCheckedChange={handleCheckedChange}
         />
       </div>
@@ -145,42 +168,46 @@ export function SensitiveLogToggle({
             <DialogDescription>
               {t(
                 "sensitive.description",
-                "完整字段仅显示 60 秒。本次访问将记录管理员、来源 IP、访问原因和记录数量。"
+                "完整字段在所选时限内显示，到期自动脱敏。本次访问将记录管理员、来源 IP、访问原因和记录数量。"
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="sensitive-log-reason">
+            <Label htmlFor={`${id}-reason`}>
               {t("sensitive.reason", "访问原因")}
             </Label>
             <Select
               onValueChange={(next) => setReason(next as SensitiveLogReason)}
-              value={reason}
+              value={reason || ""}
             >
-              <SelectTrigger className="w-full" id="sensitive-log-reason">
+              <SelectTrigger className="w-full" id={`${id}-reason`}>
                 <SelectValue
                   placeholder={t("sensitive.selectReason", "选择访问原因")}
                 />
               </SelectTrigger>
               <SelectContent>
-                {REVEAL_REASONS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {t(
-                      `sensitive.reasons.${item}`,
-                      {
-                        customer_support: "客户支持",
-                        account_verification: "账户核验",
-                        security_incident: "安全事件",
-                        billing_dispute: "账单争议",
-                        compliance: "合规审查",
-                      }[item]
-                    )}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {REVEAL_REASONS.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {t(
+                        `sensitive.reasons.${item}`,
+                        {
+                          customer_support: "客户支持",
+                          account_verification: "账户核验",
+                          security_incident: "安全事件",
+                          billing_dispute: "账单争议",
+                          compliance: "合规审查",
+                        }[item]
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
+
+          <PrivacyRevealDuration value={duration} onChange={setDuration} />
 
           <DialogFooter>
             <Button

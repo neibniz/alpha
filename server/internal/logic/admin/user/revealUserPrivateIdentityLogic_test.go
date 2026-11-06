@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	modelLog "github.com/neibniz/alpha/server/internal/model/log"
@@ -140,5 +141,23 @@ func TestRevealUserPrivateIdentityRejectsUnknownReason(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("unknown private identity reveal reason must fail")
+	}
+}
+
+func TestPrivateIdentityRevealDurationIsBounded(t *testing.T) {
+	for _, minutes := range []int{0, 5, 15, 30} {
+		ttl, err := privateIdentityRevealDuration(minutes)
+		want := minutes
+		if want == 0 {
+			want = 15
+		}
+		if err != nil || ttl != time.Duration(want)*time.Minute {
+			t.Fatalf("duration %d: ttl=%v err=%v", minutes, ttl, err)
+		}
+	}
+	for _, minutes := range []int{-1, 1, 60, 31} {
+		if _, err := privateIdentityRevealDuration(minutes); err == nil {
+			t.Fatalf("accepted duration %d", minutes)
+		}
 	}
 }

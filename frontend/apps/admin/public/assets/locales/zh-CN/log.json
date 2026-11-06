@@ -65,7 +65,9 @@
   },
   "search": "查询",
   "sensitive": {
-    "description": "完整字段仅显示 60 秒。本次访问将记录管理员、来源 IP、访问原因和记录数量。",
+    "description": "完整字段在所选时限内显示，默认 15 分钟，到期自动脱敏。本次访问将记录管理员、来源 IP、访问原因和记录数量。",
+    "duration": "查看时限",
+    "minutes": "{{count}} 分钟",
     "fullInformation": "完整信息",
     "reason": "访问原因",
     "reveal": "显示完整信息",

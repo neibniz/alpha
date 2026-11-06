@@ -38,6 +38,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 		return errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "password does not meet policy")
 	}
 	newUser := &user.User{
+		RegistrationMethod: "admin",
 		Password:           pwd,
 		Algo:               tool.PasswordAlgo,
 		ReferralPercentage: req.ReferralPercentage,

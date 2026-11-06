@@ -12,6 +12,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -27,9 +28,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PrivacyRevealDuration } from "@/components/privacy-reveal-duration";
+import {
+  DEFAULT_REVEAL_DURATION_MINUTES,
+  type RevealDurationMinutes,
+} from "@/lib/privacy-reveal-policy";
+import { formatDate } from "@/utils/common";
 
 type RevealReason = API.RevealUserPrivateIdentityRequest["reason"];
 
@@ -55,11 +62,25 @@ export function PrivateIdentityDialog({
   userId: number;
 }) {
   const { t } = useTranslation("user");
+  const reasonId = useId();
+  const requestGeneration = useRef(0);
+  const [duration, setDuration] = useState<RevealDurationMinutes>(
+    DEFAULT_REVEAL_DURATION_MINUTES
+  );
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<RevealReason>();
   const [loading, setLoading] = useState(false);
   const [privateIdentity, setPrivateIdentity] =
     useState<API.RevealUserPrivateIdentityResponse>();
+
+  useEffect(() => {
+    setPrivateIdentity(undefined);
+    setLoading(false);
+    setReason(undefined);
+    return () => {
+      requestGeneration.current += 1;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!privateIdentity) return;
@@ -68,12 +89,24 @@ export function PrivateIdentityDialog({
       () => setPrivateIdentity(undefined),
       remaining
     );
-    return () => window.clearTimeout(timer);
+    const checkExpiry = () => {
+      if (Date.now() >= privateIdentity.expires_at)
+        setPrivateIdentity(undefined);
+    };
+    window.addEventListener("focus", checkExpiry);
+    document.addEventListener("visibilitychange", checkExpiry);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", checkExpiry);
+      document.removeEventListener("visibilitychange", checkExpiry);
+    };
   }, [privateIdentity]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
+      requestGeneration.current += 1;
+      setLoading(false);
       setPrivateIdentity(undefined);
       setReason(undefined);
     }
@@ -81,17 +114,24 @@ export function PrivateIdentityDialog({
 
   const reveal = async () => {
     if (!reason) return;
+    const generation = ++requestGeneration.current;
     setLoading(true);
     try {
       const response = await revealUserPrivateIdentity({
         user_id: userId,
         reason,
+        duration_minutes: duration,
       });
       if (!response.data.data)
         throw new Error("Private identity is unavailable");
-      setPrivateIdentity(response.data.data);
+      if (
+        generation === requestGeneration.current &&
+        response.data.data.expires_at > Date.now()
+      ) {
+        setPrivateIdentity(response.data.data);
+      }
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
   };
 
@@ -118,7 +158,7 @@ export function PrivateIdentityDialog({
           <DialogDescription>
             {t(
               "privateIdentityDescription",
-              "This action is audited. Complete identifiers are shown only in this dialog and cleared after 60 seconds."
+              "This action is audited. Complete identifiers are shown only in this dialog and cleared when the selected time expires or the dialog closes."
             )}
           </DialogDescription>
         </DialogHeader>
@@ -131,7 +171,7 @@ export function PrivateIdentityDialog({
                   {t("email", "Email")}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <p className="min-w-0 flex-1 truncate font-medium text-sm">
+                  <p className="min-w-0 flex-1 break-all font-medium text-sm">
                     {privateIdentity.email}
                   </p>
                   <Button
@@ -145,7 +185,11 @@ export function PrivateIdentityDialog({
                   </Button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                {t("noEmailBound", "未绑定邮箱")}
+              </p>
+            )}
 
             <div className="divide-y overflow-hidden rounded-md border">
               {privateIdentity.auth_methods.map((method) => {
@@ -195,44 +239,55 @@ export function PrivateIdentityDialog({
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
-            <label className="font-medium text-sm" htmlFor="reveal-reason">
+          <div className="flex flex-col gap-3">
+            <label className="font-medium text-sm" htmlFor={reasonId}>
               {t("revealReasonLabel", "Access reason")}
             </label>
             <Select
               onValueChange={(value) => setReason(value as RevealReason)}
-              value={reason}
+              value={reason || ""}
             >
-              <SelectTrigger className="w-full" id="reveal-reason">
+              <SelectTrigger className="w-full" id={reasonId}>
                 <SelectValue
                   placeholder={t("selectRevealReason", "Select a reason")}
                 />
               </SelectTrigger>
               <SelectContent>
-                {REVEAL_REASONS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(
-                      `revealReasons.${value}`,
-                      {
-                        customer_support: "Customer support",
-                        account_verification: "Account verification",
-                        security_incident: "Security incident",
-                        billing_dispute: "Billing dispute",
-                        compliance: "Compliance review",
-                      }[value]
-                    )}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {REVEAL_REASONS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(
+                        `revealReasons.${value}`,
+                        {
+                          customer_support: "Customer support",
+                          account_verification: "Account verification",
+                          security_incident: "Security incident",
+                          billing_dispute: "Billing dispute",
+                          compliance: "Compliance review",
+                        }[value]
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
+            <PrivacyRevealDuration value={duration} onChange={setDuration} />
           </div>
         )}
 
         <DialogFooter>
           {privateIdentity ? (
-            <Button onClick={() => handleOpenChange(false)} type="button">
-              {t("hidePrivateData", "Hide private data")}
-            </Button>
+            <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              <p className="text-muted-foreground text-xs">
+                {t("privateIdentityExpiresAt", {
+                  defaultValue: "有效至 {{time}}",
+                  time: formatDate(privateIdentity.expires_at),
+                })}
+              </p>
+              <Button onClick={() => handleOpenChange(false)} type="button">
+                {t("hidePrivateData", "Hide private data")}
+              </Button>
+            </div>
           ) : (
             <Button
               disabled={!reason || loading}

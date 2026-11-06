@@ -567,7 +567,7 @@ func TestUserListPayloadShape(t *testing.T) {
 			t.Fatalf("user list item must not expose %q: %s", key, payload)
 		}
 	}
-	for _, key := range []string{"id", "balance", "commission", "gift_amount", "member_expired_at", "is_member", "refer_code", "referer_id", "enable", "primary_auth_method", "created_at", "deleted_at"} {
+	for _, key := range []string{"id", "balance", "commission", "gift_amount", "member_expired_at", "is_member", "refer_code", "referer_id", "enable", "primary_auth_method", "registration_method", "created_at", "deleted_at"} {
 		if _, ok := got[key]; !ok {
 			t.Fatalf("user list item missing %q: %s", key, payload)
 		}

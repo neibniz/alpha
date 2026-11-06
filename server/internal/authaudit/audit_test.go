@@ -50,7 +50,7 @@ func TestRecordRegisterBuildsCanonicalEvent(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if len(model.entries) != 1 || model.entries[0].Type != modelLog.TypeRegister.Uint8() {
+	if len(model.entries) != 1 || model.entries[0].Type != modelLog.TypeRegister.Uint8() || !model.entries[0].Success {
 		t.Fatalf("unexpected entries: %#v", model.entries)
 	}
 	var content modelLog.Register

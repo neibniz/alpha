@@ -36,6 +36,7 @@ type (
 	}
 	UserListItem {
 		Id                int64          `json:"id"`
+		RegistrationMethod string `json:"registration_method"`
 		Balance           int64          `json:"balance"`
 		Commission        int64          `json:"commission"`
 		GiftAmount        int64          `json:"gift_amount"`

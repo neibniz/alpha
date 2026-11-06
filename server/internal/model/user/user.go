@@ -9,6 +9,7 @@ import (
 
 type User struct {
 	Id                    int64          `gorm:"primaryKey"`
+	RegistrationMethod    string         `gorm:"type:varchar(32);not null;default:'';<-:create;comment:Original registration method"`
 	Password              string         `gorm:"type:varchar(100);not null;comment:User Password"`
 	Algo                  string         `gorm:"type:varchar(20);default:'default';comment:Encryption Algorithm"`
 	Salt                  string         `gorm:"type:varchar(20);default:null;comment:Password Salt"`

@@ -57,6 +57,12 @@ server origin reachable from its container. To use a public API origin instead,
 pass `VITE_API_BASE_URL` and `VITE_API_PREFIX` as build arguments, or replace
 `/usr/share/nginx/html/runtime-config.js` with a read-only runtime mount.
 
+Optional Admin Core Web Vitals reporting is disabled by default. Set
+`VITE_WEB_VITALS_ENDPOINT` when building Admin to a same-origin path routed to
+your own metrics collector, such as `/metrics/web-vitals`. The collector must
+accept a JSON POST without a session cookie. The browser sends only the metric
+name, numeric value and rating, and does not send the page URL or referrer.
+
 GitHub Actions publishes multi-architecture images to:
 
 ```text

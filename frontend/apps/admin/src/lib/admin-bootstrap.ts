@@ -11,14 +11,36 @@ import { useGlobalStore } from "@/stores/global";
 
 export const adminSessionQueryKey = ["admin", "session"] as const;
 
+export function hasAdminVerificationConfig(
+  config?: API.GetGlobalConfigResponse
+) {
+  if (!(config?.auth?.email && config.auth.register && config.invite)) {
+    return false;
+  }
+  const verify = config.verify;
+  if (!verify) return false;
+  const flags = [
+    verify.enable_login_verify,
+    verify.enable_register_verify,
+    verify.enable_reset_password_verify,
+  ];
+  return (
+    flags.every((flag) => typeof flag === "boolean") &&
+    (!flags.some(Boolean) ||
+      (typeof verify.turnstile_site_key === "string" &&
+        Boolean(verify.turnstile_site_key.trim())))
+  );
+}
+
 export const siteConfigQueryOptions = queryOptions({
   queryKey: ["admin", "bootstrap", "site-config"] as const,
   queryFn: async () => {
     const response = await getGlobalConfig({ skipErrorHandler: true });
     const config = response.data.data;
-    if (!config) {
+    if (!(config && hasAdminVerificationConfig(config))) {
       throw new Error("Site configuration is unavailable");
     }
+    useGlobalStore.getState().setCommon(config);
     return config;
   },
   gcTime: 30 * 60_000,

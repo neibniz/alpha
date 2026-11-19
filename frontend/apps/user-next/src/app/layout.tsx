@@ -6,8 +6,6 @@ import "@workspace/ui/globals.css";
 import "./globals.css";
 import { Providers } from "./providers";
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getServerSiteConfig().catch(() => undefined);
   const siteName = config?.siteName || DEFAULT_SITE_NAME;

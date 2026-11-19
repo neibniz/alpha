@@ -1,12 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
+import { WorkspaceLoading } from "@/components/workspace-loading";
 import { authCookieName, isServerDemoMode } from "@/lib/runtime";
 import {
   getServerCurrentUser,
-  getServerMembershipCard,
-  getServerSiteConfig,
   getServerSubscriptions,
   isServerAuthError,
 } from "@/lib/server/api";
@@ -38,19 +37,11 @@ export default async function AuthenticatedLayout({
           queryKey: ["alpha-subscriptions"],
           staleTime: 30_000,
         },
-        {
-          queryFn: getServerMembershipCard,
-          queryKey: ["alpha-membership-card"],
-          staleTime: 30_000,
-        },
-        {
-          queryFn: getServerSiteConfig,
-          queryKey: ["alpha-site-config"],
-          staleTime: 60_000,
-        },
       ]}
     >
-      <AppShell>{children}</AppShell>
+      <AppShell>
+        <Suspense fallback={<WorkspaceLoading />}>{children}</Suspense>
+      </AppShell>
     </ServerHydration>
   );
 }

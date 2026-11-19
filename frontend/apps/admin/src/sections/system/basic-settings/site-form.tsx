@@ -366,17 +366,14 @@ export default function SiteConfig() {
                             <FormControl>
                               <Textarea
                                 className="min-h-40 font-mono text-xs"
-                                placeholder={t(
-                                  "site.customHtmlDescription",
-                                  "Custom HTML code to be injected into the bottom of the site's body tag"
-                                )}
+                                readOnly
                                 {...field}
                               />
                             </FormControl>
                             <FormDescription>
                               {t(
                                 "site.customHtmlDescription",
-                                "Custom HTML code to be injected into the bottom of the site's body tag"
+                                "Previously saved HTML is retained but not rendered in Admin."
                               )}
                             </FormDescription>
                             <FormMessage />

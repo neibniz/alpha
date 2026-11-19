@@ -9,7 +9,6 @@ import {
   getServerInitialOrders,
   getServerOAuthMethods,
   getServerPaymentMethods,
-  getServerSiteConfig,
   getServerTickets,
   getServerWalletLogs,
 } from "@/lib/server/api";
@@ -40,17 +39,10 @@ export default async function SettingsSectionPage({ params }: PageProps) {
   if (!settingsSections.includes(section as SettingsSection)) notFound();
   const queries: ServerPrefetchQuery[] = [];
   if (section === "security") {
-    queries.push(
-      {
-        queryFn: getServerOAuthMethods,
-        queryKey: ["alpha-oauth-methods"],
-      },
-      {
-        queryFn: getServerSiteConfig,
-        queryKey: ["alpha-site-config"],
-        staleTime: 300_000,
-      }
-    );
+    queries.push({
+      queryFn: getServerOAuthMethods,
+      queryKey: ["alpha-oauth-methods"],
+    });
   } else if (section === "wallet") {
     queries.push(
       {

@@ -57,10 +57,9 @@ export default function ResetForm({
     email: z.email(t("reset.email", "Email")),
     password: z.string(),
     code: auth?.email?.enable_verify ? z.string() : z.string().nullish(),
-    cf_token:
-      verify.enable_register_verify && verify.turnstile_site_key
-        ? z.string()
-        : z.string().nullish(),
+    cf_token: verify.enable_reset_password_verify
+      ? z.string().min(1)
+      : z.string().nullish(),
   });
   const form = useForm<EmailResetFormValues>({
     resolver: zodResolver(formSchema),

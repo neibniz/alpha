@@ -58,10 +58,9 @@ export default function LoginForm({
     password: z
       .string()
       .min(1, t("login.passwordRequired", "Password is required")),
-    cf_token:
-      verify.enable_login_verify && verify.turnstile_site_key
-        ? z.string()
-        : z.string().optional(),
+    cf_token: verify.enable_login_verify
+      ? z.string().min(1)
+      : z.string().optional(),
   });
   const form = useForm<EmailLoginFormValues>({
     resolver: zodResolver(formSchema),

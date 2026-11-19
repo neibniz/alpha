@@ -44,21 +44,23 @@ export function AlphaLogo({
           compact ? "w-11" : "w-16"
         }`}
       >
-        <Image
-          alt=""
-          className="max-h-7 max-w-full object-contain"
-          height={28}
-          loader={siteLogoLoader}
-          onError={() => {
-            if (configuredLogo && logoSource === configuredLogo) {
-              setFailedLogo(configuredLogo);
-            }
-          }}
-          referrerPolicy="no-referrer"
-          src={logoSource}
-          unoptimized
-          width={64}
-        />
+        <span className="relative block h-7 w-full">
+          <Image
+            alt=""
+            className="object-contain"
+            fill
+            loader={siteLogoLoader}
+            onError={() => {
+              if (configuredLogo && logoSource === configuredLogo) {
+                setFailedLogo(configuredLogo);
+              }
+            }}
+            referrerPolicy="no-referrer"
+            sizes={compact ? "28px" : "48px"}
+            src={logoSource}
+            unoptimized
+          />
+        </span>
       </span>
       {compact ? null : <span className="max-w-44 truncate">{siteName}</span>}
     </Link>

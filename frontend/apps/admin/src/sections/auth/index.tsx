@@ -1,10 +1,17 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@workspace/ui/components/avatar";
+import { Button } from "@workspace/ui/components/button";
 import {
   Card,
   CardContent,
@@ -12,17 +19,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { LanguageSwitch } from "@workspace/ui/composed/language-switch";
 import { ThemeSwitch } from "@workspace/ui/composed/theme-switch";
 import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { siteConfigQueryOptions } from "@/lib/admin-bootstrap";
 import { useGlobalStore } from "@/stores/global";
 import EmailAuthForm from "./email/auth-form";
 import type { EmailAuthMode } from "./email/types";
 
 export default function Auth() {
   const { t } = useTranslation("auth");
+  const siteConfig = useQuery(siteConfigQueryOptions);
   const site = useGlobalStore((store) => store.common.site);
   const siteName = site.site_name || "Alpha";
   const [mode, setMode] = useState<EmailAuthMode>("login");
@@ -73,7 +83,43 @@ export default function Auth() {
               <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <EmailAuthForm mode={mode} onModeChange={setMode} />
+              {siteConfig.data ? (
+                <EmailAuthForm mode={mode} onModeChange={setMode} />
+              ) : siteConfig.isError && !siteConfig.isFetching ? (
+                <Alert variant="destructive">
+                  <AlertTitle>
+                    {t("configUnavailable", "Sign-in settings are unavailable")}
+                  </AlertTitle>
+                  <AlertDescription>
+                    <p>
+                      {t(
+                        "configUnavailableDescription",
+                        "Security settings could not be loaded. Try again to enable sign-in."
+                      )}
+                    </p>
+                    <Button
+                      className="mt-2"
+                      onClick={() => siteConfig.refetch()}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {t("configRetry", "Try again")}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <p
+                  className="flex items-center gap-2 text-muted-foreground text-sm"
+                  role="status"
+                >
+                  <Spinner
+                    aria-hidden="true"
+                    className="motion-reduce:animate-none"
+                  />
+                  {t("configLoading", "Loading sign-in settings")}
+                </p>
+              )}
             </CardContent>
           </Card>
           <p className="flex items-start justify-center gap-2 text-center text-xs leading-5 text-muted-foreground">

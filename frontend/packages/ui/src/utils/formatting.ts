@@ -16,28 +16,36 @@ export function formatCurrencyAmount(cents: number, symbol = "") {
   return `${sign}${symbol}${Math.abs(amount).toFixed(2)}`;
 }
 
+function readTimeZone(): string {
+  try {
+    return globalThis.window?.localStorage?.getItem("timezone") || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 export function formatDate(date?: Date | number, showTime = true) {
   if (!date) return;
   // Convert Unix seconds to milliseconds automatically
   const finalDate =
     typeof date === "number" && date < 100_000_000_000 ? date * 1000 : date;
-  const timeZone =
-    typeof window !== "undefined"
-      ? localStorage.getItem("timezone") || "UTC"
-      : "UTC";
-
-  return intlFormat(finalDate, {
+  const timeZone = readTimeZone();
+  const options: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "numeric",
     day: "numeric",
-    ...(showTime && {
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-    }),
+    hour: showTime ? "numeric" : undefined,
+    minute: showTime ? "numeric" : undefined,
+    second: showTime ? "numeric" : undefined,
     hour12: false,
     timeZone,
-  });
+  };
+  try {
+    return intlFormat(finalDate, options);
+  } catch (error) {
+    if (!(error instanceof RangeError) || timeZone === "UTC") throw error;
+    return intlFormat(finalDate, { ...options, timeZone: "UTC" });
+  }
 }
 
 export function differenceInDays(

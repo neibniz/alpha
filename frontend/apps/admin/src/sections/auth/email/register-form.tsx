@@ -77,10 +77,9 @@ export default function RegisterForm({
       repeat_password: z.string(),
       code: auth.email.enable_verify ? z.string() : z.string().nullish(),
       invite: invite.forced_invite ? z.string().min(1) : z.string().nullish(),
-      cf_token:
-        verify.enable_register_verify && verify.turnstile_site_key
-          ? z.string()
-          : z.string().nullish(),
+      cf_token: verify.enable_register_verify
+        ? z.string().min(1)
+        : z.string().nullish(),
     })
     .superRefine(({ password, repeat_password }, ctx) => {
       if (password !== repeat_password) {

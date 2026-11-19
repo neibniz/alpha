@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import {
   Card,
@@ -13,6 +14,7 @@ import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlphaLogo } from "@/components/alpha-logo";
+import { replaceClientSession } from "@/lib/client-session";
 import { isClientDemoMode } from "@/lib/runtime";
 
 export function OAuthCallback({
@@ -20,11 +22,12 @@ export function OAuthCallback({
   state,
 }: Readonly<{ code?: string; state?: string }>) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (isClientDemoMode()) {
-      router.replace("/dashboard");
+      replaceClientSession(queryClient, "/dashboard");
       return;
     }
     if (!(code && state)) {
@@ -41,8 +44,7 @@ export function OAuthCallback({
         const payload = (await response.json()) as { message?: string };
         if (!response.ok) throw new Error(payload.message || "GitHub 登录失败");
         if (active) {
-          router.replace("/dashboard");
-          router.refresh();
+          replaceClientSession(queryClient, "/dashboard");
         }
       })
       .catch((reason: unknown) => {
@@ -54,7 +56,7 @@ export function OAuthCallback({
     return () => {
       active = false;
     };
-  }, [code, router, state]);
+  }, [code, queryClient, state]);
 
   return (
     <main className="grid min-h-screen place-items-center bg-background px-4 py-10">

@@ -97,7 +97,7 @@
     },
     "customDataDescription": "Custom data for website customization",
     "customHtml": "Custom HTML",
-    "customHtmlDescription": "Custom HTML code to be injected into the bottom of the site's body tag",
+    "customHtmlDescription": "Previously saved HTML is retained but not rendered in Admin.",
     "description": "Configure basic site information, logo, domain and other settings",
     "keywords": "Keywords",
     "keywordsDescription": "Used for SEO purposes",

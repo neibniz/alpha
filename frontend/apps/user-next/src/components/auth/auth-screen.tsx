@@ -1,7 +1,7 @@
 "use client";
 
 import { useGSAP } from "@gsap/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import {
   Card,
@@ -9,11 +9,11 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@workspace/ui/components/card";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
@@ -27,11 +27,17 @@ import {
 import { Spinner } from "@workspace/ui/components/spinner";
 import gsap from "gsap";
 import { Check, Eye, EyeOff, Github, LockKeyhole, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlphaLogo } from "@/components/alpha-logo";
+import {
+  type AuthErrors,
+  type AuthMode,
+  validateAuthEmail,
+  validateAuthFields,
+} from "@/lib/auth-validation";
 import { getSiteConfig } from "@/lib/client-api";
+import { replaceClientSession } from "@/lib/client-session";
 import { isClientDemoMode } from "@/lib/runtime";
 import {
   DEFAULT_SITE_DESCRIPTION,
@@ -39,8 +45,6 @@ import {
   SITE_CONFIG_QUERY_KEY,
   SITE_CONFIG_STALE_TIME,
 } from "@/lib/site-brand";
-
-type AuthMode = "login" | "register" | "reset";
 
 async function jsonRequest(path: string, body: unknown) {
   const response = await fetch(path, {
@@ -59,7 +63,7 @@ async function jsonRequest(path: string, body: unknown) {
 
 export function AuthScreen() {
   const root = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const config = useQuery({
     queryFn: getSiteConfig,
     queryKey: SITE_CONFIG_QUERY_KEY,
@@ -72,31 +76,42 @@ export function AuthScreen() {
   const [invite, setInvite] = useState("");
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [errors, setErrors] = useState<AuthErrors>({});
+  const [submitError, setSubmitError] = useState("");
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const focusTitle = useRef(false);
 
   useGSAP(
     () => {
-      const targets = root.current?.querySelectorAll("[data-auth-reveal]");
-      if (!targets?.length) return;
+      const decoration = root.current?.querySelector("[data-auth-decoration]");
+      if (!decoration) return;
       const media = gsap.matchMedia();
       media.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.fromTo(
-          targets,
+          decoration,
           { autoAlpha: 0, y: 12 },
           {
             autoAlpha: 1,
-            duration: 0.58,
+            duration: 0.3,
             ease: "power3.out",
-            stagger: 0.065,
             y: 0,
           }
         );
       });
       return () => media.revert();
     },
-    { dependencies: [mode], revertOnUpdate: true }
+    { scope: root }
   );
+
+  useEffect(() => {
+    if (focusTitle.current) {
+      focusTitle.current = false;
+      titleRef.current?.focus();
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -107,9 +122,28 @@ export function AuthScreen() {
     return () => window.clearInterval(timer);
   }, [cooldown]);
 
+  const clearError = (field: keyof AuthErrors) => {
+    if (errors[field])
+      setErrors((current) => ({ ...current, [field]: undefined }));
+    if (submitError) setSubmitError("");
+  };
+
+  const changeMode = (nextMode: AuthMode) => {
+    focusTitle.current = true;
+    setMode(nextMode);
+    setPassword("");
+    setCode("");
+    setVisible(false);
+    setErrors({});
+    setSubmitError("");
+  };
+
   const sendCode = async () => {
-    if (!email.includes("@")) {
-      toast.error("请先填写有效邮箱");
+    if (sendingCode || cooldown > 0) return;
+    const emailError = validateAuthEmail(email);
+    if (emailError) {
+      setErrors((current) => ({ ...current, email: emailError }));
+      document.getElementById("auth-email")?.focus();
       return;
     }
     if (isClientDemoMode()) {
@@ -117,28 +151,38 @@ export function AuthScreen() {
       toast.success("验证码已发送");
       return;
     }
+    setSendingCode(true);
     try {
       await jsonRequest("/api/auth/send-code", {
-        email,
+        email: email.trim(),
         type: mode === "register" ? 1 : 2,
       });
       setCooldown(60);
       toast.success("验证码已发送");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "发送失败");
+      setSubmitError(
+        error instanceof Error ? error.message : "发送验证码失败。"
+      );
+    } finally {
+      setSendingCode(false);
     }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      !email.includes("@") ||
-      password.length < (mode === "login" ? 1 : 12) ||
-      password.length > (mode === "login" ? 128 : 72)
-    ) {
-      toast.error(
-        mode === "login" ? "请输入邮箱和密码" : "密码需要 12 至 72 位"
-      );
+    if (loading) return;
+    setSubmitError("");
+    const nextErrors = validateAuthFields(mode, { code, email, password });
+    setErrors(nextErrors);
+    const firstError = nextErrors.email
+      ? "email"
+      : nextErrors.code
+        ? "code"
+        : nextErrors.password
+          ? "password"
+          : undefined;
+    if (firstError) {
+      document.getElementById(`auth-${firstError}`)?.focus();
       return;
     }
     setLoading(true);
@@ -151,8 +195,8 @@ export function AuthScreen() {
               ? "密码已重置"
               : "登录成功"
         );
-        if (mode === "reset") setMode("login");
-        else router.push("/dashboard");
+        if (mode === "reset") changeMode("login");
+        else replaceClientSession(queryClient, "/dashboard");
         return;
       }
       const endpoint =
@@ -163,13 +207,13 @@ export function AuthScreen() {
             : "/api/auth/reset";
       const result = await jsonRequest(endpoint, {
         code,
-        email,
+        email: email.trim(),
         invite,
         password,
       });
       if (mode === "reset" && !result.authenticated) {
         toast.success("密码已重置，请重新登录");
-        setMode("login");
+        changeMode("login");
       } else {
         toast.success(
           mode === "register"
@@ -178,11 +222,10 @@ export function AuthScreen() {
               ? "密码已重置"
               : "登录成功"
         );
-        router.push("/dashboard");
-        router.refresh();
+        replaceClientSession(queryClient, "/dashboard");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "操作失败");
+      setSubmitError(error instanceof Error ? error.message : "操作失败。");
     } finally {
       setLoading(false);
     }
@@ -193,7 +236,7 @@ export function AuthScreen() {
     try {
       if (isClientDemoMode()) {
         toast.success("GitHub 登录成功");
-        router.push("/dashboard");
+        replaceClientSession(queryClient, "/dashboard");
         return;
       }
       const response = await fetch("/api/auth/oauth/start", { method: "POST" });
@@ -205,12 +248,14 @@ export function AuthScreen() {
         throw new Error(payload.message || "GitHub 登录失败");
       window.location.assign(payload.redirect);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "GitHub 登录失败");
+      setSubmitError(
+        error instanceof Error ? error.message : "GitHub 登录失败。"
+      );
       setGithubLoading(false);
     }
   };
 
-  const githubEnabled = config.data?.oauthMethods.includes("github") ?? true;
+  const githubEnabled = config.data?.oauthMethods.includes("github") ?? false;
   const siteName = config.data?.siteName || DEFAULT_SITE_NAME;
   const title =
     mode === "login"
@@ -228,24 +273,21 @@ export function AuthScreen() {
   return (
     <div className="flex min-h-screen flex-col bg-muted/20" ref={root}>
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:py-14">
-        <div className="mb-8" data-auth-reveal>
+        <div className="mb-8" data-auth-decoration>
           <AlphaLogo />
         </div>
         <Card className="w-full max-w-[500px] gap-0 border-0 bg-transparent py-0 shadow-none">
           <CardHeader className="gap-2 px-6 pt-0 pb-7 text-center sm:px-9">
-            <CardTitle className="text-3xl tracking-tight" data-auth-reveal>
+            <h1 className="font-semibold text-3xl" ref={titleRef} tabIndex={-1}>
               {title}
-            </CardTitle>
-            <CardDescription className="text-sm" data-auth-reveal>
-              {description}
-            </CardDescription>
+            </h1>
+            <CardDescription className="text-sm">{description}</CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-8 sm:px-9">
             <FieldGroup className="gap-5">
               {githubEnabled && mode !== "reset" ? (
                 <Button
                   className="h-11 w-full bg-background"
-                  data-auth-reveal
                   disabled={githubLoading}
                   onClick={githubLogin}
                   type="button"
@@ -260,20 +302,29 @@ export function AuthScreen() {
                 </Button>
               ) : null}
 
-              {mode !== "reset" ? (
-                <FieldSeparator data-auth-reveal>或使用邮箱</FieldSeparator>
+              {githubEnabled && mode !== "reset" ? (
+                <FieldSeparator>或使用邮箱</FieldSeparator>
               ) : null}
 
-              <form onSubmit={submit}>
+              <form method="post" noValidate onSubmit={submit}>
                 <FieldGroup className="gap-5">
-                  <Field data-auth-reveal>
+                  <Field>
                     <FieldLabel htmlFor="auth-email">电子邮箱</FieldLabel>
                     <InputGroup className="h-11">
                       <InputGroupInput
                         id="auth-email"
-                        autoComplete="email"
-                        onChange={(event) => setEmail(event.target.value)}
+                        aria-describedby={
+                          errors.email ? "auth-email-error" : undefined
+                        }
+                        aria-invalid={Boolean(errors.email)}
+                        autoComplete={mode === "login" ? "username" : "email"}
+                        name="email"
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          clearError("email");
+                        }}
                         placeholder="name@example.com"
+                        required
                         type="email"
                         value={email}
                       />
@@ -281,20 +332,31 @@ export function AuthScreen() {
                         <Mail />
                       </InputGroupAddon>
                     </InputGroup>
+                    <FieldError id="auth-email-error">
+                      {errors.email}
+                    </FieldError>
                   </Field>
                   {mode !== "login" ? (
-                    <Field data-auth-reveal>
+                    <Field>
                       <FieldLabel htmlFor="auth-code">验证码</FieldLabel>
                       <InputGroup className="h-11">
                         <InputGroupInput
                           id="auth-code"
+                          aria-describedby={
+                            errors.code ? "auth-code-error" : undefined
+                          }
+                          aria-invalid={Boolean(errors.code)}
+                          autoComplete="one-time-code"
                           inputMode="numeric"
                           maxLength={8}
-                          onChange={(event) =>
-                            setCode(event.target.value.replace(/\D/g, ""))
-                          }
+                          name="code"
+                          onChange={(event) => {
+                            setCode(event.target.value.replace(/\D/g, ""));
+                            clearError("code");
+                          }}
                           pattern="[0-9]*"
                           placeholder="邮箱验证码"
+                          required={mode === "reset"}
                           value={code}
                         />
                         <InputGroupAddon>
@@ -302,17 +364,24 @@ export function AuthScreen() {
                         </InputGroupAddon>
                         <InputGroupAddon align="inline-end">
                           <InputGroupButton
-                            disabled={cooldown > 0}
+                            disabled={cooldown > 0 || sendingCode}
                             onClick={sendCode}
                             size="sm"
                           >
-                            {cooldown > 0 ? `${cooldown}s` : "发送验证码"}
+                            {cooldown > 0
+                              ? `${cooldown}s`
+                              : sendingCode
+                                ? "正在发送…"
+                                : "发送验证码"}
                           </InputGroupButton>
                         </InputGroupAddon>
                       </InputGroup>
+                      <FieldError id="auth-code-error">
+                        {errors.code}
+                      </FieldError>
                     </Field>
                   ) : null}
-                  <Field data-auth-reveal>
+                  <Field>
                     <div className="flex items-center justify-between gap-3">
                       <FieldLabel htmlFor="auth-password">
                         {mode === "reset" ? "新密码" : "密码"}
@@ -320,7 +389,7 @@ export function AuthScreen() {
                       {mode === "login" ? (
                         <Button
                           className="h-auto px-0 py-0 font-normal"
-                          onClick={() => setMode("reset")}
+                          onClick={() => changeMode("reset")}
                           type="button"
                           variant="link"
                         >
@@ -331,16 +400,29 @@ export function AuthScreen() {
                     <InputGroup className="h-11">
                       <InputGroupInput
                         id="auth-password"
+                        aria-describedby={
+                          errors.password
+                            ? "auth-password-error"
+                            : mode !== "login"
+                              ? "auth-password-help"
+                              : undefined
+                        }
+                        aria-invalid={Boolean(errors.password)}
                         autoComplete={
                           mode === "login" ? "current-password" : "new-password"
                         }
                         maxLength={mode === "login" ? 128 : 72}
                         minLength={mode === "login" ? 1 : 12}
-                        onChange={(event) => setPassword(event.target.value)}
+                        name="password"
+                        onChange={(event) => {
+                          setPassword(event.target.value);
+                          clearError("password");
+                        }}
                         placeholder={
                           mode === "login" ? "输入密码" : "12 至 72 位密码"
                         }
                         type={visible ? "text" : "password"}
+                        required
                         value={password}
                       />
                       <InputGroupAddon>
@@ -358,13 +440,16 @@ export function AuthScreen() {
                       </InputGroupAddon>
                     </InputGroup>
                     {mode !== "login" ? (
-                      <FieldDescription>
+                      <FieldDescription id="auth-password-help">
                         密码长度需要为 12 至 72 位。
                       </FieldDescription>
                     ) : null}
+                    <FieldError id="auth-password-error">
+                      {errors.password}
+                    </FieldError>
                   </Field>
                   {mode === "register" ? (
-                    <Field data-auth-reveal>
+                    <Field>
                       <FieldLabel htmlFor="auth-invite">
                         邀请码{" "}
                         <span className="text-muted-foreground">选填</span>
@@ -372,6 +457,7 @@ export function AuthScreen() {
                       <InputGroup className="h-11">
                         <InputGroupInput
                           id="auth-invite"
+                          name="invite"
                           onChange={(event) => setInvite(event.target.value)}
                           placeholder="输入邀请码"
                           value={invite}
@@ -382,9 +468,9 @@ export function AuthScreen() {
                       </InputGroup>
                     </Field>
                   ) : null}
+                  <FieldError>{submitError}</FieldError>
                   <Button
                     className="h-11 w-full"
-                    data-auth-reveal
                     disabled={loading}
                     size="lg"
                     type="submit"
@@ -400,16 +486,13 @@ export function AuthScreen() {
               </form>
             </FieldGroup>
           </CardContent>
-          <CardFooter
-            className="flex-col gap-2 px-6 py-2 text-center text-sm sm:px-9"
-            data-auth-reveal
-          >
+          <CardFooter className="flex-col gap-2 px-6 py-2 text-center text-sm sm:px-9">
             {mode === "login" ? (
               <div className="flex items-center justify-center gap-1 text-muted-foreground">
                 <span>还没有账户？</span>
                 <Button
                   className="h-auto px-1 py-0"
-                  onClick={() => setMode("register")}
+                  onClick={() => changeMode("register")}
                   type="button"
                   variant="link"
                 >
@@ -421,7 +504,7 @@ export function AuthScreen() {
                 <span>已有账户？</span>
                 <Button
                   className="h-auto px-1 py-0"
-                  onClick={() => setMode("login")}
+                  onClick={() => changeMode("login")}
                   type="button"
                   variant="link"
                 >

@@ -2,7 +2,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 
 export function WorkspaceLoading() {
   return (
-    <main
+    <section
       aria-busy="true"
       aria-label="正在加载页面"
       className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-7 lg:py-8"
@@ -16,6 +16,6 @@ export function WorkspaceLoading() {
         <Skeleton className="h-44 rounded-lg" />
       </div>
       <Skeleton className="h-96 rounded-lg" />
-    </main>
+    </section>
   );
 }

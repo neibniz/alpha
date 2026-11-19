@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -44,7 +44,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -53,6 +53,7 @@ import {
   getSiteConfig,
   getSubscriptions,
 } from "@/lib/client-api";
+import { replaceClientSession, requestLogout } from "@/lib/client-session";
 import { formatBytes, percentOf } from "@/lib/format";
 import type { Subscription } from "@/lib/models";
 import {
@@ -337,7 +338,7 @@ export function AppShell({
   children,
 }: Readonly<{ authenticated?: boolean; children: ReactNode }>) {
   const pathname = usePathname();
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -375,9 +376,8 @@ export function AppShell({
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-      router.refresh();
+      await requestLogout();
+      replaceClientSession(queryClient, "/login");
     } catch {
       toast.error("退出失败，请稍后重试");
     }
@@ -396,6 +396,12 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background">
+      <a
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2"
+        href="#main-content"
+      >
+        跳到主要内容
+      </a>
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden border-r bg-sidebar transition-[width] duration-200 lg:block ${
           collapsed ? "w-20" : "w-[292px]"
@@ -514,7 +520,13 @@ export function AppShell({
             ) : null}
           </div>
         </header>
-        <main className="min-h-[calc(100vh-4.75rem)]">{children}</main>
+        <main
+          className="min-h-[calc(100vh-4.75rem)]"
+          id="main-content"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

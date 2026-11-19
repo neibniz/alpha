@@ -97,7 +97,7 @@
     },
     "customDataDescription": "用于网站定制的自定义数据",
     "customHtml": "自定义 HTML",
-    "customHtmlDescription": "注入到站点 body 标签底部的自定义 HTML 代码",
+    "customHtmlDescription": "保留已保存的 HTML，管理端不再渲染此内容。",
     "description": "配置基本站点信息、Logo、域名和其他设置",
     "keywords": "关键词",
     "keywordsDescription": "用于 SEO 目的",

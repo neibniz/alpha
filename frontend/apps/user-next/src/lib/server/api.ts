@@ -7,14 +7,12 @@ import {
   getAnnouncementsWith,
   getCurrentUserWith,
   getDocumentsWith,
-  getMembershipCardWith,
   getOAuthMethodsWith,
   getOrders,
   getPaymentMethodsWith,
   getProducts,
   getSiteConfigWith,
   getSubscriptionsWith,
-  getSubscriptionScopesWith,
   getTicketsWith,
   getWalletLogsWith,
 } from "@/lib/client-api";
@@ -141,14 +139,6 @@ export const getServerCurrentUser = cache(() =>
 
 export const getServerSubscriptions = cache(() =>
   getSubscriptionsWith(authenticatedRequest)
-);
-
-export const getServerMembershipCard = cache(() =>
-  getMembershipCardWith(authenticatedRequest)
-);
-
-export const getServerSubscriptionScopes = cache(() =>
-  getSubscriptionScopesWith(authenticatedRequest)
 );
 
 export const getServerSiteConfig = cache(() =>

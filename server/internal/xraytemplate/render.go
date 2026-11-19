@@ -696,6 +696,7 @@ func renderSubscriptionProxyWithConfigAndVariables(server *node.Server, binding 
 		Type:                    firstString(data, "type", stringValue(vars, "type")),
 		Security:                stringValue(data, "security"),
 		SNI:                     stringValue(data, "sni"),
+		ALPN:                    stringListValue(data["alpn"]),
 		AllowInsecure:           boolValue(data, "allow_insecure"),
 		Fingerprint:             stringValue(data, "fingerprint"),
 		PinnedPeerCertSha256:    stringValue(data, "pinned_peer_cert_sha256"),
@@ -738,7 +739,9 @@ func renderSubscriptionProxyWithConfigAndVariables(server *node.Server, binding 
 		CongestionController:    stringValue(data, "congestion_controller"),
 		XhttpMode:               stringValue(data, "xhttp_mode"),
 		XhttpExtra:              stringOrJSONValue(data["xhttp_extra"]),
+		XhttpDownloadSettings:   boolValue(data, "xhttp_download_settings"),
 		Encryption:              stringValue(data, "encryption"),
+		EncryptionRequired:      boolValue(data, "encryption_required"),
 		EncryptionMode:          firstString(data, "encryption_mode", stringValue(data, "encryptionMode")),
 		EncryptionRtt:           stringValue(data, "encryption_rtt"),
 		EncryptionClientPadding: stringValue(data, "encryption_client_padding"),
@@ -825,6 +828,9 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		meta["server_key"] = firstNonEmpty(user.Password, user.UUID)
 	}
 	if settings, ok := data["settings"].(ConfigObject); ok {
+		if decryption := stringValue(settings, "decryption"); protocol == "vless" && decryption != "" && decryption != "none" {
+			meta["encryption_required"] = true
+		}
 		if method := stringValue(settings, "method"); method != "" {
 			meta["method"] = method
 		}
@@ -867,6 +873,9 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		meta["tls"] = security == "tls" || security == "reality"
 	}
 	if tls, ok := stream["tlsSettings"].(ConfigObject); ok {
+		if alpn := stringListValue(tls["alpn"]); len(alpn) > 0 {
+			meta["alpn"] = alpn
+		}
 		if stringValue(stream, "security") == "tls" {
 			certificates := make([]string, 0)
 			entries, _ := tls["certificates"].([]any)
@@ -941,7 +950,11 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 			}
 		}
 	}
-	if raw, ok := stream["rawSettings"].(ConfigObject); ok {
+	raw, ok := stream["rawSettings"].(ConfigObject)
+	if !ok {
+		raw, ok = stream["tcpSettings"].(ConfigObject)
+	}
+	if ok {
 		if header, ok := raw["header"].(ConfigObject); ok {
 			if typ := stringValue(header, "type"); typ != "" {
 				meta["header_type"] = typ
@@ -1007,7 +1020,11 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 			meta["hysteria_masquerade"] = masquerade
 		}
 	}
-	if xhttp, ok := stream["xhttpSettings"].(ConfigObject); ok {
+	xhttp, ok := stream["xhttpSettings"].(ConfigObject)
+	if !ok {
+		xhttp, ok = stream["splithttpSettings"].(ConfigObject)
+	}
+	if ok {
 		if host := stringValue(xhttp, "host"); host != "" {
 			meta["host"] = host
 		}
@@ -1017,9 +1034,7 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		if mode := stringValue(xhttp, "mode"); mode != "" {
 			meta["xhttp_mode"] = mode
 		}
-		if extra, ok := xhttp["extra"]; ok && extra != nil {
-			meta["xhttp_extra"] = extra
-		}
+		inferXHTTPSubscriptionOptions(meta, xhttp)
 	}
 	if upgrade, ok := stream["httpupgradeSettings"].(ConfigObject); ok {
 		if host := stringValue(upgrade, "host"); host != "" {
@@ -1030,6 +1045,32 @@ func inferSubscriptionMeta(server *node.Server, data ConfigObject, user UserInfo
 		}
 	}
 	return meta
+}
+
+func inferXHTTPSubscriptionOptions(meta, xhttp ConfigObject) {
+	// Xray replaces the outer transport options when extra is present, except for host, path and mode.
+	if extra, ok := xhttp["extra"]; ok {
+		meta["xhttp_extra"] = extra
+		if object, ok := extra.(ConfigObject); ok {
+			meta["xhttp_download_settings"] = object["downloadSettings"] != nil
+		}
+		return
+	}
+	meta["xhttp_download_settings"] = xhttp["downloadSettings"] != nil
+	options := ConfigObject{}
+	for _, field := range []string{
+		"headers", "xPaddingBytes", "xPaddingObfsMode", "xPaddingKey", "xPaddingHeader", "xPaddingPlacement",
+		"xPaddingMethod", "uplinkHTTPMethod", "sessionIDPlacement", "sessionIDKey", "sessionIDTable", "sessionIDLength",
+		"seqPlacement", "seqKey", "uplinkDataPlacement", "uplinkDataKey", "uplinkChunkSize", "noGRPCHeader",
+		"scMaxEachPostBytes", "scMinPostsIntervalMs", "xmux",
+	} {
+		if value, exists := xhttp[field]; exists {
+			options[field] = value
+		}
+	}
+	if len(options) > 0 {
+		meta["xhttp_extra"] = options
+	}
 }
 
 func Context(server *node.Server, binding *node.ServerXrayTemplate, vars ConfigObject, ref Ref, user UserInfo) ConfigObject {

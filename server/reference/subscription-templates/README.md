@@ -9,6 +9,7 @@ Generated from the effective built-in migrations:
 - `initialize/migrate/database/02162_refresh_xray_core_hysteria_template.up.sql`
 - `initialize/migrate/database/02219_hy2_certificate_trust.up.sql`
 - `initialize/migrate/database/02220_client_tls_reality_compatibility.up.sql`
+- `initialize/migrate/database/02222_surge_native_vless.up.sql`
 
 ## REALITY and X25519MLKEM768
 
@@ -20,7 +21,8 @@ put `X25519MLKEM768` into VLESS `encryption` or a certificate fingerprint field.
 | Shadowrocket | TLS/REALITY URIs use `fp=chrome140`, including when the node has no fingerprint or an older fingerprint. Use a release supporting this profile; verify the imported profile in the app. |
 | Default URI | REALITY uses `fp=chrome`; its precise meaning depends on the importing client. For Shadowrocket select its dedicated template. |
 | Mihomo (Clash) / Stash | REALITY uses `client-fingerprint: chrome` and `reality-opts.support-x25519mlkem768: true`. Requires a core/app implementing that option. Classic Clash does not implement REALITY. |
-| Xray Core / Surge Xray | Xray REALITY uses `fingerprint: chrome`. Surge Xray is a SOCKS bridge to the separately running Xray Core configuration; native Surge has no equivalent REALITY switch. |
+| Surge | Native VLESS REALITY uses the documented public key, short ID and SNI fields. Surge's default ClientHello handles X25519MLKEM768; Xray-specific fingerprint names such as `chrome140` are not emitted. |
+| Xray Core / Surge Xray | Xray REALITY uses `fingerprint: chrome`. Surge Xray remains a SOCKS bridge to a separately running Xray Core. |
 | Loon | VLESS REALITY uses the documented `public-key`, `short-id`, `over-tls`, and `tls-profile=chrome147` parameters. Requires a release implementing that profile; the app controls its key-share behavior. |
 | Quantumult X | Its current REALITY implementation automatically uses the iOS 26 Safari profile with X25519MLKEM768. Keep `fast-open=false`; no extra curve flag is needed. |
 | SingBox 1.11 / 1.12, Hiddify | Templates default REALITY uTLS to `chrome`, but legacy sing-box removes the ML-KEM key share in code. No template option repairs that. Use a compatible client core or Xray Core for new REALITY servers requiring ML-KEM. |
@@ -29,6 +31,7 @@ put `X25519MLKEM768` into VLESS `encryption` or a certificate fingerprint field.
 Upstream references:
 [Mihomo TLS](https://wiki.metacubex.one/config/proxies/tls/),
 [Stash protocols](https://stash.wiki/en/proxy-protocols/proxy-types),
+[Surge VLESS](https://manual.nssurge.com/policies/vless.html),
 [Xray REALITY](https://xtls.github.io/en/config/transports/reality.html),
 [Loon nodes](https://nsloon.app/docs/Node/),
 [Quantumult X sample](https://github.com/crossutility/Quantumult-X/blob/master/sample.conf),
@@ -79,6 +82,35 @@ together with the serving certificate. Xray can retain multiple configured pins.
 The migration patches recognized blocks, including matching custom copies, without
 overwriting other content. Already-customized blocks are left unchanged and should
 be reviewed manually. Deploy the updated server and run its migrations together.
+
+## Native Surge VLESS
+
+Use Surge iOS 6.0.0+ or Mac 6.12.0+ with the native Surge template. The VLESS
+declarations follow the official RAW, WebSocket, HTTPUpgrade, gRPC and XHTTP
+transport matrix. Plain TLS can export ALPN, a certificate pin or verification
+name; these certificate checks do not apply to REALITY.
+
+For VLESS Encryption, set the binding's subscription variable
+`encryption` to the client string from Xray. The existing split fields
+(`encryption_mode`, `encryption_rtt`, optional `encryption_client_padding`,
+and `encryption_password` with `encryption=mlkem768x25519plus`) are also supported.
+The server-side decryption string is not a client setting and is not exported.
+Unsupported combinations, including mKCP and XHTTP with split download
+configuration, are omitted rather than rendered as a different transport.
+
+XHTTP accepts transport options directly in `xhttpSettings` or in its
+`extra` object. If `extra` is present, Xray takes the options from there and
+continues to read `host`, `path` and `mode` from the outer object.
+`xmux.maxConnections` and `xmux.hKeepAlivePeriod` render as
+`xhttp-xmux-max-connections` and `xhttp-xmux-keep-alive`, but Surge does not
+apply them. Leave zero-only XMUX fields unset to preserve the client's defaults.
+For a Web-only template replacement on an older Server, place the options
+under `xhttpSettings.extra` (or provide the binding's `xhttp_extra` subscription
+variable); older Servers do not export options from the outer object.
+
+Migration 02222 updates matching native Surge template blocks in the database.
+Templates with a customized VLESS block, proxy filter, or node group are not
+changed. Surge Xray and other client templates are unaffected.
 
 ## Files
 

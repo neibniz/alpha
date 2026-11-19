@@ -646,7 +646,7 @@ func TestXHTTPClientTemplateSupportMatrix(t *testing.T) {
 		"xray_inbound_host":       "127.0.0.1",
 		"xray_inbound_start_port": "10800",
 	}
-	directXHTTPTemplates := map[int]bool{1: true, 2: true, 3: true, 6: true, 14: true, 15: true}
+	directXHTTPTemplates := map[int]bool{1: true, 2: true, 3: true, 5: true, 6: true, 14: true, 15: true}
 
 	for _, item := range loadEffectiveMigrationTemplates(t) {
 		t.Run(item.name, func(t *testing.T) {
@@ -693,6 +693,16 @@ func TestXHTTPClientTemplateSupportMatrix(t *testing.T) {
 				assertYAMLField(t, reuse, "max-connections", "1")
 				if _, ok := reuse["max-concurrency"]; ok {
 					t.Fatalf("%s should omit disabled max-concurrency: %#v", item.name, reuse)
+				}
+			case 5:
+				line := surgeProxyLine(rendered, "XHTTP Node")
+				for _, option := range []string{"xhttp=true", "xhttp-path=/xhttp", "xhttp-host=xhttp.example.com", "xhttp-mode=stream-up", "xhttp-no-grpc-header=true", "xhttp-padding-bytes=100-1000", "xhttp-xmux-max-connections=1"} {
+					if !strings.Contains(line, ", "+option) {
+						t.Errorf("Surge XHTTP missing %q: %s", option, line)
+					}
+				}
+				if strings.Contains(line, "xhttp-xmux-max-concurrency") {
+					t.Errorf("Surge XHTTP should omit zero XMUX placeholders: %s", line)
 				}
 			case 14:
 				var config struct {
@@ -852,6 +862,7 @@ func loadEffectiveMigrationTemplates(t *testing.T) []migrationTemplate {
 	out := make([]migrationTemplate, 0, len(ids))
 	patches := hysteriaTrustMigrationPatches(t)
 	cryptoPatches := clientCryptoMigrationPatches(t)
+	surgePatches := surgeMigrationPatches(t, "up")
 	for _, id := range ids {
 		item := byID[id]
 		for _, patch := range patches {
@@ -863,6 +874,9 @@ func loadEffectiveMigrationTemplates(t *testing.T) []migrationTemplate {
 			if item.outputFormat == patch.format && strings.Contains(item.templateText, patch.marker) {
 				item.templateText = strings.ReplaceAll(item.templateText, patch.old, patch.updated)
 			}
+		}
+		if item.outputFormat == "conf" {
+			item.templateText = applySurgePatches(item.templateText, surgePatches)
 		}
 		out = append(out, item)
 	}

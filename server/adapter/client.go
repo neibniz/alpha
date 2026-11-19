@@ -24,6 +24,7 @@ type Proxy struct {
 	// Security Options
 	Security             string
 	SNI                  string   // Server Name Indication for TLS
+	ALPN                 []string // TLS application protocols
 	AllowInsecure        bool     // Allow insecure connections (skip certificate verification)
 	Fingerprint          string   // Client fingerprint for TLS connections
 	PinnedPeerCertSha256 string   // Whole DER certificate SHA-256 pins, not ClientHello or SPKI fingerprints
@@ -89,11 +90,13 @@ type Proxy struct {
 	//ObfsPath string // obfs path
 
 	// Vless
-	XhttpMode  string // xhttp mode
-	XhttpExtra string // xhttp extra JSON
+	XhttpMode             string // xhttp mode
+	XhttpExtra            string // xhttp extra JSON
+	XhttpDownloadSettings bool   // XHTTP uses a separate download connection configuration
 
 	// encryption
 	Encryption              string // encryption，'none', 'mlkem768x25519plus'
+	EncryptionRequired      bool   // VLESS inbound requires client-side encryption
 	EncryptionMode          string // encryption mode，'native', 'xorpub', 'random'
 	Encryption_Mode         string // Compatibility alias used by upstream subscription templates.
 	EncryptionRtt           string // encryption rtt，'0rtt', '1rtt'
@@ -136,6 +139,8 @@ func (c *Client) Build() ([]byte, error) {
 	funcs["clientSupportsProxy"] = clientSupportsProxy
 	funcs["xhttpMihomoOpts"] = xhttpMihomoOpts
 	funcs["xhttpMihomoInlineOpts"] = xhttpMihomoInlineOpts
+	funcs["surgeSupportsProxy"] = surgeSupportsProxy
+	funcs["surgeVLESSOptions"] = surgeVLESSOptions
 	tmpl, err := template.New("client").Funcs(funcs).Parse(c.ClientTemplate)
 	if err != nil {
 		return nil, err
@@ -184,6 +189,7 @@ func proxyTemplateData(proxy Proxy) ProxyTemplateData {
 		"Tags":                    proxy.Tags,
 		"Security":                proxy.Security,
 		"SNI":                     proxy.SNI,
+		"ALPN":                    proxy.ALPN,
 		"AllowInsecure":           proxy.AllowInsecure,
 		"Fingerprint":             proxy.Fingerprint,
 		"PinnedPeerCertSha256":    proxy.PinnedPeerCertSha256,
@@ -232,7 +238,9 @@ func proxyTemplateData(proxy Proxy) ProxyTemplateData {
 		"Multiplex":               proxy.Multiplex,
 		"XhttpMode":               proxy.XhttpMode,
 		"XhttpExtra":              proxy.XhttpExtra,
+		"XhttpDownloadSettings":   proxy.XhttpDownloadSettings,
 		"Encryption":              proxy.Encryption,
+		"EncryptionRequired":      proxy.EncryptionRequired,
 		"EncryptionMode":          proxy.EncryptionMode,
 		"Encryption_Mode":         proxy.Encryption_Mode,
 		"EncryptionRtt":           proxy.EncryptionRtt,

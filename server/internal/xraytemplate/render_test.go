@@ -1130,6 +1130,86 @@ func TestRenderSubscriptionProxyKeepsXHTTPExtra(t *testing.T) {
 	}
 }
 
+func TestInferXHTTPSubscriptionOptionSources(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		settings string
+		want     string
+		download bool
+	}{
+		{
+			name:     "flat options without spilling download config",
+			settings: `{"xmux":{"maxConnections":2,"hKeepAlivePeriod":30},"xPaddingBytes":"100-200","headers":{"User-Agent":"chrome"},"serverMaxHeaderBytes":8192,"downloadSettings":{"tlsSettings":{"key":"server-only"}}}`,
+			want:     `{"headers":{"User-Agent":"chrome"},"xPaddingBytes":"100-200","xmux":{"hKeepAlivePeriod":30,"maxConnections":2}}`,
+			download: true,
+		},
+		{
+			name:     "extra replaces outer options",
+			settings: `{"xmux":{"maxConnections":9},"downloadSettings":{},"extra":{"xmux":{"maxConnections":1}}}`,
+			want:     `{"xmux":{"maxConnections":1}}`,
+		},
+		{
+			name:     "split download inside extra",
+			settings: `{"extra":{"downloadSettings":{}}}`,
+			want:     `{"downloadSettings":{}}`,
+			download: true,
+		},
+		{
+			name:     "empty extra replaces outer options",
+			settings: `{"xmux":{"maxConnections":9},"extra":{}}`,
+			want:     "{}",
+		},
+		{
+			name:     "null extra replaces outer options",
+			settings: `{"xmux":{"maxConnections":9},"extra":null}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			meta := ConfigObject{}
+			inferXHTTPSubscriptionOptions(meta, jsonObject(tc.settings))
+			if got := stringOrJSONValue(meta["xhttp_extra"]); got != tc.want {
+				t.Errorf("xhttp_extra = %q, want %q", got, tc.want)
+			}
+			if got := boolValue(meta, "xhttp_download_settings"); got != tc.download {
+				t.Errorf("xhttp_download_settings = %t, want %t", got, tc.download)
+			}
+		})
+	}
+}
+
+func TestRenderSubscriptionProxyKeepsSurgeVLESSMetadata(t *testing.T) {
+	server := &node.Server{Id: 1, Name: "test", Address: "node.example.test"}
+	binding := &node.ServerXrayTemplate{
+		Alias: "xhttp",
+		Template: &node.XrayTemplate{
+			Type: node.XrayTemplateInbound,
+			Config: `{
+				"tag": "xhttp",
+				"port": 443,
+				"protocol": "vless",
+				"settings": {"decryption": "test-server-only-value", "clients": []},
+				"streamSettings": {
+					"network": "splithttp",
+					"security": "tls",
+					"tlsSettings": {"alpn": ["h2", "http/1.1"]},
+					"splithttpSettings": {"path": "/xhttp", "downloadSettings": {"address": "download.example.test"}}
+				}
+			}`,
+			DefaultVariables: "{}",
+		},
+		SubscriptionVariables: `{"encryption":"mlkem768x25519plus.native.0rtt.client-value"}`,
+	}
+	proxy, err := RenderSubscriptionProxy(server, binding, BuildRef(server, nil), UserInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proxy == nil || strings.Join(proxy.ALPN, ",") != "h2,http/1.1" ||
+		proxy.Path != "/xhttp" || !proxy.XhttpDownloadSettings || !proxy.EncryptionRequired ||
+		proxy.Encryption != "mlkem768x25519plus.native.0rtt.client-value" {
+		t.Fatalf("incorrect Surge VLESS metadata: %+v", proxy)
+	}
+}
+
 func TestRenderSubscriptionProxyUsesXHTTPBindingMode(t *testing.T) {
 	enabled := true
 	server := &node.Server{Id: 1, Name: "hk", Address: "node.example.com"}
